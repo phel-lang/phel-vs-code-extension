@@ -1,13 +1,37 @@
 {
     "name": "phel-lang",
     "displayName": "Phel Lang",
-    "description": "Syntax highlighting for the Phel language",
-    "version": "0.0.1",
+    "description": "Full-featured Phel language support with debugging for VS Code",
+    "version": "0.2.0",
+    "publisher": "phel-lang",
+    "license": "MIT",
     "engines": {
-        "vscode": "^1.44.0"
+        "vscode": "^1.75.0"
     },
     "categories": [
-        "Programming Languages"
+        "Programming Languages",
+        "Debuggers"
+    ],
+    "keywords": [
+        "phel",
+        "lisp",
+        "php",
+        "functional",
+        "debugger",
+        "xdebug"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/phel-lang/phel-vs-code-extension"
+    },
+    "bugs": {
+        "url": "https://github.com/phel-lang/phel-vs-code-extension/issues"
+    },
+    "homepage": "https://github.com/phel-lang/phel-vs-code-extension#readme",
+    "main": "./out/extension.js",
+    "activationEvents": [
+        "onLanguage:phel",
+        "onDebugResolve:phel"
     ],
     "contributes": {
         "languages": [{
@@ -20,6 +44,136 @@
             "language": "phel",
             "scopeName": "source.phel",
             "path": "./syntaxes/phel.tmLanguage.json"
-        }]
+        }],
+        "breakpoints": [{
+            "language": "phel"
+        }],
+        "debuggers": [{
+            "type": "phel",
+            "label": "Phel Debug",
+            "languages": ["phel"],
+            "configurationAttributes": {
+                "launch": {
+                    "required": [],
+                    "properties": {
+                        "program": {
+                            "type": "string",
+                            "description": "The Phel entry point file (optional, for reference only)",
+                            "default": "${workspaceFolder}/src/app.phel"
+                        },
+                        "stopOnEntry": {
+                            "type": "boolean",
+                            "description": "Automatically stop after launch",
+                            "default": false
+                        },
+                        "phpDebugPort": {
+                            "type": "number",
+                            "description": "Xdebug port to listen on",
+                            "default": 9003
+                        },
+                        "pathMappings": {
+                            "type": "object",
+                            "description": "Path mappings for remote debugging",
+                            "default": {}
+                        },
+                        "cacheDir": {
+                            "type": "string",
+                            "description": "Phel cache directory (where compiled PHP files are stored)",
+                            "default": ""
+                        },
+                        "skipPhelInternals": {
+                            "type": "boolean",
+                            "description": "Skip stepping through Phel runtime internals",
+                            "default": true
+                        },
+                        "skipFiles": {
+                            "type": "array",
+                            "description": "Glob patterns for files to skip when stepping",
+                            "items": { "type": "string" },
+                            "default": []
+                        }
+                    }
+                }
+            },
+            "initialConfigurations": [{
+                "type": "phel",
+                "request": "launch",
+                "name": "Debug Phel (Listen for Xdebug)",
+                "phpDebugPort": 9003
+            }],
+            "configurationSnippets": [{
+                "label": "Phel: Listen for Xdebug",
+                "description": "Listen for Xdebug connections and translate breakpoints for Phel files",
+                "body": {
+                    "type": "phel",
+                    "request": "launch",
+                    "name": "Debug Phel",
+                    "phpDebugPort": 9003
+                }
+            }, {
+                "label": "Phel: Debug with Docker",
+                "description": "Debug Phel in a Docker container with path mappings",
+                "body": {
+                    "type": "phel",
+                    "request": "launch",
+                    "name": "Debug Phel (Docker)",
+                    "phpDebugPort": 9003,
+                    "pathMappings": {
+                        "/var/www/html": "${workspaceFolder}"
+                    }
+                }
+            }]
+        }],
+        "commands": [{
+            "command": "phel.showCompiledLocation",
+            "title": "Phel: Show Compiled PHP Location"
+        }, {
+            "command": "phel.clearSourceMapCache",
+            "title": "Phel: Clear Source Map Cache"
+        }],
+        "configuration": {
+            "title": "Phel",
+            "properties": {
+                "phel.cacheDirectory": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to Phel cache directory. If empty, uses system temp directory."
+                },
+                "phel.debug.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable Phel debug adapter for source-level debugging"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "lint": "eslint src --ext ts",
+        "lint:fix": "eslint src --ext ts --fix",
+        "format": "prettier --write \"src/**/*.ts\"",
+        "format:check": "prettier --check \"src/**/*.ts\"",
+        "pretest": "npm run compile && npm run lint",
+        "test": "mocha out/test/**/*.test.js"
+    },
+    "devDependencies": {
+        "@types/glob": "^8.1.0",
+        "@types/mocha": "^10.0.6",
+        "@types/node": "^20.10.0",
+        "@types/vscode": "^1.75.0",
+        "@typescript-eslint/eslint-plugin": "^7.0.0",
+        "@typescript-eslint/parser": "^7.0.0",
+        "@vscode/debugadapter": "^1.64.0",
+        "@vscode/debugprotocol": "^1.64.0",
+        "eslint": "^8.57.0",
+        "glob": "^10.3.10",
+        "mocha": "^10.2.0",
+        "prettier": "^3.2.0",
+        "typescript": "^5.3.0"
+    },
+    "dependencies": {
+        "@vscode/debugadapter": "^1.64.0"
     }
 }

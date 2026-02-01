@@ -3,19 +3,28 @@
 	"name": "Phel",
 	"patterns": [
 		{
+			"include": "#multiline-comment"
+		},
+		{
 			"include": "#comment"
 		},
 		{
 			"include": "#strings"
 		},
 		{
+			"include": "#short-fn"
+		},
+		{
 			"include": "#parens"
 		},
 		{
-			"include": "#brakets"
+			"include": "#brackets"
 		},
 		{
 			"include": "#braces"
+		},
+		{
+			"include": "#sets"
 		},
 		{
 			"include": "#readermac"
@@ -41,7 +50,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.phel",
-					"match": "(?<=\\(|\\{|\\[|\\s)(definterface|declare|defstruct|defmacro-|defmacro|defn-|defn|def-|def|recur|fn|try|catch|finally|loop|ns|quote|dofor|do|if-not|if|when-not|when|apply|let|foreach|for|case|cond)(?=(\\s|,|\\)\\}\\]))(?=\\s|\\)|\\]|\\})"
+					"match": "(?<=\\(|\\{|\\[|\\s)(definterface\\*?|defexception\\*?|defstruct\\*?|declare|defmacro-|defmacro|defn-|defn|def-|def|recur|fn|try|catch|finally|loop|ns|in-ns|quote|dofor|doseq|do|if-not|if-let|if|when-not|when-let|when|apply|let|foreach|for|case|cond|throw|set-var|comment|or|and|->|->>|some->|some->>|as->|doto|lazy-seq|lazy-cat|binding|time|with-output-buffer)(?=\\s|\\)|\\]|\\})"
 				},
 				{
 					"name": "keyword.control.phel",
@@ -94,8 +103,20 @@
 			]
 		},
 		"readermac": {
-			"name": "punctation.other.phel",
-			"match": "[\\`\\'\\,]"
+			"patterns": [
+				{
+					"name": "comment.block.phel",
+					"match": "#_"
+				},
+				{
+					"name": "punctuation.other.phel",
+					"match": "[\\`\\'\\,\\^]"
+				},
+				{
+					"name": "punctuation.other.unquote-splicing.phel",
+					"match": ",@"
+				}
+			]
 		},
 		"keysym": {
 			"name": "variable.other.constant.phel",
@@ -105,8 +126,52 @@
 			"name": "meta.symbol.phel",
 			"match": "(?<![\\-])[^\\s\\#\\(\\)\\{\\}\\[\\]\\'\\\"\\,\\`]+"
 		},
+		"short-fn": {
+			"begin": "(\\|\\()",
+			"beginCaptures": {
+				"1": {
+					"name": "punctuation.definition.short-fn.begin.phel"
+				}
+			},
+			"end": "(\\))",
+			"endCaptures": {
+				"1": {
+					"name": "punctuation.definition.short-fn.end.phel"
+				}
+			},
+			"name": "meta.short-fn.phel",
+			"patterns": [
+				{
+					"name": "variable.parameter.positional.phel",
+					"match": "\\$[0-9]*|\\$&"
+				},
+				{
+					"include": "#all"
+				}
+			]
+		},
+		"sets": {
+			"begin": "(#\\{)",
+			"beginCaptures": {
+				"1": {
+					"name": "punctuation.definition.set.begin.phel"
+				}
+			},
+			"end": "(\\})",
+			"endCaptures": {
+				"1": {
+					"name": "punctuation.definition.set.end.phel"
+				}
+			},
+			"name": "meta.set.phel",
+			"patterns": [
+				{
+					"include": "#all"
+				}
+			]
+		},
 		"braces": {
-			"begin": "(\\@\\{)",
+			"begin": "(\\@?\\{)",
 			"beginCaptures": {
 				"1": {
 					"name": "punctuation.definition.braces.begin.phel"
@@ -125,7 +190,7 @@
 				}
 			]
 		},
-		"brakets": {
+		"brackets": {
 			"begin": "(@?\\[)",
 			"beginCaptures": {
 				"1": {
@@ -163,15 +228,20 @@
 				}
 			]
 		},
+		"multiline-comment": {
+			"name": "comment.block.phel",
+			"begin": "#\\|",
+			"end": "\\|#"
+		},
 		"comment": {
-			"begin": "#",
+			"begin": "[#;]",
 			"beginCaptures": {
 				"0": {
 					"name": "punctuation.definition.comment.phel"
 				}
 			},
 			"end": "$",
-			"name": "comment.line.hash.phel"
+			"name": "comment.line.phel"
 		},
 		"strings": {
 			"name": "string.quoted.double.phel",
@@ -181,6 +251,52 @@
 				{
 					"name": "constant.character.escape.phel",
 					"match": "\\\\."
+				}
+			]
+		},
+		"all": {
+			"patterns": [
+				{
+					"include": "#multiline-comment"
+				},
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#strings"
+				},
+				{
+					"include": "#short-fn"
+				},
+				{
+					"include": "#parens"
+				},
+				{
+					"include": "#brackets"
+				},
+				{
+					"include": "#braces"
+				},
+				{
+					"include": "#sets"
+				},
+				{
+					"include": "#readermac"
+				},
+				{
+					"include": "#keysym"
+				},
+				{
+					"include": "#literal"
+				},
+				{
+					"include": "#number"
+				},
+				{
+					"include": "#corelib"
+				},
+				{
+					"include": "#symbol"
 				}
 			]
 		}

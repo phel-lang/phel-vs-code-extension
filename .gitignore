@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+*.tsbuildinfo
+
+# VS Code test runner
+.vscode-test/
+
+# Packaged extensions
+*.vsix
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log
+yarn-error.log
+
+# Editor directories
+.idea/
