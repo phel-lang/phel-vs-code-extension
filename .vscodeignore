@@ -1,4 +1,16 @@
 .vscode/**
 .vscode-test/**
+src/**
+**/*.ts
+**/*.map
 .gitignore
+.editorconfig
+.eslintrc.json
+.eslintignore
+.prettierrc
+.prettierignore
+tsconfig.json
 vsc-extension-quickstart.md
+node_modules/.bin/**
+node_modules/@types/**
+**/*.test.js
