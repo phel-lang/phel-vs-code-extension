@@ -2,6 +2,14 @@
 
 All notable changes to the "phel-lang" extension will be documented in this file.
 
+## [0.5.0] - 2026-05-06
+
+### Added
+
+- **Tagged literals** (`#inst`, `#regex`, `#php`, custom `#money`, …) now highlight: `#` as `punctuation.definition.tag.phel`, the tag name as `storage.type.tagged.phel`, and the following form keeps its normal scopes.
+- **Reader conditionals** `#?(:phel … :clj …)` and the splicing form `#?@(...)` now highlight: `#?` / `#?@` as `keyword.other.reader-conditional.phel`, the body wrapped in `meta.reader-conditional.phel` so editors can dim the inactive branch via theme rules.
+- Sample (`scripts/sample.phel`) covers the new patterns; `npm run tokenize` verifies them.
+
 ## [0.4.0] - 2026-05-06
 
 Sync with phel-lang `main` (commit `428c59f`).

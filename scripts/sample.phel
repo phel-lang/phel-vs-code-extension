@@ -54,9 +54,12 @@
 
 #_(comment-out-this-form 1 2 3)
 
-;; Tagged literals (highlighting is best-effort, future work)
+;; Tagged literals
 (def created #inst "2026-01-01T00:00:00Z")
 (def re #regex "\\d+")
+(def m #money "10.00 EUR")
+(def php-call #php/Foo\Bar)
 
-;; Reader conditional (future work — currently unscoped)
-#?(:phel (php/time) :clj 0)
+;; Reader conditionals
+(def now #?(:phel (php/time) :clj 0))
+(def items [1 2 #?@(:phel [3 4] :clj [99])])

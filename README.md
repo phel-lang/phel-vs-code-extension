@@ -10,7 +10,9 @@ This VS Code extension provides syntax highlighting and language support for [Ph
   - Literals: keywords (`:keyword`), strings, numbers, booleans, `nil`
   - Collections: vectors `[]`, maps `{}`, sets `#{}`, lists `'()`
   - Short anonymous functions: `#(+ %1 %2)` (and the deprecated `|(+ $1 $2)`)
-  - Reader macros: quote `'`, quasiquote `` ` ``, unquote `~`, unquote-splicing `~@`, metadata `^` (legacy `,` / `,@` still highlighted)
+  - Reader macros: quote `'`, quasiquote `` ` ``, unquote `~`, unquote-splicing `~@`, deref `@`, metadata `^` (legacy `,` / `,@` still highlighted)
+  - Tagged literals: `#inst "..."`, `#regex "..."`, `#php/...`, custom tags via `register-tag`
+  - Reader conditionals: `#?(:phel ... :clj ...)` and splicing form `#?@(...)`
 
 - **Code completion** for every public symbol shipped with phel-lang core:
   - All special forms and macros (suggested as keywords)
@@ -78,6 +80,17 @@ The legacy `|(...)` form with `$1`, `$2`, `$&` is still recognised for older cod
 `(1 ~x ~@xs)       ;; Quasiquote with unquote and unquote-splicing
 ^:private          ;; Metadata
 @my-atom           ;; Deref
+```
+
+### Tagged Literals and Reader Conditionals
+
+```phel
+(def t #inst "2026-01-01T00:00:00Z")    ;; Tagged literal
+(def re #regex "\\d+")                  ;; Built-in regex tag
+(def m #money "10.00 EUR")              ;; Custom tag (via register-tag)
+
+(def now #?(:phel (php/time) :clj 0))           ;; Reader conditional
+(def xs [1 2 #?@(:phel [3 4] :clj [99])])       ;; Splicing form
 ```
 
 ## Debugging Phel Code
@@ -195,7 +208,7 @@ code --install-extension phel-lang.phel-lang
 
 Download the latest `.vsix` from the [releases page](https://github.com/phel-lang/phel-vs-code-extension/releases) and install it:
 
-- **CLI:** `code --install-extension phel-lang-0.4.0.vsix`
+- **CLI:** `code --install-extension phel-lang-0.5.0.vsix`
 - **GUI:** Extensions sidebar → "..." menu → *Install from VSIX...*
 
 ### Option 3 — Build from source
@@ -218,7 +231,7 @@ Iterate on grammar / TypeScript without rebuilding the `.vsix` each time:
 **macOS / Linux**
 ```bash
 cd ~/.vscode/extensions
-ln -s /absolute/path/to/phel-vs-code-extension phel-lang.phel-lang-0.4.0
+ln -s /absolute/path/to/phel-vs-code-extension phel-lang.phel-lang-0.5.0
 ```
 
 **Windows** (PowerShell, Administrator)
@@ -226,7 +239,7 @@ ln -s /absolute/path/to/phel-vs-code-extension phel-lang.phel-lang-0.4.0
 cd $env:USERPROFILE\.vscode\extensions
 New-Item -ItemType SymbolicLink `
     -Target "C:\absolute\path\to\phel-vs-code-extension" `
-    -Path "phel-lang.phel-lang-0.4.0"
+    -Path "phel-lang.phel-lang-0.5.0"
 ```
 
 Restart VS Code (or use *Developer: Reload Window*) and changes to `syntaxes/`, `snippets/`, and the compiled `out/` directory take effect.

@@ -12,6 +12,9 @@
 			"include": "#strings"
 		},
 		{
+			"include": "#reader-conditional"
+		},
+		{
 			"include": "#short-fn"
 		},
 		{
@@ -25,6 +28,9 @@
 		},
 		{
 			"include": "#sets"
+		},
+		{
+			"include": "#tagged-literal"
 		},
 		{
 			"include": "#readermac"
@@ -233,6 +239,40 @@
 			"begin": "#\\|",
 			"end": "\\|#"
 		},
+		"tagged-literal": {
+			"match": "(#)([a-zA-Z][\\w-]*)",
+			"captures": {
+				"1": {
+					"name": "punctuation.definition.tag.phel"
+				},
+				"2": {
+					"name": "storage.type.tagged.phel"
+				}
+			}
+		},
+		"reader-conditional": {
+			"begin": "(#\\?@?)(\\()",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.other.reader-conditional.phel"
+				},
+				"2": {
+					"name": "punctuation.definition.parens.begin.phel"
+				}
+			},
+			"end": "(\\))",
+			"endCaptures": {
+				"1": {
+					"name": "punctuation.definition.parens.end.phel"
+				}
+			},
+			"name": "meta.reader-conditional.phel",
+			"patterns": [
+				{
+					"include": "#all"
+				}
+			]
+		},
 		"comment": {
 			"begin": "(?:;|#(?=\\s|$))",
 			"beginCaptures": {
@@ -266,6 +306,9 @@
 					"include": "#strings"
 				},
 				{
+					"include": "#reader-conditional"
+				},
+				{
 					"include": "#short-fn"
 				},
 				{
@@ -279,6 +322,9 @@
 				},
 				{
 					"include": "#sets"
+				},
+				{
+					"include": "#tagged-literal"
 				},
 				{
 					"include": "#readermac"
