@@ -1,134 +1,48 @@
 # Phel Lang for VS Code
 
-Syntax highlighting, code completion, snippets, and a native debug adapter for [Phel](https://phel-lang.org/) — a functional Lisp that compiles to PHP.
+[![Release](https://img.shields.io/github/v/release/phel-lang/phel-vs-code-extension?label=release)](https://github.com/phel-lang/phel-vs-code-extension/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+VS Code support for [Phel](https://phel-lang.org/) — a functional Lisp that compiles to PHP.
+
+## Why this extension
+
+Writing Phel without editor support means colourless code, no completion for the 400+ symbols in `phel\core`, and dropping back to PHP-level debugging. This extension fixes all three.
+
+- **Highlighting** — full coverage of forms, macros, reader macros, tagged literals (`#inst`, `#regex`, `#php`, …) and reader conditionals (`#?(...)`).
+- **Completion** for every public symbol in `phel\core` (47 special forms, ~70 macros, 394 functions).
+- **Snippets** for everyday scaffolding — `defn`, `let`, `cond`, `try`, `deftest`, `->`, …
+- **Native debug adapter** — set breakpoints in `.phel` files; the adapter translates between Phel and the compiled PHP via Xdebug.
 
 ## Install
 
-- **Marketplace** — Extensions sidebar → search **"Phel Lang"** → Install. Or `code --install-extension phel-lang.phel-lang`.
-- **Pre-built `.vsix`** — grab the latest from the [releases page](https://github.com/phel-lang/phel-vs-code-extension/releases) and run `code --install-extension phel-lang-*.vsix` (or *Install from VSIX...* in the Extensions menu).
-- **From source** — `git clone`, `npm install`, `npx @vscode/vsce package`, then install the resulting `.vsix`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev loop.
-
-Requires VS Code **1.75+**.
-
-## What you get
-
-- **Syntax highlighting** for the full Phel core — special forms, ~70 macros, threading, interop (`php/...`), reader macros (`'`, `` ` ``, `~`, `~@`, `^`, `@`), tagged literals (`#inst`, `#regex`, `#php`, custom `#tag`), and reader conditionals (`#?(...)`, `#?@(...)`).
-- **Code completion** for every public symbol in `phel\core` — 47 special forms, ~70 macros, 394 functions (`assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, …).
-- **Snippets** for the everyday forms — type `defn`, `let`, `cond`, `try`, `deftest`, `->` and tab through.
-- **Debug adapter** with source-level breakpoints, Phel-friendly variable display, multi-expression line handling, exception breakpoints, and Docker / remote path mapping.
-- Auto-closing pairs, smart Lisp indentation, and breakpoint gutters in `.phel` files.
-
-Legacy syntax is still highlighted: `|(+ $1 $2)`, `,@xs`, `#` line comments, and `#| ... |#` block comments.
-
-## Syntax at a glance
-
-```phel
-(ns my-app\core
-  (:require phel\core :refer [filter map])
-  (:require phel\test :refer [deftest is]))
-
-(def ^:private answer 42)              ;; metadata + def
-
-(defn greet [name]                     ;; public fn
-  (str "Hello, " name "!"))
-
-(defn- helper [x]                      ;; private fn
-  (when (pos? x) (* x x)))
-
-(->> [1 2 3 4 5]                       ;; threading + anon-fn
-     (filter #(> % 2))
-     (map #(* %1 %1)))
-
-`(let [x# ~val] ~@body)                ;; quasiquote, unquote, splicing
-
-(def t  #inst "2026-01-01T00:00:00Z")  ;; tagged literals
-(def re #regex "\\d+")
-(def now #?(:phel (php/time) :clj 0))  ;; reader conditional
-
-;; preferred line comment
-(println 1 #_ skip 3)                  ;; skip middle form
+```bash
+code --install-extension phel-lang.phel-lang
 ```
 
-## Debugging Phel code
+Or grab a `.vsix` from the [releases page](https://github.com/phel-lang/phel-vs-code-extension/releases) and run `code --install-extension phel-lang-*.vsix`. Requires VS Code **1.75+**.
 
-The bundled debug adapter (`type: "phel"`) translates between `.phel` source and the compiled PHP, so breakpoints, stack traces, and stepping all stay in your Phel files.
+Other paths (build from source, symlink for live development): see [docs/installation.md](docs/installation.md).
 
-### Setup
+## First steps
 
-1. Enable Xdebug in `php.ini`:
-   ```ini
-   [xdebug]
-   zend_extension=xdebug
-   xdebug.mode=debug
-   xdebug.start_with_request=yes
-   xdebug.client_port=9003
-   ```
-2. Add a launch config (`.vscode/launch.json`):
-   ```json
-   {
-     "version": "0.2.0",
-     "configurations": [
-       {
-         "type": "phel",
-         "request": "launch",
-         "name": "Debug Phel",
-         "phpDebugPort": 9003
-       }
-     ]
-   }
-   ```
-3. Set breakpoints in `.phel` files, press <kbd>F5</kbd>, run your app (e.g. `vendor/bin/phel run src/main.phel`).
+1. **Open any `.phel` file** — highlighting kicks in automatically.
+2. **Try completion** — start typing `re-` or `swap` and accept a suggestion.
+3. **Expand a snippet** — type `defn` <kbd>Tab</kbd> and tab through the placeholders.
+4. **Set a breakpoint** in `.phel`, add a launch config (see [docs/debugging.md](docs/debugging.md)), press <kbd>F5</kbd>.
 
-### Configuration options
+## Documentation
 
-| Option | Default | Description |
-|---|---|---|
-| `phpDebugPort` | `9003` | Xdebug listen port |
-| `cacheDir` | auto-detected | Phel cache directory |
-| `pathMappings` | `{}` | Container / remote path mappings |
-| `skipPhelInternals` | `true` | Skip stepping through Phel runtime |
-| `skipFiles` | `[]` | Glob patterns to skip when stepping |
+| Topic | Link |
+|---|---|
+| Installation paths | [docs/installation.md](docs/installation.md) |
+| Syntax highlighting reference | [docs/syntax.md](docs/syntax.md) |
+| Completion & snippets | [docs/completion.md](docs/completion.md) |
+| Debugging with Xdebug | [docs/debugging.md](docs/debugging.md) |
+| Tracing with `tap>` | [docs/taps.md](docs/taps.md) |
+| Settings reference | [docs/settings.md](docs/settings.md) |
+| Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
 
-For Docker / remote work, add `pathMappings`:
+## Contributing · Changelog · License
 
-```json
-"pathMappings": { "/var/www/html": "${workspaceFolder}" }
-```
-
-### Commands
-
-- **Phel: Show Compiled PHP Location** — jump from a `.phel` line to the compiled PHP.
-- **Phel: Clear Source Map Cache** — drop cached source maps after a recompile.
-
-## Inspecting values with taps
-
-For ad-hoc tracing without a debugger, use the Clojure-style tap registry from `phel\core`:
-
-```phel
-(add-tap println)
-
-(defn process [order]
-  (tap> {:event :start :id (:id order)})
-  (let [result (do-work order)]
-    (tap> {:event :end :id (:id order) :result result})
-    result))
-
-(remove-tap println)
-```
-
-Taps run synchronously on the calling thread. Exceptions thrown by a tap handler are swallowed so a buggy tap can't take down the producer.
-
-## Settings
-
-| Setting | Default | Description |
-|---|---|---|
-| `phel.cacheDirectory` | `""` | Path to Phel cache directory. Empty → system temp dir. |
-| `phel.debug.enabled` | `true` | Enable the Phel debug adapter. |
-
-## Contributing
-
-Bug reports, pull requests, and language-surface refreshes welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Changelog · License
-
-History in [CHANGELOG.md](CHANGELOG.md). MIT — see [LICENSE](LICENSE).
+[CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [LICENSE](LICENSE) (MIT)
