@@ -7,6 +7,7 @@ import { SourceMapManager } from './sourceMapManager';
 import { PhelDebugSession } from './phelDebugAdapter';
 import { PhelCompletionProvider } from './phelCompletionProvider';
 import { PhelHoverProvider } from './phelHoverProvider';
+import { PhelSignatureHelpProvider } from './phelSignatureHelpProvider';
 
 let sourceMapManager: SourceMapManager;
 
@@ -112,6 +113,15 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.languages.registerHoverProvider('phel', new PhelHoverProvider())
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerSignatureHelpProvider(
+            'phel',
+            new PhelSignatureHelpProvider(),
+            '(',
+            ' '
+        )
     );
 
     // Provide hover information for breakpoints
