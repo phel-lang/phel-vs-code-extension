@@ -50,7 +50,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.phel",
-					"match": "(?<=\\(|\\{|\\[|\\s)(with-output-buffer|with-mock-wrapper|unquote-splicing|extend-protocol|definterface\\*?|defexception\\*?|with-bindings|future-fiber|with-redefs|with-config|symbol-info|extend-type|explain-sym|defprotocol|with-mocks|when-first|defstruct\\*?|when-some|instance\\?|defrecord|defmethod|defmacro-|when-not|when-let|lazy-seq|lazy-cat|hash-map|defmulti|defmacro|unquote|testing|some->>|set-var|require|if-some|foreach|finally|dotimes|deftype|deftest|defspec|declare|cond->>|comment|binding|vector|source|some->|reify\\*?|if-not|if-let|future|cond->|concat|assert|throw|recur|quote|match|letfn|in-ns|doseq|dofor|deref|delay|defn-|condp|catch|async|apply|when|time|loop|load|list|html|doto|defn|def-|conj|cond|case|as->|var|use|try|pop|new|let|for|doc|dir|def|are|and|->>|or|ns|is|if|fn|do|->)(?=\\s|\\)|\\]|\\})"
+					"match": "(?<=\\(|\\{|\\[|\\s)(with-output-buffer|with-mock-wrapper|unquote-splicing|extend-protocol|definterface\\*?|defexception\\*?|with-bindings|future-fiber|with-redefs|with-config|symbol-info|extend-type|explain-sym|defprotocol|with-mocks|when-first|defstruct\\*?|when-some|instance\\?|defrecord|defmethod|defmacro-|when-not|when-let|lazy-seq|lazy-cat|hash-map|defmulti|defmacro|unquote|testing|some->>|set-var|require|if-some|foreach|finally|dotimes|deftype|deftest|defspec|declare|cond->>|comment|binding|vector|source|some->|reify\\*?|if-not|if-let|future|cond->|concat|assert|throw|recur|quote|match|letfn|in-ns|doseq|dofor|deref|delay|defn-|condp|catch|async|apply|when|time|loop|load|list|html|doto|defn|def-|conj|cond|case|aset|as->|var|use|try|pop|new|let|for|doc|dir|def|are|and|->>|or|ns|is|if|fn|do|->)(?=\\s|\\)|\\]|\\})"
 				},
 				{
 					"name": "keyword.control.phel",
@@ -109,12 +109,12 @@
 					"match": "#_"
 				},
 				{
-					"name": "punctuation.other.phel",
-					"match": "[\\`\\'\\,\\^]"
+					"name": "punctuation.other.unquote-splicing.phel",
+					"match": "~@|,@"
 				},
 				{
-					"name": "punctuation.other.unquote-splicing.phel",
-					"match": ",@"
+					"name": "punctuation.other.phel",
+					"match": "[~`',^]"
 				}
 			]
 		},
@@ -127,7 +127,7 @@
 			"match": "(?<![\\-])[^\\s\\#\\(\\)\\{\\}\\[\\]\\'\\\"\\,\\`]+"
 		},
 		"short-fn": {
-			"begin": "(\\|\\()",
+			"begin": "(#\\(|\\|\\()",
 			"beginCaptures": {
 				"1": {
 					"name": "punctuation.definition.short-fn.begin.phel"
@@ -143,7 +143,7 @@
 			"patterns": [
 				{
 					"name": "variable.parameter.positional.phel",
-					"match": "\\$[0-9]*|\\$&"
+					"match": "%[0-9]*|%&|\\$[0-9]*|\\$&"
 				},
 				{
 					"include": "#all"
