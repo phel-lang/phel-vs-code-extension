@@ -1,6 +1,6 @@
 # Tracing with taps
 
-For ad-hoc inspection without setting up a full debug session, Phel ships a Clojure-style **tap registry** in `phel\core`.
+For ad-hoc inspection without setting up a full debug session, Phel ships a Clojure-style **tap registry** in `phel.core`.
 
 ## API
 
@@ -13,7 +13,7 @@ For ad-hoc inspection without setting up a full debug session, Phel ships a Cloj
 ## Example
 
 ```phel
-(ns my-app\core)
+(ns my-app.core)
 
 ;; Print every tapped value (or push to a logger, atom, file, etc.)
 (add-tap println)
@@ -30,7 +30,7 @@ For ad-hoc inspection without setting up a full debug session, Phel ships a Cloj
 
 ## Semantics
 
-- **Synchronous.** Unlike Clojure, taps run inline on the calling thread — Phel has no background queue.
+- **Synchronous.** Unlike Clojure, taps run inline on the calling thread - Phel has no background queue.
 - **Fault-isolated.** Exceptions thrown by individual tap handlers are swallowed so a buggy tap can't take down the producer or other taps.
 - **Set-based.** Adding the same function twice still registers it once (`add-tap` `conj`'s into a set).
 

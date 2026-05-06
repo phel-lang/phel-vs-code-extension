@@ -28,11 +28,11 @@ Other: `comment`, `time`, `lazy-seq`, `lazy-cat`, `match`, `instance?`, `pop`, `
 ## Anonymous functions
 
 ```phel
-#(+ %1 %2)        ;; preferred — Clojure-style
+#(+ %1 %2)        ;; preferred - Clojure-style
 #(* % %)          ;; % is shorthand for %1
 #(apply str %&)   ;; %& captures rest
 
-|(+ $1 $2)        ;; legacy — deprecated upstream, still highlighted
+|(+ $1 $2)        ;; legacy - deprecated upstream, still highlighted
 ```
 
 ## Comments
@@ -40,7 +40,7 @@ Other: `comment`, `time`, `lazy-seq`, `lazy-cat`, `match`, `instance?`, `pop`, `
 ```phel
 ;; preferred line comment
 ; also a line comment
-# legacy line comment — deprecated, still highlighted
+# legacy line comment - deprecated, still highlighted
 
 #| legacy block comment |#
 ;; (deprecated, still highlighted)
@@ -55,7 +55,7 @@ Other: `comment`, `time`, `lazy-seq`, `lazy-cat`, `match`, `instance?`, `pop`, `
 `(1 ~x ~@xs)       ;; quasiquote, unquote, unquote-splicing
 ^:private          ;; metadata
 @my-atom           ;; deref
-,form  ,@xs        ;; legacy unquote / splicing — still highlighted
+,form  ,@xs        ;; legacy unquote / splicing - still highlighted
 ```
 
 ## Tagged literals

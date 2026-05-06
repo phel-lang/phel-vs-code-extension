@@ -4,7 +4,7 @@ The extension bundles a native debug adapter (`type: "phel"`) that translates be
 
 ## Prerequisites
 
-Install and configure **Xdebug** in your PHP installation. The adapter speaks Xdebug's DBGP protocol over TCP — no PHP Debug extension required.
+Install and configure **Xdebug** in your PHP installation. The adapter speaks Xdebug's DBGP protocol over TCP - no PHP Debug extension required.
 
 ## Setup
 
@@ -36,7 +36,7 @@ Install and configure **Xdebug** in your PHP installation. The adapter speaks Xd
 
 4. **Start debugging**:
    - Press <kbd>F5</kbd> or **Run → Start Debugging**.
-   - Run your Phel application — e.g. `vendor/bin/phel run src/main.phel`.
+   - Run your Phel application - e.g. `vendor/bin/phel run src/main.phel`.
    - Breakpoints hit and show your Phel source code.
 
 ## Configuration options
@@ -71,16 +71,16 @@ In the container, set `xdebug.client_host=host.docker.internal` (macOS / Windows
 
 ## What you get
 
-- **Source-level breakpoints** — set them in `.phel`, hit them with the original Phel line + column.
-- **Phel-friendly variables** — vectors render as `[3 items]`, hash maps as `{:k v}`, keywords as `:name`. Internal Phel runtime structures stay collapsed unless you opt in.
-- **Multi-expression line handling** — when a single Phel line compiles to several PHP statements, the adapter consolidates breakpoints so the line behaves as one unit.
-- **Exception breakpoints** — break on all PHP exceptions or just uncaught ones (configure in the Run & Debug sidebar).
-- **Step filter** — `skipPhelInternals: true` (default) keeps stepping inside *your* code, not Phel's runtime.
+- **Source-level breakpoints** - set them in `.phel`, hit them with the original Phel line + column.
+- **Phel-friendly variables** - vectors render as `[3 items]`, hash maps as `{:k v}`, keywords as `:name`. Internal Phel runtime structures stay collapsed unless you opt in.
+- **Multi-expression line handling** - when a single Phel line compiles to several PHP statements, the adapter consolidates breakpoints so the line behaves as one unit.
+- **Exception breakpoints** - break on all PHP exceptions or just uncaught ones (configure in the Run & Debug sidebar).
+- **Step filter** - `skipPhelInternals: true` (default) keeps stepping inside *your* code, not Phel's runtime.
 
 ## Commands
 
-- **Phel: Show Compiled PHP Location** — jump from the current `.phel` line to its compiled PHP equivalent.
-- **Phel: Clear Source Map Cache** — drop cached source maps after a Phel rebuild.
+- **Phel: Show Compiled PHP Location** - jump from the current `.phel` line to its compiled PHP equivalent.
+- **Phel: Clear Source Map Cache** - drop cached source maps after a Phel rebuild.
 
 ## Troubleshooting
 
@@ -88,7 +88,7 @@ In the container, set `xdebug.client_host=host.docker.internal` (macOS / Windows
 |---|---|
 | Breakpoints show as hollow circles | Phel hasn't been compiled yet, or the cache directory is wrong |
 | Adapter reports "no source map for `X.php`" | The `.phel` file was not compiled with source maps enabled |
-| Steps land in unexpected files | `skipPhelInternals` is false, or `skipFiles` is empty — add globs |
+| Steps land in unexpected files | `skipPhelInternals` is false, or `skipFiles` is empty - add globs |
 | Container debugging hangs | Missing `pathMappings`, or `xdebug.client_host` not set inside the container |
 
 For ad-hoc tracing without setting up a full debug session, see [Tracing with taps](taps.md).

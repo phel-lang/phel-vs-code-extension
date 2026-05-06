@@ -24,7 +24,7 @@ Useful scripts:
 
 ## Running the extension locally
 
-Open the repo in VS Code and press <kbd>F5</kbd>. That starts an Extension Development Host with this extension loaded and source-mapped — set breakpoints in `src/*.ts`, then exercise the extension by opening a `.phel` file in the Host window.
+Open the repo in VS Code and press <kbd>F5</kbd>. That starts an Extension Development Host with this extension loaded and source-mapped - set breakpoints in `src/*.ts`, then exercise the extension by opening a `.phel` file in the Host window.
 
 ## Branches
 
@@ -39,10 +39,10 @@ The default branch is `main`. Topic branches use a `<type>/<short-slug>` shape, 
 
 Use [Conventional Commits](https://www.conventionalcommits.org/). Common prefixes in this repo:
 
-- `feat(<area>): …` — new user-visible behaviour
-- `fix(<area>): …` — bug fix
-- `chore(deps): …` — dependency / tooling changes
-- `docs(<area>): …` — README, CHANGELOG, comments
+- `feat(<area>): …` - new user-visible behaviour
+- `fix(<area>): …` - bug fix
+- `chore(deps): …` - dependency / tooling changes
+- `docs(<area>): …` - README, CHANGELOG, comments
 
 Keep the subject under ~70 characters; put the *why* in the body when it isn't obvious from the diff.
 
@@ -89,9 +89,9 @@ Subsequent `vsce publish` calls reuse the cached credentials. To rotate, run `vs
 
 Listed in `package.json` and shipped inside the `.vsix`:
 
-- `displayName`, `description`, `categories`, `keywords` — surface in search.
-- `repository.url`, `bugs.url`, `homepage` — render as sidebar links.
-- `icon` — 128×128 PNG (currently absent; add one before the first publish for a better listing).
+- `displayName`, `description`, `categories`, `keywords` - surface in search.
+- `repository.url`, `bugs.url`, `homepage` - render as sidebar links.
+- `icon` - 128×128 PNG (currently absent; add one before the first publish for a better listing).
 
 ## Updating the language surface
 
@@ -99,7 +99,7 @@ The completion and grammar features are driven by snapshots of the phel-lang cor
 
 ### Grammar (`syntaxes/phel.tmLanguage.json`)
 
-The `corelib` pattern in `syntaxes/phel.tmLanguage.json` is a single regex alternation of every special form and macro that should be highlighted as `keyword.control.phel`. **The order matters** — alternation is left-to-right, so longer names must come first (`defmacro-` before `defmacro`, `cond->>` before `cond->` before `cond`, `if-some` before `if`). When you edit the list, sort it longest-first.
+The `corelib` pattern in `syntaxes/phel.tmLanguage.json` is a single regex alternation of every special form and macro that should be highlighted as `keyword.control.phel`. **The order matters** - alternation is left-to-right, so longer names must come first (`defmacro-` before `defmacro`, `cond->>` before `cond->` before `cond`, `if-some` before `if`). When you edit the list, sort it longest-first.
 
 To verify highlighting changes without launching VS Code, run:
 
@@ -111,13 +111,13 @@ That uses the same `vscode-textmate` + `vscode-oniguruma` engine VS Code ships w
 
 ### Completion (`src/phelCoreSymbols.ts`)
 
-Three readonly arrays — `SPECIAL_FORMS`, `MACROS`, `CORE_FNS` — back the completion provider. To regenerate them from a phel-lang checkout:
+Three readonly arrays - `SPECIAL_FORMS`, `MACROS`, `CORE_FNS` - back the completion provider. To regenerate them from a phel-lang checkout:
 
 ```bash
 scripts/regen-core-symbols.sh /path/to/phel-lang > /tmp/phel-symbols.txt
 ```
 
-The script prints the three arrays to stdout. Review the output, then paste the relevant arrays into `src/phelCoreSymbols.ts`. The script does not write the file in place on purpose — manual review keeps surprises (private helpers leaking into completion) out of the published surface.
+The script prints the three arrays to stdout. Review the output, then paste the relevant arrays into `src/phelCoreSymbols.ts`. The script does not write the file in place on purpose - manual review keeps surprises (private helpers leaking into completion) out of the published surface.
 
 ### Snippets (`snippets/phel.code-snippets`)
 
