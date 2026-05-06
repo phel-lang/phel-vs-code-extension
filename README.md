@@ -183,32 +183,55 @@ Taps run synchronously on the calling thread; exceptions thrown by a tap handler
 
 ## Installation
 
-### From VS Code Marketplace
+### Option 1 — VS Code Marketplace
 
-Search for "Phel Lang" in the VS Code extensions marketplace.
+Open the Extensions sidebar (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>), search for **"Phel Lang"**, and click **Install**. Or from the terminal:
 
-### Manual Installation
+```bash
+code --install-extension phel-lang.phel-lang
+```
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/phel-lang/phel-vs-code-extension.git
-   ```
+### Option 2 — Pre-built `.vsix`
 
-2. Create a symlink in your VS Code extensions directory:
+Download the latest `.vsix` from the [releases page](https://github.com/phel-lang/phel-vs-code-extension/releases) and install it:
 
-   **macOS/Linux:**
-   ```bash
-   cd ~/.vscode/extensions
-   ln -s /path/to/phel-vs-code-extension phel-lang.phel-lang-0.4.0
-   ```
+- **CLI:** `code --install-extension phel-lang-0.4.0.vsix`
+- **GUI:** Extensions sidebar → "..." menu → *Install from VSIX...*
 
-   **Windows (PowerShell as Administrator):**
-   ```powershell
-   cd $env:USERPROFILE\.vscode\extensions
-   New-Item -ItemType SymbolicLink -Target "C:\path\to\phel-vs-code-extension" -Path "phel-lang.phel-lang-0.4.0"
-   ```
+### Option 3 — Build from source
 
-3. Restart VS Code
+For the very latest changes on `main` (or to develop the extension), build the `.vsix` yourself:
+
+```bash
+git clone https://github.com/phel-lang/phel-vs-code-extension.git
+cd phel-vs-code-extension
+npm install
+npm run compile
+npx @vscode/vsce package      # produces phel-lang-<version>.vsix
+code --install-extension phel-lang-*.vsix
+```
+
+### Option 4 — Symlink for live development
+
+Iterate on grammar / TypeScript without rebuilding the `.vsix` each time:
+
+**macOS / Linux**
+```bash
+cd ~/.vscode/extensions
+ln -s /absolute/path/to/phel-vs-code-extension phel-lang.phel-lang-0.4.0
+```
+
+**Windows** (PowerShell, Administrator)
+```powershell
+cd $env:USERPROFILE\.vscode\extensions
+New-Item -ItemType SymbolicLink `
+    -Target "C:\absolute\path\to\phel-vs-code-extension" `
+    -Path "phel-lang.phel-lang-0.4.0"
+```
+
+Restart VS Code (or use *Developer: Reload Window*) and changes to `syntaxes/`, `snippets/`, and the compiled `out/` directory take effect.
+
+> Press <kbd>F5</kbd> inside the cloned repo to launch an Extension Development Host with the extension loaded and source-mapped — the recommended setup when developing.
 
 ## Requirements
 
