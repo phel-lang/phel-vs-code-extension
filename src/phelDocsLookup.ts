@@ -1,0 +1,105 @@
+// Pure helpers that turn `PhelDoc` records into the things providers need:
+// resolve a typed symbol to a doc, and render a doc as Markdown for hover /
+// completion popups. Kept free of `vscode` imports so they can be unit-tested
+// without booting the editor.
+
+import type { PhelDoc } from './phelDocs';
+
+/**
+ * Find the best `PhelDoc` for a typed symbol.
+ *
+ * - An exact `<ns>/<name>` match always wins.
+ * - Otherwise look for a public symbol with that bare `name`. Prefer
+ *   `phel.core` (the auto-imported namespace), then any other public
+ *   namespace, then private definitions as a last resort.
+ *
+ * Returns `undefined` if nothing matches.
+ */
+export function lookupSymbol(symbol: string, docs: readonly PhelDoc[]): PhelDoc | undefined {
+    if (!symbol) {
+        return undefined;
+    }
+
+    const exact = docs.find((d) => d.qualifiedName === symbol);
+    if (exact) {
+        return exact;
+    }
+
+    const matches = docs.filter((d) => d.name === symbol);
+    if (matches.length === 0) {
+        return undefined;
+    }
+
+    const publicCore = matches.find((d) => !d.private && d.ns === 'phel.core');
+    if (publicCore) {
+        return publicCore;
+    }
+
+    const anyPublic = matches.find((d) => !d.private);
+    if (anyPublic) {
+        return anyPublic;
+    }
+
+    return matches[0];
+}
+
+/**
+ * Render a `PhelDoc` as a Markdown string suitable for hover popups and
+ * completion-item documentation. Each section is omitted if absent.
+ */
+export function renderDocMarkdown(doc: PhelDoc): string {
+    const lines: string[] = [];
+
+    const kindLabel = describeKind(doc);
+    lines.push(`**\`${doc.qualifiedName}\`** _${kindLabel}_`);
+    lines.push('');
+
+    if (doc.signature) {
+        lines.push('```phel');
+        lines.push(doc.signature);
+        if (doc.arities && doc.arities.length > 1) {
+            for (const arity of doc.arities.slice(1)) {
+                lines.push(arity);
+            }
+        }
+        lines.push('```');
+        lines.push('');
+    }
+
+    if (doc.doc) {
+        lines.push(doc.doc.trim());
+        lines.push('');
+    }
+
+    if (doc.example) {
+        lines.push('**Example**');
+        lines.push('');
+        lines.push('```phel');
+        lines.push(doc.example.trim());
+        lines.push('```');
+        lines.push('');
+    }
+
+    if (doc.seeAlso && doc.seeAlso.length > 0) {
+        lines.push('**See also:** ' + doc.seeAlso.map((s) => `\`${s}\``).join(', '));
+        lines.push('');
+    }
+
+    if (doc.sourceUrl) {
+        lines.push(`[View source](${doc.sourceUrl})`);
+    }
+
+    return lines.join('\n').trimEnd();
+}
+
+function describeKind(doc: PhelDoc): string {
+    const visibility = doc.private ? 'private ' : '';
+    switch (doc.kind) {
+        case 'fn':
+            return `${visibility}function`;
+        case 'macro':
+            return `${visibility}macro`;
+        case 'def':
+            return `${visibility}def`;
+    }
+}

@@ -1,34 +1,61 @@
 import * as vscode from 'vscode';
+import { PHEL_DOCS } from './phelCoreDocs';
 import { CORE_FNS, MACROS, SPECIAL_FORMS } from './phelCoreSymbols';
+import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
 
 const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
 
-function buildItems(): vscode.CompletionItem[] {
-    const items: vscode.CompletionItem[] = [];
+interface ItemSpec {
+    label: string;
+    kind: vscode.CompletionItemKind;
+    detail: string;
+}
 
+function buildSpecs(): ItemSpec[] {
+    const specs: ItemSpec[] = [];
     for (const name of SPECIAL_FORMS) {
-        const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Keyword);
-        item.detail = 'Phel special form';
-        items.push(item);
+        specs.push({
+            label: name,
+            kind: vscode.CompletionItemKind.Keyword,
+            detail: 'Phel special form',
+        });
     }
-
     for (const name of MACROS) {
-        const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Keyword);
-        item.detail = 'Phel macro';
-        items.push(item);
+        specs.push({
+            label: name,
+            kind: vscode.CompletionItemKind.Keyword,
+            detail: 'Phel macro',
+        });
     }
-
     for (const name of CORE_FNS) {
-        const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Function);
-        item.detail = 'Phel core function';
-        items.push(item);
+        specs.push({
+            label: name,
+            kind: vscode.CompletionItemKind.Function,
+            detail: 'Phel core function',
+        });
     }
+    return specs;
+}
 
-    return items;
+function buildItem(spec: ItemSpec, range?: vscode.Range): vscode.CompletionItem {
+    const item = new vscode.CompletionItem(spec.label, spec.kind);
+    item.detail = spec.detail;
+    const doc = lookupSymbol(spec.label, PHEL_DOCS);
+    if (doc) {
+        const md = new vscode.MarkdownString(renderDocMarkdown(doc));
+        md.isTrusted = false;
+        md.supportHtml = false;
+        item.documentation = md;
+    }
+    if (range) {
+        item.range = range;
+    }
+    return item;
 }
 
 export class PhelCompletionProvider implements vscode.CompletionItemProvider {
-    private readonly items: vscode.CompletionItem[] = buildItems();
+    private readonly specs: ItemSpec[] = buildSpecs();
+    private readonly bareItems: vscode.CompletionItem[] = this.specs.map((spec) => buildItem(spec));
 
     provideCompletionItems(
         document: vscode.TextDocument,
@@ -36,13 +63,8 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
     ): vscode.ProviderResult<vscode.CompletionItem[]> {
         const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
         if (!range) {
-            return this.items;
+            return this.bareItems;
         }
-        return this.items.map((item) => {
-            const cloned = new vscode.CompletionItem(item.label, item.kind);
-            cloned.detail = item.detail;
-            cloned.range = range;
-            return cloned;
-        });
+        return this.specs.map((spec) => buildItem(spec, range));
     }
 }
