@@ -1,0 +1,178 @@
+{
+    "ns": {
+        "prefix": "ns",
+        "body": [
+            "(ns ${1:my-app\\\\core}",
+            "  (:require ${2:phel\\\\core :as core}))"
+        ],
+        "description": "Namespace declaration"
+    },
+    "defn": {
+        "prefix": "defn",
+        "body": [
+            "(defn ${1:name}",
+            "  \"${2:doc}\"",
+            "  [${3:args}]",
+            "  ${0})"
+        ],
+        "description": "Public function definition"
+    },
+    "defn-": {
+        "prefix": "defn-",
+        "body": [
+            "(defn- ${1:name}",
+            "  \"${2:doc}\"",
+            "  [${3:args}]",
+            "  ${0})"
+        ],
+        "description": "Private function definition"
+    },
+    "def": {
+        "prefix": "def",
+        "body": ["(def ${1:name} ${0:value})"],
+        "description": "Top-level binding"
+    },
+    "fn": {
+        "prefix": "fn",
+        "body": ["(fn [${1:args}] ${0})"],
+        "description": "Anonymous function"
+    },
+    "let": {
+        "prefix": "let",
+        "body": [
+            "(let [${1:name} ${2:value}]",
+            "  ${0})"
+        ],
+        "description": "Local bindings"
+    },
+    "if": {
+        "prefix": "if",
+        "body": [
+            "(if ${1:test}",
+            "  ${2:then}",
+            "  ${0:else})"
+        ],
+        "description": "Conditional"
+    },
+    "when": {
+        "prefix": "when",
+        "body": [
+            "(when ${1:test}",
+            "  ${0})"
+        ],
+        "description": "Conditional without else"
+    },
+    "cond": {
+        "prefix": "cond",
+        "body": [
+            "(cond",
+            "  ${1:test} ${2:expr}",
+            "  :else ${0})"
+        ],
+        "description": "Multi-branch conditional"
+    },
+    "case": {
+        "prefix": "case",
+        "body": [
+            "(case ${1:expr}",
+            "  ${2:value} ${3:result}",
+            "  ${0:default})"
+        ],
+        "description": "Value dispatch"
+    },
+    "doseq": {
+        "prefix": "doseq",
+        "body": [
+            "(doseq [${1:x} ${2:coll}]",
+            "  ${0})"
+        ],
+        "description": "Iterate for side effects"
+    },
+    "for": {
+        "prefix": "for",
+        "body": [
+            "(for [${1:x} :in ${2:coll}]",
+            "  ${0})"
+        ],
+        "description": "List comprehension"
+    },
+    "loop-recur": {
+        "prefix": "loop",
+        "body": [
+            "(loop [${1:acc} ${2:init}]",
+            "  (if ${3:done?}",
+            "    ${4:acc}",
+            "    (recur ${0})))"
+        ],
+        "description": "Loop with recur"
+    },
+    "try": {
+        "prefix": "try",
+        "body": [
+            "(try",
+            "  ${1:body}",
+            "  (catch \\\\Throwable ${2:e}",
+            "    ${0}))"
+        ],
+        "description": "Try / catch"
+    },
+    "defmacro": {
+        "prefix": "defmacro",
+        "body": [
+            "(defmacro ${1:name}",
+            "  \"${2:doc}\"",
+            "  [${3:args}]",
+            "  ${0})"
+        ],
+        "description": "Macro definition"
+    },
+    "defstruct": {
+        "prefix": "defstruct",
+        "body": ["(defstruct ${1:name} [${0:fields}])"],
+        "description": "Struct definition"
+    },
+    "definterface": {
+        "prefix": "definterface",
+        "body": [
+            "(definterface ${1:Name}",
+            "  (${0:method [this args]}))"
+        ],
+        "description": "Interface definition"
+    },
+    "defprotocol": {
+        "prefix": "defprotocol",
+        "body": [
+            "(defprotocol ${1:Name}",
+            "  (${0:method [this args]}))"
+        ],
+        "description": "Protocol definition"
+    },
+    "defexception": {
+        "prefix": "defexception",
+        "body": ["(defexception ${1:Name} ${0:\"message\"})"],
+        "description": "Exception type"
+    },
+    "deftest": {
+        "prefix": "deftest",
+        "body": [
+            "(deftest ${1:test-name}",
+            "  (is ${0}))"
+        ],
+        "description": "Test case"
+    },
+    "->": {
+        "prefix": "->",
+        "body": ["(-> ${1:x}", "    ${0})"],
+        "description": "Thread-first macro"
+    },
+    "->>": {
+        "prefix": "->>",
+        "body": ["(->> ${1:x}", "     ${0})"],
+        "description": "Thread-last macro"
+    },
+    "comment": {
+        "prefix": "comment",
+        "body": ["(comment", "  ${0})"],
+        "description": "Comment block (form-aware)"
+    }
+}
