@@ -1,5 +1,8 @@
 .vscode/**
 .vscode-test/**
+.idea/**
+.git/**
+.github/**
 src/**
 **/*.ts
 **/*.map
