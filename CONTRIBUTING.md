@@ -59,7 +59,39 @@ Keep the subject under ~70 characters; put the *why* in the body when it isn't o
 2. Bump it in `package.json` and run `npm install` so `package-lock.json` follows.
 3. Move the `Unreleased` block in `CHANGELOG.md` under the new version and date.
 4. Open a `chore(release): x.y.z` PR.
-5. After merge, tag `vX.Y.Z` on `main` and (if publishing) run `vsce package` / `vsce publish`.
+5. After merge, tag `vX.Y.Z` on `main`.
+6. Build the package and publish:
+   ```bash
+   npx @vscode/vsce package                 # produces phel-lang-x.y.z.vsix
+   gh release create vX.Y.Z phel-lang-*.vsix --notes-file release-notes.md
+   npx @vscode/vsce publish                 # pushes to the Marketplace
+   ```
+
+### Marketplace setup (one-time)
+
+The extension's `publisher` field is `chemaclass`. To publish you need a Personal Access Token (PAT) tied to that account:
+
+1. Go to <https://dev.azure.com>, sign in with the same account that owns the [`chemaclass` publisher](https://marketplace.visualstudio.com/manage/publishers/chemaclass).
+2. **User settings → Personal Access Tokens → New Token**:
+   - Organization: **All accessible organizations**
+   - Expiration: pick what you're comfortable with (max 1 year)
+   - Scopes → **Custom defined** → check **Marketplace > Manage**
+3. Copy the token (shown once).
+4. Cache it locally:
+   ```bash
+   npx @vscode/vsce login chemaclass
+   # paste the PAT when prompted
+   ```
+
+Subsequent `vsce publish` calls reuse the cached credentials. To rotate, run `vsce logout chemaclass` and repeat.
+
+### Marketplace assets
+
+Listed in `package.json` and shipped inside the `.vsix`:
+
+- `displayName`, `description`, `categories`, `keywords` — surface in search.
+- `repository.url`, `bugs.url`, `homepage` — render as sidebar links.
+- `icon` — 128×128 PNG (currently absent; add one before the first publish for a better listing).
 
 ## Updating the language surface
 

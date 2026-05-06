@@ -2,7 +2,7 @@
 
 Requires **VS Code 1.75+**.
 
-> **Note:** the extension is not yet on the VS Code Marketplace. Marketplace publication is on the roadmap; for now use one of the paths below. The `.vsix` from the GitHub releases page is the recommended option for end users.
+> **Note:** Marketplace publication is in progress. Once published under publisher [`chemaclass`](https://marketplace.visualstudio.com/manage/publishers/chemaclass), `code --install-extension chemaclass.phel-lang` will work. Until then, use one of the paths below.
 
 ## Option 1 — Pre-built `.vsix` (recommended)
 
