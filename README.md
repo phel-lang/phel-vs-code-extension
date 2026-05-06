@@ -16,13 +16,15 @@ Writing Phel without editor support means colourless code, no completion for the
 
 ## Install
 
+Grab the latest `.vsix` from the [releases page](https://github.com/phel-lang/phel-vs-code-extension/releases) and run:
+
 ```bash
-code --install-extension phel-lang.phel-lang
+code --install-extension phel-lang-0.5.0.vsix
 ```
 
-Or grab a `.vsix` from the [releases page](https://github.com/phel-lang/phel-vs-code-extension/releases) and run `code --install-extension phel-lang-*.vsix`. Requires VS Code **1.75+**.
+Or in VS Code: Extensions sidebar → **`...`** menu → *Install from VSIX...*
 
-Other paths (build from source, symlink for live development): see [docs/installation.md](docs/installation.md).
+Requires VS Code **1.75+**. Marketplace publication is on the roadmap. Other paths (build from source, symlink for live development): see [docs/installation.md](docs/installation.md).
 
 ## First steps
 
@@ -42,7 +44,3 @@ Other paths (build from source, symlink for live development): see [docs/install
 | Tracing with `tap>` | [docs/taps.md](docs/taps.md) |
 | Settings reference | [docs/settings.md](docs/settings.md) |
 | Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
-
-## Contributing · Changelog · License
-
-[CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [LICENSE](LICENSE) (MIT)
