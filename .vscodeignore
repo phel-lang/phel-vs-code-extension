@@ -14,3 +14,5 @@ vsc-extension-quickstart.md
 node_modules/.bin/**
 node_modules/@types/**
 **/*.test.js
+CONTRIBUTING.md
+scripts/**
