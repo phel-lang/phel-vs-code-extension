@@ -18,17 +18,15 @@ if [[ -z "$PHEL_LANG_ROOT" ]]; then
 fi
 
 SYMBOL_PHP="$PHEL_LANG_ROOT/src/php/Lang/Symbol.php"
-PHEL_SRC="$PHEL_LANG_ROOT/src/phel"
+PHEL_CORE_FILE="$PHEL_LANG_ROOT/src/phel/core.phel"
+PHEL_CORE_DIR="$PHEL_LANG_ROOT/src/phel/core"
 
-if [[ ! -f "$SYMBOL_PHP" ]]; then
-    echo "Symbol.php not found at $SYMBOL_PHP" >&2
-    exit 1
-fi
-
-if [[ ! -d "$PHEL_SRC" ]]; then
-    echo "Phel source dir not found at $PHEL_SRC" >&2
-    exit 1
-fi
+for path in "$SYMBOL_PHP" "$PHEL_CORE_FILE"; do
+    if [[ ! -e "$path" ]]; then
+        echo "expected $path to exist" >&2
+        exit 1
+    fi
+done
 
 format_array() {
     local label="$1"
@@ -45,14 +43,21 @@ extract_special_forms() {
         sort -u
 }
 
+core_files() {
+    printf '%s\n' "$PHEL_CORE_FILE"
+    if [[ -d "$PHEL_CORE_DIR" ]]; then
+        find "$PHEL_CORE_DIR" -name '*.phel'
+    fi
+}
+
 extract_macros() {
-    find "$PHEL_SRC" -name '*.phel' -exec grep -hE '^\(defmacro ' {} + |
+    core_files | xargs grep -hE '^\(defmacro ' |
         awk '{print $2}' |
         sort -u
 }
 
 extract_core_fns() {
-    find "$PHEL_SRC" -name '*.phel' -exec grep -hE '^\(defn ' {} + |
+    core_files | xargs grep -hE '^\(defn ' |
         awk '{print $2}' |
         sort -u
 }

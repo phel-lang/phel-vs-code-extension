@@ -9,18 +9,19 @@ This VS Code extension provides syntax highlighting and language support for [Ph
   - Macros: `when`, `cond`, `cond->`, `cond->>`, `condp`, `case`, `->`, `->>`, `some->`, `some->>`, `as->`, `for`, `doseq`, `dotimes`, `match`, `defprotocol`, `defrecord`, `deftype`, `deftest`, `extend-type`, `extend-protocol`, `with-redefs`, etc.
   - Literals: keywords (`:keyword`), strings, numbers, booleans, `nil`
   - Collections: vectors `[]`, maps `{}`, sets `#{}`, lists `'()`
-  - Short anonymous functions: `|(+ $1 $2)`
+  - Short anonymous functions: `#(+ %1 %2)` (and the deprecated `|(+ $1 $2)`)
+  - Reader macros: quote `'`, quasiquote `` ` ``, unquote `~`, unquote-splicing `~@`, metadata `^` (legacy `,` / `,@` still highlighted)
 
 - **Code completion** for every public symbol shipped with phel-lang core:
   - All special forms and macros (suggested as keywords)
-  - 382 public functions from `phel\core` and friends — `assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, etc. (suggested as functions)
+  - 394 public functions from `phel\core` (`assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, …) suggested as functions
 
 - **Code snippets** for common scaffolding — type `defn`, `let`, `cond`, `try`, `deftest`, `->`, … and tab through the placeholders.
 
 - **Comment support**:
-  - Line comments: `#` or `;`
-  - Block comments: `#| ... |#`
+  - Line comments: `;` or `;;` (legacy `#` still highlighted)
   - Inline comments: `#_` (comments out next form)
+  - Block comments: `#| ... |#` (deprecated upstream — kept for legacy code)
 
 - **Breakpoint support**: Set breakpoints on Phel files for debugging
 
@@ -33,38 +34,50 @@ This VS Code extension provides syntax highlighting and language support for [Ph
 ### Keywords and Special Forms
 
 ```phel
-(ns my-app)
+(ns my-app\core)
 
 (defn greet [name]
   (str "Hello, " name "!"))
 
 (def users [{:name "Alice"} {:name "Bob"}])
 
-(-> users
-    (filter |(> (count (:name $)) 3))
-    (map :name))
+(->> users
+     (filter #(> (count (:name %)) 3))
+     (map :name))
 ```
 
 ### Short Anonymous Functions
 
 ```phel
-|(+ $1 $2)      # Takes 2 arguments
-|(* $ $)        # Single argument referenced as $
-|(apply f $&)   # $& captures all arguments
+#(+ %1 %2)        ;; Two args: %1, %2
+#(* % %)          ;; Single arg: % is shorthand for %1
+#(apply str %&)   ;; %& captures rest args
+```
+
+The legacy `|(...)` form with `$1`, `$2`, `$&` is still recognised for older code:
+
+```phel
+|(+ $1 $2)        ;; Deprecated — prefer #(+ %1 %2)
 ```
 
 ### Comments
 
 ```phel
-# Line comment
-; Also a line comment
+;; Standalone comment (preferred)
+;  Single-semi line comment
 
-#|
-  Block comment
-  spanning multiple lines
-|#
+(println 1 #_ 2 3)  ;; Prints: 1 3 (2 is commented out)
 
-(println 1 #_ 2 3)  # Prints: 1 3 (2 is commented out)
+#| Multiline comment — deprecated upstream, still highlighted. |#
+```
+
+### Reader Macros
+
+```phel
+'symbol            ;; Quote
+`(1 ~x ~@xs)       ;; Quasiquote with unquote and unquote-splicing
+^:private          ;; Metadata
+@my-atom           ;; Deref
 ```
 
 ## Debugging Phel Code
@@ -181,13 +194,13 @@ Search for "Phel Lang" in the VS Code extensions marketplace.
    **macOS/Linux:**
    ```bash
    cd ~/.vscode/extensions
-   ln -s /path/to/phel-vs-code-extension phel-lang.phel-lang-0.3.0
+   ln -s /path/to/phel-vs-code-extension phel-lang.phel-lang-0.4.0
    ```
 
    **Windows (PowerShell as Administrator):**
    ```powershell
    cd $env:USERPROFILE\.vscode\extensions
-   New-Item -ItemType SymbolicLink -Target "C:\path\to\phel-vs-code-extension" -Path "phel-lang.phel-lang-0.3.0"
+   New-Item -ItemType SymbolicLink -Target "C:\path\to\phel-vs-code-extension" -Path "phel-lang.phel-lang-0.4.0"
    ```
 
 3. Restart VS Code

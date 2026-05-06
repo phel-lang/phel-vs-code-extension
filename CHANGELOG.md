@@ -2,6 +2,22 @@
 
 All notable changes to the "phel-lang" extension will be documented in this file.
 
+## [0.4.0] - 2026-05-06
+
+Sync with phel-lang `main` (commit `428c59f`).
+
+### Added
+
+- **Anonymous function syntax `#(...)`** with `%`, `%1`, `%2`, …, `%&` placeholders — the form Phel now ships as the default. The legacy `|(...)` form with `$`-placeholders continues to highlight for older code.
+- **Preferred reader macros** `~` (unquote) and `~@` (unquote-splicing) now highlight as reader-macro punctuation alongside the legacy `,` and `,@`.
+- `aset` macro added to grammar and completion (lives in `phel\core`'s `arrays.phel`).
+- Numeric / comparison core fns added to completion: `+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`.
+
+### Changed
+
+- `CONTRIBUTING.md` and `scripts/regen-core-symbols.sh` now scope the `MACROS` and `CORE_FNS` extraction to `phel\core` only (`src/phel/core.phel` plus `src/phel/core/**/*.phel`). Library macros from `phel\test`, `phel\match`, `phel\repl`, `phel\html`, etc. remain in the curated list because they are commonly `:refer`'d unqualified.
+- README documents the new anonymous function and comment syntax (`;` / `;;` preferred over the deprecated `#`).
+
 ## [0.3.0] - 2026-05-06
 
 ### Added
