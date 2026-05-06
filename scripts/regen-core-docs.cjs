@@ -140,8 +140,38 @@ function formatDoc(doc) {
     return lines.join('\n');
 }
 
+// Emit a TypeScript string literal that matches the project's Prettier config
+// (single quotes by default; switch to double quotes when the value itself
+// contains a single quote, escape only what's strictly necessary).
 function jsonString(value) {
-    return JSON.stringify(value);
+    if (typeof value !== 'string') return JSON.stringify(value);
+    if (value.includes("'") && !value.includes('"')) {
+        return '"' + value.replace(/[\\\r\n\t\b\f]/g, escapeControl) + '"';
+    }
+    return "'" + value.replace(/[\\'\r\n\t\b\f]/g, escapeControl) + "'";
+}
+
+function escapeControl(ch) {
+    switch (ch) {
+        case '\\':
+            return '\\\\';
+        case "'":
+            return "\\'";
+        case '"':
+            return '\\"';
+        case '\n':
+            return '\\n';
+        case '\r':
+            return '\\r';
+        case '\t':
+            return '\\t';
+        case '\b':
+            return '\\b';
+        case '\f':
+            return '\\f';
+        default:
+            return ch;
+    }
 }
 
 function summarise(docs) {

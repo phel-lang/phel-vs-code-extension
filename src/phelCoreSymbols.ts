@@ -71,9 +71,7 @@ function namesWhere(predicate: (doc: PhelDoc) => boolean): string[] {
 }
 
 /** Public macros across every shipped `phel.*` namespace. */
-export const MACROS: readonly string[] = namesWhere(
-    (d) => d.kind === 'macro' && !d.private
-);
+export const MACROS: readonly string[] = namesWhere((d) => d.kind === 'macro' && !d.private);
 
 /** Public functions defined inside the auto-imported `phel.core` namespace. */
 export const CORE_FNS: readonly string[] = namesWhere(
