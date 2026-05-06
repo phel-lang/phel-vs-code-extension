@@ -69,9 +69,9 @@ Keep the subject under ~70 characters; put the *why* in the body when it isn't o
 
 ### Marketplace setup (one-time)
 
-The extension's `publisher` field is `chemaclass`. To publish you need a Personal Access Token (PAT) tied to that account:
+The extension's `publisher` field is `Phel-Lang`. To publish you need a Personal Access Token (PAT) tied to that account:
 
-1. Go to <https://dev.azure.com>, sign in with the same account that owns the [`chemaclass` publisher](https://marketplace.visualstudio.com/manage/publishers/chemaclass).
+1. Go to <https://dev.azure.com>, sign in with the same account that owns the [`Phel-Lang` publisher](https://marketplace.visualstudio.com/manage/publishers/Phel-Lang).
 2. **User settings → Personal Access Tokens → New Token**:
    - Organization: **All accessible organizations**
    - Expiration: pick what you're comfortable with (max 1 year)
@@ -79,11 +79,11 @@ The extension's `publisher` field is `chemaclass`. To publish you need a Persona
 3. Copy the token (shown once).
 4. Cache it locally:
    ```bash
-   npx @vscode/vsce login chemaclass
+   npx @vscode/vsce login Phel-Lang
    # paste the PAT when prompted
    ```
 
-Subsequent `vsce publish` calls reuse the cached credentials. To rotate, run `vsce logout chemaclass` and repeat.
+Subsequent `vsce publish` calls reuse the cached credentials. To rotate, run `vsce logout Phel-Lang` and repeat.
 
 ### Marketplace assets
 

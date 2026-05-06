@@ -2,7 +2,7 @@
 
 Requires **VS Code 1.75+**.
 
-> **Note:** Marketplace publication is in progress. Once published under publisher [`chemaclass`](https://marketplace.visualstudio.com/manage/publishers/chemaclass), `code --install-extension chemaclass.phel-lang` will work. Until then, use one of the paths below.
+> **Note:** Marketplace publication is in progress. Once published under publisher [`Phel-Lang`](https://marketplace.visualstudio.com/manage/publishers/Phel-Lang), `code --install-extension Phel-Lang.phel-lang` will work. Until then, use one of the paths below.
 
 ## Option 1 — Pre-built `.vsix` (recommended)
 
