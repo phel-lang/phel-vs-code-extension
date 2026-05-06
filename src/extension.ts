@@ -5,6 +5,7 @@ import * as os from 'os';
 import * as net from 'net';
 import { SourceMapManager } from './sourceMapManager';
 import { PhelDebugSession } from './phelDebugAdapter';
+import { PhelCompletionProvider } from './phelCompletionProvider';
 
 let sourceMapManager: SourceMapManager;
 
@@ -103,6 +104,10 @@ export function activate(context: vscode.ExtensionContext) {
     if (cacheDir) {
         sourceMapManager.addCacheDirectory(cacheDir);
     }
+
+    context.subscriptions.push(
+        vscode.languages.registerCompletionItemProvider('phel', new PhelCompletionProvider())
+    );
 
     // Provide hover information for breakpoints
     context.subscriptions.push(
