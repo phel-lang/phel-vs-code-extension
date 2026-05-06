@@ -189,6 +189,16 @@
                 "command": "phel.showDoc",
                 "title": "Phel: Show Documentation",
                 "category": "Phel"
+            },
+            {
+                "command": "phel.runTest",
+                "title": "Phel: Run Test",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.runTestsInFile",
+                "title": "Phel: Run All Tests in File",
+                "category": "Phel"
             }
         ],
         "configuration": {
@@ -223,6 +233,16 @@
                     "type": "string",
                     "default": "vendor/bin/phel",
                     "description": "Path to the Phel CLI used for formatting. Relative paths resolve against the workspace folder."
+                },
+                "phel.tests.codeLensEnabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show inline CodeLens shortcuts for running individual `deftest` forms and all tests in the current file."
+                },
+                "phel.test.command": {
+                    "type": "string",
+                    "default": "vendor/bin/phel",
+                    "description": "Path to the Phel CLI used by the test CodeLens. Relative paths resolve against the workspace folder."
                 }
             }
         }

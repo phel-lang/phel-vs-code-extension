@@ -13,6 +13,7 @@ import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
 import { buildQuickPickEntries } from './phelShowDoc';
 import { registerDiagnostics } from './phelDiagnosticsProvider';
 import { PhelFormatProvider } from './phelFormatProvider';
+import { PhelTestCodeLensProvider } from './phelTestCodeLensProvider';
 
 let sourceMapManager: SourceMapManager;
 
@@ -142,6 +143,19 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.languages.registerDocumentFormattingEditProvider('phel', new PhelFormatProvider())
     );
 
+    context.subscriptions.push(
+        vscode.languages.registerCodeLensProvider('phel', new PhelTestCodeLensProvider())
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('phel.runTest', (uri?: vscode.Uri, testName?: string) => {
+            runPhelTests(uri, testName);
+        }),
+        vscode.commands.registerCommand('phel.runTestsInFile', (uri?: vscode.Uri) => {
+            runPhelTests(uri);
+        })
+    );
+
     // Provide hover information for breakpoints
     context.subscriptions.push(
         vscode.languages.registerHoverProvider('phel', {
@@ -212,6 +226,28 @@ function wordAtCursor(): string | undefined {
         /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/
     );
     return range ? editor.document.getText(range) : undefined;
+}
+
+function runPhelTests(uri?: vscode.Uri, testName?: string): void {
+    const target = uri ?? vscode.window.activeTextEditor?.document.uri;
+    if (!target) {
+        vscode.window.showWarningMessage('Open a .phel test file first.');
+        return;
+    }
+    const folder = vscode.workspace.getWorkspaceFolder(target);
+    const command = vscode.workspace
+        .getConfiguration('phel')
+        .get<string>('test.command', 'vendor/bin/phel');
+    const cwd = folder?.uri.fsPath ?? path.dirname(target.fsPath);
+    const filePath = path.relative(cwd, target.fsPath) || target.fsPath;
+    const args = ['test'];
+    if (testName) {
+        args.push('--filter', testName);
+    }
+    args.push(filePath);
+    const terminal = vscode.window.createTerminal({ name: 'Phel Tests', cwd });
+    terminal.show(true);
+    terminal.sendText(`${command} ${args.join(' ')}`);
 }
 
 async function pickSymbol(): Promise<string | undefined> {
