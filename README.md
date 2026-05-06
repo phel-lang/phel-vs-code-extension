@@ -234,7 +234,7 @@ Press F5 in VS Code to launch an Extension Development Host with the extension l
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests at [GitHub](https://github.com/phel-lang/phel-vs-code-extension).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions, and how to refresh the language surface (grammar, completion, snippets) when phel-lang core changes. Issues and pull requests are welcome at [GitHub](https://github.com/phel-lang/phel-vs-code-extension).
 
 ## Release Notes
 

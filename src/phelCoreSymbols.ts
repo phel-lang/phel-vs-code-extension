@@ -3,6 +3,8 @@
 //   - SPECIAL_FORMS — `NAME_*` constants in phel-lang's `src/php/Lang/Symbol.php`
 //   - MACROS       — `^\(defmacro ` declarations across `src/phel/**/*.phel`
 //   - CORE_FNS     — `^\(defn `      declarations across `src/phel/**/*.phel`
+// To regenerate, run `scripts/regen-core-symbols.sh /path/to/phel-lang`
+// and paste the relevant arrays back here. See CONTRIBUTING.md.
 
 export const SPECIAL_FORMS: readonly string[] = [
     'apply',
