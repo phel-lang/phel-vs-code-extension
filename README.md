@@ -4,13 +4,19 @@ This VS Code extension provides syntax highlighting and language support for [Ph
 
 ## Features
 
-- **Syntax highlighting** for all Phel constructs:
-  - Special forms: `def`, `defn`, `fn`, `let`, `if`, `loop`, `recur`, etc.
-  - Macros: `when`, `cond`, `case`, `->`, `->>`, `for`, `doseq`, etc.
+- **Syntax highlighting** for the full Phel core:
+  - Special forms: `def`, `defn`, `fn`, `let`, `if`, `loop`, `recur`, `var`, `deref`, `new`, `quote`, `try`/`catch`/`finally`, all `php/*` interop forms, etc.
+  - Macros: `when`, `cond`, `cond->`, `cond->>`, `condp`, `case`, `->`, `->>`, `some->`, `some->>`, `as->`, `for`, `doseq`, `dotimes`, `match`, `defprotocol`, `defrecord`, `deftype`, `deftest`, `extend-type`, `extend-protocol`, `with-redefs`, etc.
   - Literals: keywords (`:keyword`), strings, numbers, booleans, `nil`
   - Collections: vectors `[]`, maps `{}`, sets `#{}`, lists `'()`
   - Short anonymous functions: `|(+ $1 $2)`
-  
+
+- **Code completion** for every public symbol shipped with phel-lang core:
+  - All special forms and macros (suggested as keywords)
+  - 382 public functions from `phel\core` and friends — `assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, etc. (suggested as functions)
+
+- **Code snippets** for common scaffolding — type `defn`, `let`, `cond`, `try`, `deftest`, `->`, … and tab through the placeholders.
+
 - **Comment support**:
   - Line comments: `#` or `;`
   - Block comments: `#| ... |#`
@@ -175,13 +181,13 @@ Search for "Phel Lang" in the VS Code extensions marketplace.
    **macOS/Linux:**
    ```bash
    cd ~/.vscode/extensions
-   ln -s /path/to/phel-vs-code-extension phel-lang.phel-lang-0.2.0
+   ln -s /path/to/phel-vs-code-extension phel-lang.phel-lang-0.3.0
    ```
 
    **Windows (PowerShell as Administrator):**
    ```powershell
    cd $env:USERPROFILE\.vscode\extensions
-   New-Item -ItemType SymbolicLink -Target "C:\path\to\phel-vs-code-extension" -Path "phel-lang.phel-lang-0.2.0"
+   New-Item -ItemType SymbolicLink -Target "C:\path\to\phel-vs-code-extension" -Path "phel-lang.phel-lang-0.3.0"
    ```
 
 3. Restart VS Code

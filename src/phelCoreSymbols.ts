@@ -1,3 +1,9 @@
+// Snapshot of the phel-lang core public surface used by the completion
+// provider. Sources of truth (regenerate when bumping phel-lang):
+//   - SPECIAL_FORMS — `NAME_*` constants in phel-lang's `src/php/Lang/Symbol.php`
+//   - MACROS       — `^\(defmacro ` declarations across `src/phel/**/*.phel`
+//   - CORE_FNS     — `^\(defn `      declarations across `src/phel/**/*.phel`
+
 export const SPECIAL_FORMS: readonly string[] = [
     'apply',
     'catch',

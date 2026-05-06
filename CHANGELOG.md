@@ -2,6 +2,18 @@
 
 All notable changes to the "phel-lang" extension will be documented in this file.
 
+## [0.3.0] - 2026-05-06
+
+### Added
+
+- **Code completion** for the full public Phel core: 382 functions, all special forms, and every public macro. Special forms and macros surface as `Keyword`; plain functions as `Function`.
+- **Code snippets** for the most common forms — `ns`, `defn`, `defn-`, `def`, `fn`, `let`, `if`, `when`, `cond`, `case`, `doseq`, `for`, `loop`/`recur`, `try`/`catch`, `defmacro`, `defstruct`, `definterface`, `defprotocol`, `defexception`, `deftest`, `->`, `->>`, `comment`.
+- **Expanded syntax highlighting** with the rest of the current core: `var`, `deref`, `new`, `conj`, `concat`, `list`, `vector`, `hash-map`, `load`, `use`, `reify*`, `unquote`, `unquote-splicing`, plus macros `defprotocol`, `defrecord`, `defmethod`, `defmulti`, `defspec`, `deftest`, `deftype`, `are`, `assert`, `async`, `cond->`, `cond->>`, `condp`, `delay`, `dir`, `doc`, `dotimes`, `explain-sym`, `extend-protocol`, `extend-type`, `future`, `future-fiber`, `html`, `if-some`, `instance?`, `is`, `letfn`, `match`, `pop`, `reify`, `require`, `source`, `symbol-info`, `testing`, `when-first`, `when-some`, `with-bindings`, `with-config`, `with-mock-wrapper`, `with-mocks`, `with-redefs`. Alternation is sorted longest-first so e.g. `defmacro-` wins over `defmacro` and `cond->>` over `cond`.
+
+### Changed
+
+- Bumped `mocha` to `^11.7.5` and added npm `overrides` for `serialize-javascript` (`^7.0.5`) and `diff` (`^9.0.0`); `npm audit` now reports zero vulnerabilities.
+
 ## [0.2.0] - 2025-02-01
 
 ### Added
