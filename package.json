@@ -213,6 +213,7 @@
         "pretest": "npm run compile && npm run lint",
         "test": "mocha out/test/**/*.test.js",
         "tokenize": "node scripts/tokenize-sample.mjs",
+        "regen-docs": "npm run compile && node scripts/regen-core-docs.cjs",
         "package": "vsce package",
         "publish": "vsce publish",
         "release": "scripts/release.sh"
