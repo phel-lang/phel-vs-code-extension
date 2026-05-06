@@ -203,6 +203,16 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Enable Phel debug adapter for source-level debugging"
+                },
+                "phel.diagnostics.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Run `phel analyze` on save and surface the result as inline diagnostics."
+                },
+                "phel.diagnostics.command": {
+                    "type": "string",
+                    "default": "vendor/bin/phel",
+                    "description": "Path to the Phel CLI used for diagnostics. Relative paths resolve against the workspace folder."
                 }
             }
         }
