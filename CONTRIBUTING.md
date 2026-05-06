@@ -122,15 +122,20 @@ npm run tokenize
 
 That uses the same `vscode-textmate` + `vscode-oniguruma` engine VS Code ships with to tokenise `scripts/sample.phel` and prints each token with its scope. Add new edge cases to `scripts/sample.phel` when fixing or extending grammar patterns.
 
-### Completion (`src/phelCoreSymbols.ts`)
+### Completion + docs database (`src/phelCoreDocs.ts`)
 
-Three readonly arrays - `SPECIAL_FORMS`, `MACROS`, `CORE_FNS` - back the completion provider. To regenerate them from a phel-lang checkout:
+`src/phelCoreDocs.ts` is a generated array of `PhelDoc` records (one per `defn` / `defmacro` / `def` form) extracted from a phel-lang checkout. It is the single source of truth for completion, hover, signature help, and the `Phel: Show Doc` command.
+
+To regenerate after bumping phel-lang:
 
 ```bash
-scripts/regen-core-symbols.sh /path/to/phel-lang > /tmp/phel-symbols.txt
+npm run compile
+node scripts/regen-core-docs.cjs /path/to/phel-lang --phel-version v0.35.0
 ```
 
-The script prints the three arrays to stdout. Review the output, then paste the relevant arrays into `src/phelCoreSymbols.ts`. The script does not write the file in place on purpose - manual review keeps surprises (private helpers leaking into completion) out of the published surface.
+The script walks `src/phel/**/*.phel`, detects each file's namespace from its `(ns ...)` or `(in-ns ...)` form, runs the parser in `src/phelDocs.ts`, and writes the typed module. `--phel-version` (default `main`) is the git ref used to build `View source` links.
+
+`src/phelCoreSymbols.ts` exposes flat name arrays projected from this database (`MACROS`, `CORE_FNS`) plus a hand-curated `SPECIAL_FORMS` for the engine special forms (which live in PHP, not in any `.phel` file).
 
 ### Snippets (`snippets/phel.code-snippets`)
 
