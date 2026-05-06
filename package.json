@@ -187,7 +187,8 @@
         "format": "prettier --write \"src/**/*.ts\"",
         "format:check": "prettier --check \"src/**/*.ts\"",
         "pretest": "npm run compile && npm run lint",
-        "test": "mocha out/test/**/*.test.js"
+        "test": "mocha out/test/**/*.test.js",
+        "tokenize": "node scripts/tokenize-sample.mjs"
     },
     "devDependencies": {
         "@types/glob": "^8.1.0",
@@ -202,7 +203,9 @@
         "glob": "^10.3.10",
         "mocha": "^11.7.5",
         "prettier": "^3.2.0",
-        "typescript": "^5.3.0"
+        "typescript": "^5.3.0",
+        "vscode-oniguruma": "^2.0.1",
+        "vscode-textmate": "^9.3.2"
     },
     "dependencies": {
         "@vscode/debugadapter": "^1.64.0"

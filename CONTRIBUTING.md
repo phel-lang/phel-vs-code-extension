@@ -69,6 +69,14 @@ The completion and grammar features are driven by snapshots of the phel-lang cor
 
 The `corelib` pattern in `syntaxes/phel.tmLanguage.json` is a single regex alternation of every special form and macro that should be highlighted as `keyword.control.phel`. **The order matters** — alternation is left-to-right, so longer names must come first (`defmacro-` before `defmacro`, `cond->>` before `cond->` before `cond`, `if-some` before `if`). When you edit the list, sort it longest-first.
 
+To verify highlighting changes without launching VS Code, run:
+
+```bash
+npm run tokenize
+```
+
+That uses the same `vscode-textmate` + `vscode-oniguruma` engine VS Code ships with to tokenise `scripts/sample.phel` and prints each token with its scope. Add new edge cases to `scripts/sample.phel` when fixing or extending grammar patterns.
+
 ### Completion (`src/phelCoreSymbols.ts`)
 
 Three readonly arrays — `SPECIAL_FORMS`, `MACROS`, `CORE_FNS` — back the completion provider. To regenerate them from a phel-lang checkout:

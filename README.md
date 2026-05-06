@@ -159,22 +159,27 @@ For containerized environments, add path mappings:
 - **Multi-expression lines**: Correctly handles multiple expressions on one Phel line
 - **Exception breakpoints**: Break on all or uncaught PHP exceptions
 
-### Debug Trace Mode
+### Inspecting Values with Taps
 
-Phel also supports a built-in debug trace mode:
+For ad-hoc tracing without a debugger, Phel ships a Clojure-style tap registry in `phel\core`. Register a handler with `add-tap`, send values with `tap>`:
 
 ```phel
-(ns my-app
-  (:require phel\debug))
+(ns my-app\core)
 
-# Enable debug tracing (logs to ./phel-debug.log)
-(phel\debug/enable-trace)
+;; Print every tapped value (or push to a logger, atom, etc.).
+(add-tap println)
 
-# Your code here...
+(defn process [order]
+  (tap> {:event :process-start :id (:id order)})
+  (let [result (do-work order)]
+    (tap> {:event :process-end :id (:id order) :result result})
+    result))
 
-# Disable when done
-(phel\debug/disable-trace)
+;; Cleanup when done
+(remove-tap println)
 ```
+
+Taps run synchronously on the calling thread; exceptions thrown by a tap handler are swallowed so a buggy tap can't take down the producer.
 
 ## Installation
 
