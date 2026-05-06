@@ -50,7 +50,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.phel",
-					"match": "(?<=\\(|\\{|\\[|\\s)(definterface\\*?|defexception\\*?|defstruct\\*?|declare|defmacro-|defmacro|defn-|defn|def-|def|recur|fn|try|catch|finally|loop|ns|in-ns|quote|dofor|doseq|do|if-not|if-let|if|when-not|when-let|when|apply|let|foreach|for|case|cond|throw|set-var|comment|or|and|->|->>|some->|some->>|as->|doto|lazy-seq|lazy-cat|binding|time|with-output-buffer)(?=\\s|\\)|\\]|\\})"
+					"match": "(?<=\\(|\\{|\\[|\\s)(with-output-buffer|with-mock-wrapper|unquote-splicing|extend-protocol|definterface\\*?|defexception\\*?|with-bindings|future-fiber|with-redefs|with-config|symbol-info|extend-type|explain-sym|defprotocol|with-mocks|when-first|defstruct\\*?|when-some|instance\\?|defrecord|defmethod|defmacro-|when-not|when-let|lazy-seq|lazy-cat|hash-map|defmulti|defmacro|unquote|testing|some->>|set-var|require|if-some|foreach|finally|dotimes|deftype|deftest|defspec|declare|cond->>|comment|binding|vector|source|some->|reify\\*?|if-not|if-let|future|cond->|concat|assert|throw|recur|quote|match|letfn|in-ns|doseq|dofor|deref|delay|defn-|condp|catch|async|apply|when|time|loop|load|list|html|doto|defn|def-|conj|cond|case|as->|var|use|try|pop|new|let|for|doc|dir|def|are|and|->>|or|ns|is|if|fn|do|->)(?=\\s|\\)|\\]|\\})"
 				},
 				{
 					"name": "keyword.control.phel",
