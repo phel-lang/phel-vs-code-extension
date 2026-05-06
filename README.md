@@ -1,5 +1,6 @@
 # Phel Lang for VS Code
 
+[![CI](https://github.com/phel-lang/phel-vs-code-extension/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/phel-lang/phel-vs-code-extension/actions/workflows/ci.yml)
 [![Marketplace](https://img.shields.io/visual-studio-marketplace/v/Phel-Lang.phel-lang?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=Phel-Lang.phel-lang)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/Phel-Lang.phel-lang)](https://marketplace.visualstudio.com/items?itemName=Phel-Lang.phel-lang)
 [![Release](https://img.shields.io/github/v/release/phel-lang/phel-vs-code-extension?label=release)](https://github.com/phel-lang/phel-vs-code-extension/releases)
