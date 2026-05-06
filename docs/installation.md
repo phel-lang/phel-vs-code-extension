@@ -2,7 +2,7 @@
 
 Requires **VS Code 1.75+**. Published on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Phel-Lang.phel-lang) under publisher `Phel-Lang`.
 
-## Option 1 — Marketplace (recommended)
+## Option 1 - Marketplace (recommended)
 
 In VS Code, open the Extensions sidebar (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>), search for **"Phel Lang"**, click **Install**. Or from the terminal:
 
@@ -10,7 +10,7 @@ In VS Code, open the Extensions sidebar (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X<
 code --install-extension Phel-Lang.phel-lang
 ```
 
-## Option 2 — Pre-built `.vsix`
+## Option 2 - Pre-built `.vsix`
 
 Useful for offline machines or when you want a specific version.
 
@@ -19,7 +19,7 @@ Useful for offline machines or when you want a specific version.
    - **CLI:** `code --install-extension phel-lang-<version>.vsix`
    - **GUI:** Extensions sidebar → **`...`** menu → *Install from VSIX...*
 
-## Option 3 — Build from source
+## Option 3 - Build from source
 
 Use this when you want changes from `main` that haven't been released yet.
 
@@ -32,7 +32,7 @@ npx @vscode/vsce package        # produces phel-lang-<version>.vsix
 code --install-extension phel-lang-*.vsix
 ```
 
-## Option 4 — Symlink for live development
+## Option 4 - Symlink for live development
 
 Iterate on grammar / TypeScript without rebuilding the `.vsix` each time. Pair this with <kbd>F5</kbd> from inside the cloned repo (launches an Extension Development Host with source maps).
 

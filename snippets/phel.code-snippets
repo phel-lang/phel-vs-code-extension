@@ -2,8 +2,8 @@
     "ns": {
         "prefix": "ns",
         "body": [
-            "(ns ${1:my-app\\\\core}",
-            "  (:require ${2:phel\\\\core :as core}))"
+            "(ns ${1:my-app.core}",
+            "  (:require ${2:phel.core :as core}))"
         ],
         "description": "Namespace declaration"
     },

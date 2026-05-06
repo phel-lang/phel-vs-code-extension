@@ -1,8 +1,8 @@
 {
     "name": "phel-lang",
     "displayName": "Phel Lang",
-    "description": "Full-featured Phel language support with debugging for VS Code",
-    "version": "0.5.0",
+    "description": "Phel language support for VS Code: syntax highlighting, code completion, and snippets for .phel files (plus an optional Xdebug-based debug adapter).",
+    "version": "0.5.1",
     "publisher": "Phel-Lang",
     "license": "MIT",
     "engines": {
@@ -10,15 +10,39 @@
     },
     "categories": [
         "Programming Languages",
+        "Snippets",
         "Debuggers"
     ],
     "keywords": [
         "phel",
+        "phel-lang",
+        ".phel",
         "lisp",
+        "clojure",
         "php",
         "functional",
-        "debugger",
+        "syntax-highlighting",
+        "completion",
+        "snippets",
         "xdebug"
+    ],
+    "qna": false,
+    "pricing": "Free",
+    "galleryBanner": {
+        "color": "#1e1e1e",
+        "theme": "dark"
+    },
+    "badges": [
+        {
+            "url": "https://img.shields.io/visual-studio-marketplace/v/Phel-Lang.phel-lang?label=marketplace",
+            "href": "https://marketplace.visualstudio.com/items?itemName=Phel-Lang.phel-lang",
+            "description": "Marketplace version"
+        },
+        {
+            "url": "https://img.shields.io/github/v/release/phel-lang/phel-vs-code-extension?label=release",
+            "href": "https://github.com/phel-lang/phel-vs-code-extension/releases",
+            "description": "Latest GitHub release"
+        }
     ],
     "repository": {
         "type": "git",
@@ -188,19 +212,18 @@
         "format:check": "prettier --check \"src/**/*.ts\"",
         "pretest": "npm run compile && npm run lint",
         "test": "mocha out/test/**/*.test.js",
-        "tokenize": "node scripts/tokenize-sample.mjs"
+        "tokenize": "node scripts/tokenize-sample.mjs",
+        "package": "vsce package",
+        "publish": "vsce publish"
     },
     "devDependencies": {
-        "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.6",
         "@types/node": "^20.10.0",
         "@types/vscode": "^1.75.0",
         "@typescript-eslint/eslint-plugin": "^7.0.0",
         "@typescript-eslint/parser": "^7.0.0",
-        "@vscode/debugadapter": "^1.64.0",
-        "@vscode/debugprotocol": "^1.64.0",
+        "@vscode/vsce": "^3.0.0",
         "eslint": "^8.57.0",
-        "glob": "^10.3.10",
         "mocha": "^11.7.5",
         "prettier": "^3.2.0",
         "typescript": "^5.3.0",
@@ -208,7 +231,8 @@
         "vscode-textmate": "^9.3.2"
     },
     "dependencies": {
-        "@vscode/debugadapter": "^1.64.0"
+        "@vscode/debugadapter": "^1.64.0",
+        "@vscode/debugprotocol": "^1.64.0"
     },
     "overrides": {
         "serialize-javascript": "^7.0.5",

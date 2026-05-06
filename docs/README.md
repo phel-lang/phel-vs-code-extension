@@ -1,4 +1,4 @@
-# Phel Lang for VS Code — Documentation
+# Phel Lang for VS Code - Documentation
 
 User-facing docs that go beyond the project [README](../README.md).
 
@@ -14,5 +14,5 @@ User-facing docs that go beyond the project [README](../README.md).
 
 For repo-level docs see:
 
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — dev setup, conventions, how to refresh the language surface
-- [CHANGELOG.md](../CHANGELOG.md) — release history
+- [CONTRIBUTING.md](../CONTRIBUTING.md) - dev setup, conventions, how to refresh the language surface
+- [CHANGELOG.md](../CHANGELOG.md) - release history

@@ -5,10 +5,10 @@ Common problems and fixes. If your issue isn't here, open one at [GitHub Issues]
 ## Highlighting
 
 **No highlighting in `.phel` files.**
-The extension activates on language `phel`. Confirm the file's language mode in the bottom-right status bar. If it says **Plain Text**, click it and pick *Phel*. If *Phel* isn't in the list, the extension didn't install — see [Installation](installation.md).
+The extension activates on language `phel`. Confirm the file's language mode in the bottom-right status bar. If it says **Plain Text**, click it and pick *Phel*. If *Phel* isn't in the list, the extension didn't install - see [Installation](installation.md).
 
 **Some forms render as plain symbols.**
-The grammar tracks `phel-lang` `main`. If you're using a bleeding-edge form added after the last extension release, it may not be in the keyword list yet — file an issue with a code sample, or refresh the grammar yourself (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
+The grammar tracks `phel-lang` `main`. If you're using a bleeding-edge form added after the last extension release, it may not be in the keyword list yet - file an issue with a code sample, or refresh the grammar yourself (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
 
 **`#tag` literals show with a default colour.**
 Tagged literals scope as `storage.type.tagged.phel`. Most themes don't style that scope explicitly. Add a rule in your settings:
@@ -24,10 +24,10 @@ Tagged literals scope as `storage.type.tagged.phel`. Most themes don't style tha
 ## Completion
 
 **No suggestions when I type.**
-Confirm the language mode is `phel` (see above). Completion lives in `src/phelCompletionProvider.ts` and registers on the `phel` language ID — if the file isn't recognised as Phel, the provider doesn't fire.
+Confirm the language mode is `phel` (see above). Completion lives in `src/phelCompletionProvider.ts` and registers on the `phel` language ID - if the file isn't recognised as Phel, the provider doesn't fire.
 
 **Suggestion list misses a function I just added in `phel-lang`.**
-The list is a static snapshot. Refresh it via `scripts/regen-core-symbols.sh` and rebuild — see [completion.md](completion.md).
+The list is a static snapshot. Refresh it via `scripts/regen-core-symbols.sh` and rebuild - see [completion.md](completion.md).
 
 ## Debugging
 

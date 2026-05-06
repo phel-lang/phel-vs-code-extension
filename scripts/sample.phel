@@ -1,12 +1,12 @@
 ;; Sample Phel exercising the grammar features that 0.4.0 should highlight.
 
-(ns my-app\core
-  (:require phel\core :refer [filter map reduce])
-  (:require phel\test :refer [deftest is testing]))
+(ns my-app.core
+  (:require phel.core :refer [filter map reduce])
+  (:require phel.test :refer [deftest is testing]))
 
-#| legacy block comment — deprecated upstream but still valid |#
+#| legacy block comment - deprecated upstream but still valid |#
 
-# legacy line comment — deprecated, should still highlight
+# legacy line comment - deprecated, should still highlight
 
 (def ^:private answer 42)
 (def numbers [1 2 3 4 5 0xff 0b1010 0o17 1_000 3.14 2e-3])
