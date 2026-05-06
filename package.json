@@ -213,6 +213,16 @@
                     "type": "string",
                     "default": "vendor/bin/phel",
                     "description": "Path to the Phel CLI used for diagnostics. Relative paths resolve against the workspace folder."
+                },
+                "phel.format.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Use `phel format` as the document formatter for .phel files."
+                },
+                "phel.format.command": {
+                    "type": "string",
+                    "default": "vendor/bin/phel",
+                    "description": "Path to the Phel CLI used for formatting. Relative paths resolve against the workspace folder."
                 }
             }
         }

@@ -12,6 +12,7 @@ import { PHEL_DOCS } from './phelCoreDocs';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
 import { buildQuickPickEntries } from './phelShowDoc';
 import { registerDiagnostics } from './phelDiagnosticsProvider';
+import { PhelFormatProvider } from './phelFormatProvider';
 
 let sourceMapManager: SourceMapManager;
 
@@ -136,6 +137,10 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     registerDiagnostics(context);
+
+    context.subscriptions.push(
+        vscode.languages.registerDocumentFormattingEditProvider('phel', new PhelFormatProvider())
+    );
 
     // Provide hover information for breakpoints
     context.subscriptions.push(
