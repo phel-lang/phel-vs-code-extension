@@ -1,109 +1,61 @@
-# Phel Lang Support for VS Code
+# Phel Lang for VS Code
 
-This VS Code extension provides syntax highlighting and language support for [Phel](https://phel-lang.org/), a functional programming language that compiles to PHP.
+Syntax highlighting, code completion, snippets, and a native debug adapter for [Phel](https://phel-lang.org/) — a functional Lisp that compiles to PHP.
 
-## Features
+## Install
 
-- **Syntax highlighting** for the full Phel core:
-  - Special forms: `def`, `defn`, `fn`, `let`, `if`, `loop`, `recur`, `var`, `deref`, `new`, `quote`, `try`/`catch`/`finally`, all `php/*` interop forms, etc.
-  - Macros: `when`, `cond`, `cond->`, `cond->>`, `condp`, `case`, `->`, `->>`, `some->`, `some->>`, `as->`, `for`, `doseq`, `dotimes`, `match`, `defprotocol`, `defrecord`, `deftype`, `deftest`, `extend-type`, `extend-protocol`, `with-redefs`, etc.
-  - Literals: keywords (`:keyword`), strings, numbers, booleans, `nil`
-  - Collections: vectors `[]`, maps `{}`, sets `#{}`, lists `'()`
-  - Short anonymous functions: `#(+ %1 %2)` (and the deprecated `|(+ $1 $2)`)
-  - Reader macros: quote `'`, quasiquote `` ` ``, unquote `~`, unquote-splicing `~@`, deref `@`, metadata `^` (legacy `,` / `,@` still highlighted)
-  - Tagged literals: `#inst "..."`, `#regex "..."`, `#php/...`, custom tags via `register-tag`
-  - Reader conditionals: `#?(:phel ... :clj ...)` and splicing form `#?@(...)`
+- **Marketplace** — Extensions sidebar → search **"Phel Lang"** → Install. Or `code --install-extension phel-lang.phel-lang`.
+- **Pre-built `.vsix`** — grab the latest from the [releases page](https://github.com/phel-lang/phel-vs-code-extension/releases) and run `code --install-extension phel-lang-*.vsix` (or *Install from VSIX...* in the Extensions menu).
+- **From source** — `git clone`, `npm install`, `npx @vscode/vsce package`, then install the resulting `.vsix`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev loop.
 
-- **Code completion** for every public symbol shipped with phel-lang core:
-  - All special forms and macros (suggested as keywords)
-  - 394 public functions from `phel\core` (`assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, …) suggested as functions
+Requires VS Code **1.75+**.
 
-- **Code snippets** for common scaffolding — type `defn`, `let`, `cond`, `try`, `deftest`, `->`, … and tab through the placeholders.
+## What you get
 
-- **Comment support**:
-  - Line comments: `;` or `;;` (legacy `#` still highlighted)
-  - Inline comments: `#_` (comments out next form)
-  - Block comments: `#| ... |#` (deprecated upstream — kept for legacy code)
+- **Syntax highlighting** for the full Phel core — special forms, ~70 macros, threading, interop (`php/...`), reader macros (`'`, `` ` ``, `~`, `~@`, `^`, `@`), tagged literals (`#inst`, `#regex`, `#php`, custom `#tag`), and reader conditionals (`#?(...)`, `#?@(...)`).
+- **Code completion** for every public symbol in `phel\core` — 47 special forms, ~70 macros, 394 functions (`assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, …).
+- **Snippets** for the everyday forms — type `defn`, `let`, `cond`, `try`, `deftest`, `->` and tab through.
+- **Debug adapter** with source-level breakpoints, Phel-friendly variable display, multi-expression line handling, exception breakpoints, and Docker / remote path mapping.
+- Auto-closing pairs, smart Lisp indentation, and breakpoint gutters in `.phel` files.
 
-- **Breakpoint support**: Set breakpoints on Phel files for debugging
+Legacy syntax is still highlighted: `|(+ $1 $2)`, `,@xs`, `#` line comments, and `#| ... |#` block comments.
 
-- **Auto-closing pairs** for brackets, quotes, and comments
-
-- **Smart indentation** for Lisp-style code
-
-## Supported Syntax
-
-### Keywords and Special Forms
+## Syntax at a glance
 
 ```phel
-(ns my-app\core)
+(ns my-app\core
+  (:require phel\core :refer [filter map])
+  (:require phel\test :refer [deftest is]))
 
-(defn greet [name]
+(def ^:private answer 42)              ;; metadata + def
+
+(defn greet [name]                     ;; public fn
   (str "Hello, " name "!"))
 
-(def users [{:name "Alice"} {:name "Bob"}])
+(defn- helper [x]                      ;; private fn
+  (when (pos? x) (* x x)))
 
-(->> users
-     (filter #(> (count (:name %)) 3))
-     (map :name))
+(->> [1 2 3 4 5]                       ;; threading + anon-fn
+     (filter #(> % 2))
+     (map #(* %1 %1)))
+
+`(let [x# ~val] ~@body)                ;; quasiquote, unquote, splicing
+
+(def t  #inst "2026-01-01T00:00:00Z")  ;; tagged literals
+(def re #regex "\\d+")
+(def now #?(:phel (php/time) :clj 0))  ;; reader conditional
+
+;; preferred line comment
+(println 1 #_ skip 3)                  ;; skip middle form
 ```
 
-### Short Anonymous Functions
+## Debugging Phel code
 
-```phel
-#(+ %1 %2)        ;; Two args: %1, %2
-#(* % %)          ;; Single arg: % is shorthand for %1
-#(apply str %&)   ;; %& captures rest args
-```
+The bundled debug adapter (`type: "phel"`) translates between `.phel` source and the compiled PHP, so breakpoints, stack traces, and stepping all stay in your Phel files.
 
-The legacy `|(...)` form with `$1`, `$2`, `$&` is still recognised for older code:
+### Setup
 
-```phel
-|(+ $1 $2)        ;; Deprecated — prefer #(+ %1 %2)
-```
-
-### Comments
-
-```phel
-;; Standalone comment (preferred)
-;  Single-semi line comment
-
-(println 1 #_ 2 3)  ;; Prints: 1 3 (2 is commented out)
-
-#| Multiline comment — deprecated upstream, still highlighted. |#
-```
-
-### Reader Macros
-
-```phel
-'symbol            ;; Quote
-`(1 ~x ~@xs)       ;; Quasiquote with unquote and unquote-splicing
-^:private          ;; Metadata
-@my-atom           ;; Deref
-```
-
-### Tagged Literals and Reader Conditionals
-
-```phel
-(def t #inst "2026-01-01T00:00:00Z")    ;; Tagged literal
-(def re #regex "\\d+")                  ;; Built-in regex tag
-(def m #money "10.00 EUR")              ;; Custom tag (via register-tag)
-
-(def now #?(:phel (php/time) :clj 0))           ;; Reader conditional
-(def xs [1 2 #?@(:phel [3 4] :clj [99])])       ;; Splicing form
-```
-
-## Debugging Phel Code
-
-This extension includes a **native Phel debug adapter** that provides source-level debugging for Phel code. It automatically translates between your `.phel` source files and the compiled PHP code.
-
-### Prerequisites
-
-1. Install and configure **Xdebug** in your PHP installation
-
-### Setting Up Debugging
-
-1. **Enable Xdebug** in your `php.ini`:
+1. Enable Xdebug in `php.ini`:
    ```ini
    [xdebug]
    zend_extension=xdebug
@@ -111,8 +63,7 @@ This extension includes a **native Phel debug adapter** that provides source-lev
    xdebug.start_with_request=yes
    xdebug.client_port=9003
    ```
-
-2. **Create a launch configuration** (`.vscode/launch.json`):
+2. Add a launch config (`.vscode/launch.json`):
    ```json
    {
      "version": "0.2.0",
@@ -120,180 +71,64 @@ This extension includes a **native Phel debug adapter** that provides source-lev
        {
          "type": "phel",
          "request": "launch",
-         "name": "Debug Phel (Listen for Xdebug)",
+         "name": "Debug Phel",
          "phpDebugPort": 9003
        }
      ]
    }
    ```
+3. Set breakpoints in `.phel` files, press <kbd>F5</kbd>, run your app (e.g. `vendor/bin/phel run src/main.phel`).
 
-3. **Set breakpoints** in your `.phel` files (click in the gutter)
+### Configuration options
 
-4. **Start debugging**:
-   - Press F5 or select "Run > Start Debugging"
-   - Run your Phel application (e.g., `vendor/bin/phel run src/main.phel`)
-   - Breakpoints will hit and show your Phel source code
+| Option | Default | Description |
+|---|---|---|
+| `phpDebugPort` | `9003` | Xdebug listen port |
+| `cacheDir` | auto-detected | Phel cache directory |
+| `pathMappings` | `{}` | Container / remote path mappings |
+| `skipPhelInternals` | `true` | Skip stepping through Phel runtime |
+| `skipFiles` | `[]` | Glob patterns to skip when stepping |
 
-### Debug Configuration Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `phpDebugPort` | Xdebug port to listen on | `9003` |
-| `cacheDir` | Path to Phel cache directory | Auto-detected |
-| `pathMappings` | Path mappings for Docker/remote debugging | `{}` |
-| `skipPhelInternals` | Skip stepping through Phel runtime code | `true` |
-| `skipFiles` | Glob patterns for files to skip | `[]` |
-
-### Docker/Remote Debugging
-
-For containerized environments, add path mappings:
+For Docker / remote work, add `pathMappings`:
 
 ```json
-{
-  "type": "phel",
-  "request": "launch",
-  "name": "Debug Phel (Docker)",
-  "phpDebugPort": 9003,
-  "pathMappings": {
-    "/var/www/html": "${workspaceFolder}"
-  }
-}
+"pathMappings": { "/var/www/html": "${workspaceFolder}" }
 ```
 
 ### Commands
 
-- **Phel: Show Compiled PHP Location** - Shows where the current Phel line maps to in compiled PHP
-- **Phel: Clear Source Map Cache** - Clears cached source maps (useful after recompiling)
+- **Phel: Show Compiled PHP Location** — jump from a `.phel` line to the compiled PHP.
+- **Phel: Clear Source Map Cache** — drop cached source maps after a recompile.
 
-### Features
+## Inspecting values with taps
 
-- **Source-level debugging**: Breakpoints and stack traces show Phel source locations
-- **Phel-friendly variables**: Collections display as `[3 items]`, keywords as `:name`, etc.
-- **Multi-expression lines**: Correctly handles multiple expressions on one Phel line
-- **Exception breakpoints**: Break on all or uncaught PHP exceptions
-
-### Inspecting Values with Taps
-
-For ad-hoc tracing without a debugger, Phel ships a Clojure-style tap registry in `phel\core`. Register a handler with `add-tap`, send values with `tap>`:
+For ad-hoc tracing without a debugger, use the Clojure-style tap registry from `phel\core`:
 
 ```phel
-(ns my-app\core)
-
-;; Print every tapped value (or push to a logger, atom, etc.).
 (add-tap println)
 
 (defn process [order]
-  (tap> {:event :process-start :id (:id order)})
+  (tap> {:event :start :id (:id order)})
   (let [result (do-work order)]
-    (tap> {:event :process-end :id (:id order) :result result})
+    (tap> {:event :end :id (:id order) :result result})
     result))
 
-;; Cleanup when done
 (remove-tap println)
 ```
 
-Taps run synchronously on the calling thread; exceptions thrown by a tap handler are swallowed so a buggy tap can't take down the producer.
+Taps run synchronously on the calling thread. Exceptions thrown by a tap handler are swallowed so a buggy tap can't take down the producer.
 
-## Installation
+## Settings
 
-### Option 1 — VS Code Marketplace
-
-Open the Extensions sidebar (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>), search for **"Phel Lang"**, and click **Install**. Or from the terminal:
-
-```bash
-code --install-extension phel-lang.phel-lang
-```
-
-### Option 2 — Pre-built `.vsix`
-
-Download the latest `.vsix` from the [releases page](https://github.com/phel-lang/phel-vs-code-extension/releases) and install it:
-
-- **CLI:** `code --install-extension phel-lang-0.5.0.vsix`
-- **GUI:** Extensions sidebar → "..." menu → *Install from VSIX...*
-
-### Option 3 — Build from source
-
-For the very latest changes on `main` (or to develop the extension), build the `.vsix` yourself:
-
-```bash
-git clone https://github.com/phel-lang/phel-vs-code-extension.git
-cd phel-vs-code-extension
-npm install
-npm run compile
-npx @vscode/vsce package      # produces phel-lang-<version>.vsix
-code --install-extension phel-lang-*.vsix
-```
-
-### Option 4 — Symlink for live development
-
-Iterate on grammar / TypeScript without rebuilding the `.vsix` each time:
-
-**macOS / Linux**
-```bash
-cd ~/.vscode/extensions
-ln -s /absolute/path/to/phel-vs-code-extension phel-lang.phel-lang-0.5.0
-```
-
-**Windows** (PowerShell, Administrator)
-```powershell
-cd $env:USERPROFILE\.vscode\extensions
-New-Item -ItemType SymbolicLink `
-    -Target "C:\absolute\path\to\phel-vs-code-extension" `
-    -Path "phel-lang.phel-lang-0.5.0"
-```
-
-Restart VS Code (or use *Developer: Reload Window*) and changes to `syntaxes/`, `snippets/`, and the compiled `out/` directory take effect.
-
-> Press <kbd>F5</kbd> inside the cloned repo to launch an Extension Development Host with the extension loaded and source-mapped — the recommended setup when developing.
-
-## Requirements
-
-- VS Code 1.75.0 or higher
-
-## Extension Settings
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `phel.cacheDirectory` | Path to Phel cache directory. If empty, uses system temp directory. | `""` |
-| `phel.debug.enabled` | Enable Phel debug adapter for source-level debugging | `true` |
-
-## Known Issues
-
-None at this time.
-
-## Development
-
-### Setup
-
-```bash
-git clone https://github.com/phel-lang/phel-vs-code-extension.git
-cd phel-vs-code-extension
-npm install
-```
-
-### Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run compile` | Compile TypeScript to JavaScript |
-| `npm run watch` | Watch for changes and recompile |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Run ESLint with auto-fix |
-| `npm run format` | Format code with Prettier |
-| `npm test` | Run tests |
-
-### Testing
-
-Press F5 in VS Code to launch an Extension Development Host with the extension loaded.
+| Setting | Default | Description |
+|---|---|---|
+| `phel.cacheDirectory` | `""` | Path to Phel cache directory. Empty → system temp dir. |
+| `phel.debug.enabled` | `true` | Enable the Phel debug adapter. |
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, conventions, and how to refresh the language surface (grammar, completion, snippets) when phel-lang core changes. Issues and pull requests are welcome at [GitHub](https://github.com/phel-lang/phel-vs-code-extension).
+Bug reports, pull requests, and language-surface refreshes welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Release Notes
+## Changelog · License
 
-See [CHANGELOG.md](CHANGELOG.md) for release notes.
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
+History in [CHANGELOG.md](CHANGELOG.md). MIT — see [LICENSE](LICENSE).
