@@ -184,6 +184,11 @@
             {
                 "command": "phel.clearSourceMapCache",
                 "title": "Phel: Clear Source Map Cache"
+            },
+            {
+                "command": "phel.showDoc",
+                "title": "Phel: Show Documentation",
+                "category": "Phel"
             }
         ],
         "configuration": {
