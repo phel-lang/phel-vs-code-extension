@@ -214,7 +214,8 @@
         "test": "mocha out/test/**/*.test.js",
         "tokenize": "node scripts/tokenize-sample.mjs",
         "package": "vsce package",
-        "publish": "vsce publish"
+        "publish": "vsce publish",
+        "release": "scripts/release.sh"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.6",

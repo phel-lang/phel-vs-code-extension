@@ -55,17 +55,30 @@ Keep the subject under ~70 characters; put the *why* in the body when it isn't o
 
 ## Releasing
 
-1. Decide the new version (`MAJOR.MINOR.PATCH`).
-2. Bump it in `package.json` and run `npm install` so `package-lock.json` follows.
-3. Move the `Unreleased` block in `CHANGELOG.md` under the new version and date.
-4. Open a `chore(release): x.y.z` PR.
-5. After merge, tag `vX.Y.Z` on `main`.
-6. Build the package and publish:
-   ```bash
-   npx @vscode/vsce package                 # produces phel-lang-x.y.z.vsix
-   gh release create vX.Y.Z phel-lang-*.vsix --notes-file release-notes.md
-   npx @vscode/vsce publish                 # pushes to the Marketplace
-   ```
+The end-to-end flow is automated by `scripts/release.sh` (also exposed as `npm run release`):
+
+```bash
+# from a clean main branch:
+npm run release -- 0.6.0
+```
+
+That single command:
+
+1. Sanity-checks: on `main`, working tree clean, version not already tagged, local in sync with `origin/main`.
+2. Bumps `package.json` + `package-lock.json` to the requested version.
+3. Renames `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD` (no-op if you've already done it).
+4. Runs the gate: `npm run compile`, `npm test`, `npm run tokenize`.
+5. Builds `phel-lang-X.Y.Z.vsix` via `vsce package`.
+6. Commits `chore(release): vX.Y.Z`, tags `vX.Y.Z`, pushes both.
+7. Creates a GitHub Release with the `.vsix` attached, using the matching CHANGELOG section as the body.
+8. Publishes to the VS Code Marketplace via `vsce publish`.
+
+Useful flags:
+
+- `--no-publish` - everything except the Marketplace upload (use when you want to drag-and-drop the `.vsix` via the publisher web UI instead).
+- `--no-push` - dry run: bumps versions and builds the `.vsix` locally, but does not push, tag remotely, create a release, or publish.
+
+If the script fails partway through, fix the cause and re-run; it's safe to re-run from the same point because each step checks for existing artefacts.
 
 ### Marketplace setup (one-time)
 
