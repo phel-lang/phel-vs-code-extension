@@ -8,6 +8,9 @@ import { PhelDebugSession } from './phelDebugAdapter';
 import { PhelCompletionProvider } from './phelCompletionProvider';
 import { PhelHoverProvider } from './phelHoverProvider';
 import { PhelSignatureHelpProvider } from './phelSignatureHelpProvider';
+import { PHEL_DOCS } from './phelCoreDocs';
+import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
+import { buildQuickPickEntries } from './phelShowDoc';
 
 let sourceMapManager: SourceMapManager;
 
@@ -87,6 +90,13 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Register command: Show Phel documentation
+    context.subscriptions.push(
+        vscode.commands.registerCommand('phel.showDoc', async (symbol?: string) => {
+            await runShowDocCommand(symbol);
+        })
+    );
+
     // Watch for configuration changes
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration((e) => {
@@ -157,6 +167,59 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     // Cleanup
+}
+
+/**
+ * Resolve a symbol (from arg, cursor, or quick-pick) and show its docs in
+ * a Markdown preview tab.
+ */
+async function runShowDocCommand(symbolArg?: string): Promise<void> {
+    let symbol = symbolArg ?? wordAtCursor();
+    if (!symbol || !lookupSymbol(symbol, PHEL_DOCS)) {
+        symbol = await pickSymbol();
+        if (!symbol) {
+            return;
+        }
+    }
+    const doc = lookupSymbol(symbol, PHEL_DOCS);
+    if (!doc) {
+        vscode.window.showWarningMessage(`No Phel documentation found for "${symbol}".`);
+        return;
+    }
+    const markdown = renderDocMarkdown(doc);
+    const tdoc = await vscode.workspace.openTextDocument({
+        content: markdown,
+        language: 'markdown',
+    });
+    await vscode.commands.executeCommand('markdown.showPreview', tdoc.uri);
+}
+
+function wordAtCursor(): string | undefined {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'phel') {
+        return undefined;
+    }
+    const range = editor.document.getWordRangeAtPosition(
+        editor.selection.active,
+        /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/
+    );
+    return range ? editor.document.getText(range) : undefined;
+}
+
+async function pickSymbol(): Promise<string | undefined> {
+    const entries = buildQuickPickEntries(PHEL_DOCS);
+    const items = entries.map((e) => ({
+        label: e.label,
+        description: e.description,
+        detail: e.detail,
+        qualifiedName: e.doc.qualifiedName,
+    }));
+    const picked = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Phel symbol (start typing to filter)',
+        matchOnDescription: true,
+        matchOnDetail: true,
+    });
+    return picked?.qualifiedName;
 }
 
 /**
