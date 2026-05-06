@@ -18,4 +18,5 @@ node_modules/.bin/**
 node_modules/@types/**
 **/*.test.js
 CONTRIBUTING.md
+docs/**
 scripts/**
