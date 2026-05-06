@@ -24,7 +24,13 @@ code --install-extension phel-lang-0.5.0.vsix
 
 Or in VS Code: Extensions sidebar → **`...`** menu → *Install from VSIX...*
 
-Requires VS Code **1.75+**. Marketplace publication is on the roadmap. Other paths (build from source, symlink for live development): see [docs/installation.md](docs/installation.md).
+Once published to the [VS Code Marketplace](https://marketplace.visualstudio.com/manage/publishers/chemaclass) the install will be:
+
+```bash
+code --install-extension chemaclass.phel-lang
+```
+
+Requires VS Code **1.75+**. Other paths (build from source, symlink for live development): see [docs/installation.md](docs/installation.md).
 
 ## First steps
 
