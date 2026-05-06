@@ -1,5 +1,7 @@
 # Phel Lang for VS Code
 
+[![Marketplace](https://img.shields.io/visual-studio-marketplace/v/Phel-Lang.phel-lang?label=marketplace)](https://marketplace.visualstudio.com/items?itemName=Phel-Lang.phel-lang)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/Phel-Lang.phel-lang)](https://marketplace.visualstudio.com/items?itemName=Phel-Lang.phel-lang)
 [![Release](https://img.shields.io/github/v/release/phel-lang/phel-vs-code-extension?label=release)](https://github.com/phel-lang/phel-vs-code-extension/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -16,21 +18,13 @@ Writing Phel without editor support means colourless code, no completion for the
 
 ## Install
 
-Grab the latest `.vsix` from the [releases page](https://github.com/phel-lang/phel-vs-code-extension/releases) and run:
-
-```bash
-code --install-extension phel-lang-0.5.0.vsix
-```
-
-Or in VS Code: Extensions sidebar → **`...`** menu → *Install from VSIX...*
-
-Once published to the [VS Code Marketplace](https://marketplace.visualstudio.com/manage/publishers/Phel-Lang) the install will be:
+In VS Code, open the Extensions sidebar (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>), search for **"Phel Lang"**, click **Install**. Or from the terminal:
 
 ```bash
 code --install-extension Phel-Lang.phel-lang
 ```
 
-Requires VS Code **1.75+**. Other paths (build from source, symlink for live development): see [docs/installation.md](docs/installation.md).
+Requires VS Code **1.75+**. Other paths (`.vsix` from GitHub releases, build from source, symlink for live development): see [docs/installation.md](docs/installation.md).
 
 ## First steps
 
