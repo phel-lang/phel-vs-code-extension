@@ -114,7 +114,7 @@
 				},
 				{
 					"name": "punctuation.other.phel",
-					"match": "[~`',^]"
+					"match": "[~`',^]|@(?![({\\[])"
 				}
 			]
 		},
@@ -234,7 +234,7 @@
 			"end": "\\|#"
 		},
 		"comment": {
-			"begin": "[#;]",
+			"begin": "(?:;|#(?=\\s|$))",
 			"beginCaptures": {
 				"0": {
 					"name": "punctuation.definition.comment.phel"

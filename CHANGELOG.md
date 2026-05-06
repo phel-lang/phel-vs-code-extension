@@ -10,11 +10,18 @@ Sync with phel-lang `main` (commit `428c59f`).
 
 - **Anonymous function syntax `#(...)`** with `%`, `%1`, `%2`, …, `%&` placeholders — the form Phel now ships as the default. The legacy `|(...)` form with `$`-placeholders continues to highlight for older code.
 - **Preferred reader macros** `~` (unquote) and `~@` (unquote-splicing) now highlight as reader-macro punctuation alongside the legacy `,` and `,@`.
+- **Deref `@x`** now highlights `@` as reader-macro punctuation (previously it was absorbed into the symbol). Mutable collection literals `@(...)`, `@[...]`, `@{...}` still parse via the existing collection patterns.
 - `aset` macro added to grammar and completion (lives in `phel\core`'s `arrays.phel`).
 - Numeric / comparison core fns added to completion: `+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`.
+- `npm run tokenize` and `scripts/tokenize-sample.mjs` — runs the same `vscode-textmate` engine VS Code uses to produce a token-by-token report for a sample `.phel` file. Used to verify highlighting changes without launching the editor.
+
+### Fixed
+
+- Set literals `#{...}`, anonymous functions `#(...)`, and inline form-comments `#_` were previously eaten by the line-comment pattern (`[#;]` matched any `#` first). The comment pattern now requires `#` to be followed by whitespace or end-of-line, so `#{`, `#(`, `#_`, `#|`, `#?`, and `#tag` literals all reach their proper patterns.
 
 ### Changed
 
+- README "Debug Trace Mode" section replaced with a "Inspecting Values with Taps" section that uses the current `add-tap` / `tap>` / `remove-tap` API in `phel\core`. The previous `(phel\debug/enable-trace)` API no longer exists upstream.
 - `CONTRIBUTING.md` and `scripts/regen-core-symbols.sh` now scope the `MACROS` and `CORE_FNS` extraction to `phel\core` only (`src/phel/core.phel` plus `src/phel/core/**/*.phel`). Library macros from `phel\test`, `phel\match`, `phel\repl`, `phel\html`, etc. remain in the curated list because they are commonly `:refer`'d unqualified.
 - README documents the new anonymous function and comment syntax (`;` / `;;` preferred over the deprecated `#`).
 
