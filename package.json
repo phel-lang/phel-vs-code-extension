@@ -54,6 +54,12 @@
                 "path": "./syntaxes/phel.tmLanguage.json"
             }
         ],
+        "snippets": [
+            {
+                "language": "phel",
+                "path": "./snippets/phel.code-snippets"
+            }
+        ],
         "breakpoints": [
             {
                 "language": "phel"
