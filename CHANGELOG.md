@@ -38,6 +38,7 @@
 - Marketplace icon: 256x256 PNG generated from the official `phel-lang/phel-lang/logo_readme.svg`.
 - README tour: code-first walkthrough of completion + auto-import, hover, REPL, paredit, refactoring, and the test explorer at the top of the README.
 - Inline debug values: while a Phel debug session is paused, plain symbol tokens in the visible range get inline value annotations. Unresolved names (e.g. macros that didn't survive compilation) drop silently.
+- Document highlight: putting the cursor on a symbol underlines every occurrence of it in the current file (reusing the find-references scanner so strings and comments are skipped).
 
 ### Changed
 
