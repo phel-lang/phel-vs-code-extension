@@ -359,7 +359,12 @@
                 "phel.executablePath": {
                     "type": "string",
                     "default": "vendor/bin/phel",
-                    "description": "Workspace-wide path to the Phel CLI. Used by diagnostics, format, test, and REPL unless a per-command setting overrides it. Relative paths resolve against the workspace folder; absolute paths are used as-is."
+                    "examples": [
+                        "vendor/bin/phel",
+                        "bin/phel",
+                        "/usr/local/bin/phel"
+                    ],
+                    "markdownDescription": "Workspace-wide path to the Phel CLI. Used by diagnostics, format, test, and REPL unless a per-command setting (`#phel.diagnostics.command#`, `#phel.format.command#`, `#phel.test.command#`, `#phel.repl.command#`) overrides it. Relative paths resolve against the workspace folder; absolute paths are used as-is."
                 },
                 "phel.diagnostics.enabled": {
                     "type": "boolean",
@@ -369,7 +374,7 @@
                 "phel.diagnostics.command": {
                     "type": "string",
                     "default": "",
-                    "description": "Override `phel.executablePath` for diagnostics only. Empty string falls back to `phel.executablePath`. Relative paths resolve against the workspace folder."
+                    "markdownDescription": "Override `#phel.executablePath#` for diagnostics only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
                 "phel.format.enabled": {
                     "type": "boolean",
@@ -379,7 +384,7 @@
                 "phel.format.command": {
                     "type": "string",
                     "default": "",
-                    "description": "Override `phel.executablePath` for formatting only. Empty string falls back to `phel.executablePath`. Relative paths resolve against the workspace folder."
+                    "markdownDescription": "Override `#phel.executablePath#` for formatting only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
                 "phel.tests.codeLensEnabled": {
                     "type": "boolean",
@@ -389,7 +394,7 @@
                 "phel.test.command": {
                     "type": "string",
                     "default": "",
-                    "description": "Override `phel.executablePath` for the test CodeLens / Test Explorer. Empty string falls back to `phel.executablePath`. Relative paths resolve against the workspace folder."
+                    "markdownDescription": "Override `#phel.executablePath#` for the test CodeLens / Test Explorer. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
                 "phel.paredit.enabled": {
                     "type": "boolean",
@@ -404,7 +409,7 @@
                 "phel.repl.command": {
                     "type": "string",
                     "default": "",
-                    "description": "Override `phel.executablePath` for the REPL terminal. Empty string falls back to `phel.executablePath`. Relative paths resolve against the workspace folder."
+                    "markdownDescription": "Override `#phel.executablePath#` for the REPL terminal. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
                 "phel.repl.args": {
                     "type": "array",
