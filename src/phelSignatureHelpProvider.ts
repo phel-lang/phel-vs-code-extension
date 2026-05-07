@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { PHEL_DOCS } from './phelCoreDocs';
 import { lookupSymbol } from './phelDocsLookup';
+import { aliasMapFromSource } from './phelNsAnalyzer';
 import {
     aritiesOf,
     clampActiveParam,
@@ -27,7 +28,8 @@ export class PhelSignatureHelpProvider implements vscode.SignatureHelpProvider {
         const merged = this.indexer
             ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
             : [...PHEL_DOCS];
-        const doc = lookupSymbol(call.callee, merged);
+        const aliases = aliasMapFromSource(document.getText());
+        const doc = lookupSymbol(call.callee, merged, aliases);
         if (!doc) {
             return null;
         }

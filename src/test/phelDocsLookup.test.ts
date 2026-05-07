@@ -83,6 +83,25 @@ describe('lookupSymbol', function () {
     it('returns undefined for an empty input', function () {
         assert.strictEqual(lookupSymbol('', corpus), undefined);
     });
+
+    it('resolves alias-qualified `alias/name` via the alias map', function () {
+        const aliases = new Map([['r', 'phel.misc']]);
+        const r = lookupSymbol('r/orphan', corpus, aliases);
+        assert.ok(r);
+        assert.strictEqual(r?.qualifiedName, 'phel.misc/orphan');
+    });
+
+    it('falls back to plain lookup when the alias is unknown', function () {
+        const aliases = new Map([['x', 'no.such.ns']]);
+        const r = lookupSymbol('assoc', corpus, aliases);
+        assert.strictEqual(r?.qualifiedName, 'phel.core/assoc');
+    });
+
+    it('returns undefined when alias resolves but the name does not exist', function () {
+        const aliases = new Map([['r', 'phel.misc']]);
+        const r = lookupSymbol('r/missing', corpus, aliases);
+        assert.strictEqual(r, undefined);
+    });
 });
 
 describe('renderDocMarkdown', function () {

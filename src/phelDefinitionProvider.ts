@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { lookupSymbol } from './phelDocsLookup';
+import { aliasMapFromSource } from './phelNsAnalyzer';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { combineDocs } from './phelWorkspaceIndex';
 import { PHEL_DOCS } from './phelCoreDocs';
@@ -20,7 +21,8 @@ export class PhelDefinitionProvider implements vscode.DefinitionProvider {
         const word = document.getText(range);
 
         const merged = combineDocs(this.indexer.index.allDocs(), PHEL_DOCS);
-        const doc = lookupSymbol(word, merged);
+        const aliases = aliasMapFromSource(document.getText());
+        const doc = lookupSymbol(word, merged, aliases);
         if (!doc) {
             return null;
         }

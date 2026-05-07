@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Editor intelligence
+
+- Resolve `alias/name` symbols via the file's `(:require [other.ns :as alias])` clause. Hover, go-to-definition, and signature help now light up for `r/render`-style references when `r` is aliased in the current file.
+
 ## [0.6.1] - 2026-05-07
 
 ### Build
