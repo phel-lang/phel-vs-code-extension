@@ -16,6 +16,7 @@ import { PhelFormatProvider } from './phelFormatProvider';
 import { PhelTestCodeLensProvider } from './phelTestCodeLensProvider';
 import { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PhelDefinitionProvider } from './phelDefinitionProvider';
+import { PhelDocumentHighlightProvider } from './phelDocumentHighlight';
 import { PhelReferenceProvider } from './phelReferenceProvider';
 import { PhelRenameProvider } from './phelRenameProvider';
 import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelSymbolProviders';
@@ -167,6 +168,13 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.languages.registerReferenceProvider(
             'phel',
             new PhelReferenceProvider(workspaceIndexer)
+        )
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerDocumentHighlightProvider(
+            'phel',
+            new PhelDocumentHighlightProvider()
         )
     );
 
