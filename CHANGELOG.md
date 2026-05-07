@@ -20,6 +20,9 @@
 - Go-to-definition: jumps from a symbol to its workspace `defn`.
 - Paredit commands: slurp/barf forward and backward, raise, and wrap with `( )` / `[ ]` / `{ }`. Default keys for `.phel`: `ctrl+shift+]` / `ctrl+shift+[` (slurp/barf forward), `ctrl+shift+9` / `ctrl+shift+0` (slurp/barf backward), `ctrl+shift+r` (raise), `alt+w` (wrap).
 - REPL integration: `Phel: Start REPL` opens a terminal running `phel repl`; `ctrl+enter` evals the form under the cursor, `ctrl+shift+enter` evals the selection. Commands also include eval next form and eval file.
+- Find-all-references (`shift+F12`) across every indexed `.phel` file.
+- Document outline + Go to Symbol in Workspace (`cmd+T`).
+- Rename refactor (`F2`): renames the symbol in every workspace file; rejects invalid names.
 
 ### Changed
 
