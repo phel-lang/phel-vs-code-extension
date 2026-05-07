@@ -50,7 +50,7 @@ Keep the subject under ~70 characters; put the *why* in the body when it isn't o
 
 - One concern per PR. Stack PRs if a feature naturally splits.
 - Link the source of truth when adding language features (e.g. point at the `phel-lang` file or commit that introduced the form).
-- Update `CHANGELOG.md` under an `## [Unreleased]` heading (or bump the version in a separate PR if the change ships immediately).
+- **Always** add an entry under the `## [Unreleased]` heading in `CHANGELOG.md`. Keep entries one line each. The release script promotes `## [Unreleased]` to `## [X.Y.Z] - DATE` and reinstates a fresh `## [Unreleased]` block, so the section is never empty between releases.
 - Make sure compile, lint, and tests pass.
 
 ## Releasing
@@ -66,7 +66,7 @@ That single command:
 
 1. Sanity-checks: on `main`, working tree clean, version not already tagged, local in sync with `origin/main`.
 2. Bumps `package.json` + `package-lock.json` to the requested version.
-3. Renames `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD` (no-op if you've already done it).
+3. Renames `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`, then inserts a fresh empty `## [Unreleased]` heading above it (no-op if no Unreleased section exists).
 4. Runs the gate: `npm run compile`, `npm test`, `npm run tokenize`.
 5. Builds `phel-lang-X.Y.Z.vsix` via `vsce package`.
 6. Commits `chore(release): vX.Y.Z`, tags `vX.Y.Z`, pushes both.
