@@ -21,6 +21,7 @@ import { PhelRenameProvider } from './phelRenameProvider';
 import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelSymbolProviders';
 import { registerPareditCommands } from './phelPareditProvider';
 import { registerReplCommands } from './phelReplProvider';
+import { registerSelectionCommands } from './phelSelectionProvider';
 
 let sourceMapManager: SourceMapManager;
 
@@ -214,6 +215,8 @@ export function activate(context: vscode.ExtensionContext) {
     if (vscode.workspace.getConfiguration('phel').get<boolean>('repl.enabled', true)) {
         registerReplCommands(context);
     }
+
+    registerSelectionCommands(context);
 
     // Provide hover information for breakpoints
     context.subscriptions.push(
