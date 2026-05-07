@@ -266,6 +266,11 @@
                 "category": "Phel"
             },
             {
+                "command": "phel.repl.switchNs",
+                "title": "Phel: Switch REPL to Current Namespace",
+                "category": "Phel"
+            },
+            {
                 "command": "phel.selection.expand",
                 "title": "Phel: Expand Selection",
                 "category": "Phel"
@@ -404,6 +409,11 @@
                         "repl"
                     ],
                     "description": "Arguments passed to the Phel CLI when starting the REPL."
+                },
+                "phel.repl.history.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Append every form sent to the REPL to `.vscode/phel-repl-history.phel` in the workspace."
                 }
             }
         }
