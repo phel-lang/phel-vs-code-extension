@@ -34,6 +34,7 @@
 - CI: PRs must keep at least one bullet in `## [Unreleased]` (`scripts/check-changelog.cjs`).
 - Test Explorer: every `deftest` shows up in VS Code's testing panel; running an item shells `phel test --filter` and reports pass/fail by exit code.
 - Enclosing-form highlight: subtle background tint on the form containing the cursor in `.phel` files. Toggle via `phel.formHighlight.enabled`.
+- README rewritten to cover REPL, paredit, refactoring, test explorer, diagnostics, and formatting alongside the original highlighting/completion/snippets/debug story. Added `docs/repl-and-paredit.md` and `docs/refactoring.md`.
 
 ### Changed
 
