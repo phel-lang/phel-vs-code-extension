@@ -40,6 +40,26 @@ export interface NsForm {
     requireClause: RequireClause | null;
 }
 
+/**
+ * Build the alias map for the given source: `alias -> target.ns` for every
+ * `[other.ns :as alias]` entry in the file's `(:require ...)` clause. Used
+ * by hover / definition / completion / signature providers to resolve
+ * `alias/name` into a fully-qualified lookup.
+ */
+export function aliasMapFromSource(src: string): Map<string, string> {
+    const map = new Map<string, string>();
+    const ns = parseNsForm(src);
+    if (!ns?.requireClause) {
+        return map;
+    }
+    for (const entry of ns.requireClause.entries) {
+        if (entry.as && entry.ns) {
+            map.set(entry.as, entry.ns);
+        }
+    }
+    return map;
+}
+
 export function parseNsForm(src: string): NsForm | null {
     const forms = parseAll(src);
     for (const form of forms) {

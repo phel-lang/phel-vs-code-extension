@@ -9,15 +9,35 @@ import type { PhelDoc } from './phelDocs';
  * Find the best `PhelDoc` for a typed symbol.
  *
  * - An exact `<ns>/<name>` match always wins.
+ * - When `aliases` is provided and `symbol` is `alias/name`, the alias is
+ *   resolved to its target namespace before looking up `<ns>/<name>`.
  * - Otherwise look for a public symbol with that bare `name`. Prefer
  *   `phel.core` (the auto-imported namespace), then any other public
  *   namespace, then private definitions as a last resort.
  *
  * Returns `undefined` if nothing matches.
  */
-export function lookupSymbol(symbol: string, docs: readonly PhelDoc[]): PhelDoc | undefined {
+export function lookupSymbol(
+    symbol: string,
+    docs: readonly PhelDoc[],
+    aliases?: ReadonlyMap<string, string>
+): PhelDoc | undefined {
     if (!symbol) {
         return undefined;
+    }
+
+    if (aliases && symbol.includes('/')) {
+        const slash = symbol.indexOf('/');
+        const alias = symbol.slice(0, slash);
+        const name = symbol.slice(slash + 1);
+        const targetNs = aliases.get(alias);
+        if (targetNs) {
+            const qualified = `${targetNs}/${name}`;
+            const aliased = docs.find((d) => d.qualifiedName === qualified);
+            if (aliased) {
+                return aliased;
+            }
+        }
     }
 
     const exact = docs.find((d) => d.qualifiedName === symbol);

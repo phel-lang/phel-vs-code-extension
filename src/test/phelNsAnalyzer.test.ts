@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { buildRequireEdit, parseNsForm } from '../phelNsAnalyzer';
+import { aliasMapFromSource, buildRequireEdit, parseNsForm } from '../phelNsAnalyzer';
 
 function applyEdit(src: string, edit: ReturnType<typeof buildRequireEdit>): string {
     if (!edit) {
@@ -77,5 +77,26 @@ describe('phelNsAnalyzer.buildRequireEdit', () => {
 
     it('returns null when there is no ns form', () => {
         assert.equal(buildRequireEdit(null, 'other.ns', 'foo'), null);
+    });
+});
+
+describe('phelNsAnalyzer.aliasMapFromSource', () => {
+    it('returns an empty map when there is no ns form', () => {
+        assert.equal(aliasMapFromSource('(defn foo [])').size, 0);
+    });
+
+    it('returns an empty map when there is no :require clause', () => {
+        assert.equal(aliasMapFromSource('(ns my.app)').size, 0);
+    });
+
+    it('extracts every :as alias from the require clause', () => {
+        const src = `(ns my.app
+  (:require [phelgeon.render :as r]
+            [phelgeon.input :as i]
+            [other.ns]))`;
+        const map = aliasMapFromSource(src);
+        assert.equal(map.size, 2);
+        assert.equal(map.get('r'), 'phelgeon.render');
+        assert.equal(map.get('i'), 'phelgeon.input');
     });
 });

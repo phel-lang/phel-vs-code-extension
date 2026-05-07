@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { PHEL_DOCS } from './phelCoreDocs';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
+import { aliasMapFromSource } from './phelNsAnalyzer';
 import { combineDocs } from './phelWorkspaceIndex';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
@@ -21,7 +22,8 @@ export class PhelHoverProvider implements vscode.HoverProvider {
         const merged = this.indexer
             ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
             : [...PHEL_DOCS];
-        const doc = lookupSymbol(word, merged);
+        const aliases = aliasMapFromSource(document.getText());
+        const doc = lookupSymbol(word, merged, aliases);
         if (!doc) {
             return null;
         }
