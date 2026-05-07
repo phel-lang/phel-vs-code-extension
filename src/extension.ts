@@ -23,6 +23,7 @@ import { registerPareditCommands } from './phelPareditProvider';
 import { registerReplCommands } from './phelReplProvider';
 import { registerSelectionCommands } from './phelSelectionProvider';
 import { PhelFormHighlight } from './phelFormHighlight';
+import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
 import { PhelStatusBar } from './phelStatusBar';
 import { PhelTestController } from './phelTestController';
 
@@ -225,6 +226,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(new PhelTestController());
     context.subscriptions.push(new PhelFormHighlight());
+
+    context.subscriptions.push(
+        vscode.languages.registerInlineValuesProvider('phel', new PhelInlineValuesProvider())
+    );
 
     // Provide hover information for breakpoints
     context.subscriptions.push(
