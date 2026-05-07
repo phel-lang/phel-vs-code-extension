@@ -12,6 +12,7 @@ import { PHEL_DOCS } from './phelCoreDocs';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
 import { buildQuickPickEntries } from './phelShowDoc';
 import { registerDiagnostics } from './phelDiagnosticsProvider';
+import { resolvePhelExecutable } from './phelExecutable';
 import { PhelFormatProvider } from './phelFormatProvider';
 import { PhelTestCodeLensProvider } from './phelTestCodeLensProvider';
 import { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
@@ -318,9 +319,7 @@ function runPhelTests(uri?: vscode.Uri, testName?: string): void {
         return;
     }
     const folder = vscode.workspace.getWorkspaceFolder(target);
-    const command = vscode.workspace
-        .getConfiguration('phel')
-        .get<string>('test.command', 'vendor/bin/phel');
+    const command = resolvePhelExecutable('test.command', folder);
     const cwd = folder?.uri.fsPath ?? path.dirname(target.fsPath);
     const filePath = path.relative(cwd, target.fsPath) || target.fsPath;
     const args = ['test'];

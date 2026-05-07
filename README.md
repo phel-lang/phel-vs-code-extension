@@ -36,6 +36,16 @@ code --install-extension Phel-Lang.phel-lang
 
 Requires VS Code **1.75+**.
 
+## Configuration
+
+The extension expects the Phel CLI at `vendor/bin/phel` (Composer default). For other layouts, set `phel.executablePath` once in `.vscode/settings.json`:
+
+```jsonc
+{ "phel.executablePath": "bin/phel" }
+```
+
+Per-subsystem overrides (`phel.diagnostics.command`, `phel.format.command`, `phel.test.command`, `phel.repl.command`) take precedence when set. Full settings reference: [docs/settings.md](docs/settings.md).
+
 ## Documentation
 
 | Topic | Link |

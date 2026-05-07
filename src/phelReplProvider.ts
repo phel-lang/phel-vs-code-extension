@@ -12,8 +12,8 @@
 // in the corresponding workspace folder when `phel.repl.history.enabled` is
 // true (the default).
 
-import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { resolvePhelExecutable } from './phelExecutable';
 import { parseNsForm } from './phelNsAnalyzer';
 import { flattenForTerminal, nextTopLevelFormAfter, topLevelFormAt } from './phelRepl';
 
@@ -36,10 +36,9 @@ function workspaceFolderForDoc(doc?: vscode.TextDocument): vscode.WorkspaceFolde
 
 function resolveCommand(folder: vscode.WorkspaceFolder | undefined): ReplCommandConfig {
     const config = vscode.workspace.getConfiguration('phel', folder);
-    const cmd = config.get<string>('repl.command', 'vendor/bin/phel');
     const args = config.get<string[]>('repl.args', ['repl']);
     const cwd = folder?.uri.fsPath ?? process.cwd();
-    const absolute = path.isAbsolute(cmd) ? cmd : path.join(cwd, cmd);
+    const absolute = resolvePhelExecutable('repl.command', folder);
     return { command: absolute, args, cwd };
 }
 
