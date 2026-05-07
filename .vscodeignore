@@ -5,6 +5,8 @@
 .github/**
 src/**
 out/**
+assets/**
+dist/meta.json
 **/*.ts
 **/*.map
 .gitignore

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Build
+
+- Move the 1300-entry symbol corpus out of the JS bundle into a sibling `dist/phel-core-docs.json` (~490 KB), lazy-loaded via a `Proxy` on first use. `dist/extension.js` shrinks from ~559 KB to ~97 KB; the bundle-size warning during `vsce package` no longer fires. Total vsix size is unchanged.
+
 ## [0.6.0] - 2026-05-07
 
 Largest release since the initial cut. Brings the extension up to a modern
