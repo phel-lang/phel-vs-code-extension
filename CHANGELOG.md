@@ -19,6 +19,7 @@
 - Workspace indexer: parses every `.phel` in the workspace and surfaces user `defn`/`defmacro`/`def` forms in completion / hover / signature help.
 - Go-to-definition: jumps from a symbol to its workspace `defn`.
 - Paredit commands: slurp/barf forward and backward, raise, and wrap with `( )` / `[ ]` / `{ }`. Default keys for `.phel`: `ctrl+shift+]` / `ctrl+shift+[` (slurp/barf forward), `ctrl+shift+9` / `ctrl+shift+0` (slurp/barf backward), `ctrl+shift+r` (raise), `alt+w` (wrap).
+- REPL integration: `Phel: Start REPL` opens a terminal running `phel repl`; `ctrl+enter` evals the form under the cursor, `ctrl+shift+enter` evals the selection. Commands also include eval next form and eval file.
 
 ### Changed
 
@@ -31,6 +32,7 @@
 - `phel.format.enabled`, `phel.format.command`
 - `phel.tests.codeLensEnabled`, `phel.test.command`
 - `phel.paredit.enabled`
+- `phel.repl.enabled`, `phel.repl.command`, `phel.repl.args`
 
 ## [0.5.1] - 2026-05-06
 

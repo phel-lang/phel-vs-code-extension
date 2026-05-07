@@ -17,6 +17,7 @@ import { PhelTestCodeLensProvider } from './phelTestCodeLensProvider';
 import { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PhelDefinitionProvider } from './phelDefinitionProvider';
 import { registerPareditCommands } from './phelPareditProvider';
+import { registerReplCommands } from './phelReplProvider';
 
 let sourceMapManager: SourceMapManager;
 
@@ -184,6 +185,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     if (vscode.workspace.getConfiguration('phel').get<boolean>('paredit.enabled', true)) {
         registerPareditCommands(context);
+    }
+
+    if (vscode.workspace.getConfiguration('phel').get<boolean>('repl.enabled', true)) {
+        registerReplCommands(context);
     }
 
     // Provide hover information for breakpoints
