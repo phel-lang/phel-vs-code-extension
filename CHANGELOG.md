@@ -26,6 +26,9 @@
 - Selection expand/shrink by sexp: `ctrl+shift+space` grows the selection to the enclosing form, `ctrl+shift+alt+space` undoes the last grow.
 - Auto-import: completing a workspace symbol from another namespace also inserts the matching `:require` entry into the current file's `(ns ...)` form (`:refer [name]`). Skipped for `phel.core` and same-ns symbols.
 - Call snippets: accepting a function completion in callee position (just after `(`) inserts a `name ${1:arg1} ${2:arg2}` skeleton with tab stops, derived from the function's signature.
+- REPL `(in-ns ...)` follow: evaluating from a different file automatically switches the REPL into that file's namespace first.
+- REPL history: every form sent to the REPL is appended to `.vscode/phel-repl-history.phel` (toggle via `phel.repl.history.enabled`).
+- New command `Phel: Switch REPL to Current Namespace`.
 
 ### Changed
 
