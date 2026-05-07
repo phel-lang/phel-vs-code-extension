@@ -31,6 +31,8 @@ jobs:
       - run: npm run compile
       - run: npm run lint
       - run: npm test
+      - run: npm run check:changelog
+        if: github.event_name == 'pull_request'
       - run: npm run tokenize
       - run: npm run bundle:prod
       - name: vsce package (sanity)
