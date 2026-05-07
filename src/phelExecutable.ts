@@ -33,9 +33,7 @@ export function resolvePhelExecutable(
 function explicitString(config: vscode.WorkspaceConfiguration, key: string): string | undefined {
     const inspected = config.inspect<string>(key);
     const value =
-        inspected?.workspaceFolderValue ??
-        inspected?.workspaceValue ??
-        inspected?.globalValue;
+        inspected?.workspaceFolderValue ?? inspected?.workspaceValue ?? inspected?.globalValue;
     return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
