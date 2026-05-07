@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icon.png" alt="Phel" width="128" />
+</p>
+
 # Phel Lang for VS Code
 
 [![CI](https://github.com/phel-lang/phel-vs-code-extension/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/phel-lang/phel-vs-code-extension/actions/workflows/ci.yml)
@@ -40,6 +44,110 @@ Requires VS Code **1.75+**. Other paths (`.vsix` from GitHub releases, build fro
 3. **Run the REPL** - `cmd+shift+P` → `Phel: Start REPL`, then `ctrl+enter` over a form to eval it.
 4. **Find & rename** - place the cursor on a symbol, press <kbd>F2</kbd> to rename it across the workspace, <kbd>shift+F12</kbd> to list every usage.
 5. **Set a breakpoint** in `.phel`, add a launch config (see [docs/debugging.md](docs/debugging.md)), press <kbd>F5</kbd>.
+
+## Tour
+
+### Smart completion + auto-import
+
+Type a workspace symbol's prefix; accept it, and the `(ns ...)` form is patched too:
+
+```clojure
+;; before
+(ns my.app)
+
+(println (slug-for "Hello World"))   ; <- typed `slug-` and accepted
+
+;; after
+(ns my.app
+  (:require [my.app.text :refer [slug-for]]))
+
+(println (slug-for "Hello World"))
+```
+
+Accepting a function in callee position fills in tabstops:
+
+```clojure
+;; type (asso → accept assoc
+(assoc m k v)
+;       ^   ^   ^   tab through m, k, v
+```
+
+### Hover & signature help
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│ assoc                                                       │
+│ (assoc m k v)                                               │
+│ (assoc m k v & kvs)                                         │
+│                                                             │
+│ Returns a new map with the key/value pairs assoc'd onto m.  │
+│                                                             │
+│ Example: (assoc {:a 1} :b 2) ;=> {:a 1 :b 2}                │
+│ See also: dissoc, get, update                               │
+└────────────────────────────────────────────────────────────┘
+```
+
+### REPL with `(in-ns)` follow
+
+```text
+$ phel repl
+phel> ;; cursor in src/app/core.phel, ctrl+enter on:
+(defn greet [name] (str "Hello, " name))
+;=> nil
+
+;; jump to src/app/util.phel, ctrl+enter on:
+(reverse [1 2 3])
+;; extension first sends:
+(in-ns 'app.util)
+;=> [3 2 1]
+```
+
+History trail in `.vscode/phel-repl-history.phel`:
+
+```clojure
+;; 2026-05-07T08:42:11.231Z
+(defn greet [name] (str "Hello, " name))
+
+;; 2026-05-07T08:42:34.118Z
+(reverse [1 2 3])
+```
+
+### Paredit
+
+```text
+;; cursor in (a)         slurp-forward      → (a b)
+(a) b                    ─────────────►     (a b)
+
+;; cursor inside         barf-forward       → (a b) c
+(a b c)                  ─────────────►     (a b) c
+
+;; cursor on bar         raise              → (foo bar)
+(foo (bar baz))          ─────────────►     (foo bar)
+```
+
+`cmd+shift+space` grows the selection by sexp; again, again until you hit the top-level form.
+
+### Refactoring
+
+| Action | Key | Scope |
+|---|---|---|
+| Go to definition | `F12` | workspace + bundled `phel.core` |
+| Find all references | `shift+F12` | workspace |
+| Rename | `F2` | workspace |
+| Outline | `cmd+shift+O` | current file |
+| Symbol search | `cmd+T` | workspace |
+
+### Test Explorer
+
+```text
+TESTING
+└─ src/app/core_test.phel
+   ├─ ✓ greet-basic         (124 ms)
+   ├─ ✓ greet-empty-name    (87 ms)
+   └─ ✗ greet-i18n          (assertion failed: expected ...)
+```
+
+Inline `▶ Run test` lenses run a single `deftest` from the editor.
 
 ## Documentation
 
