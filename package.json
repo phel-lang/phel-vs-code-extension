@@ -432,6 +432,7 @@
         "format:check": "prettier --check \"src/**/*.ts\"",
         "pretest": "npm run compile && npm run lint",
         "test": "mocha out/test/**/*.test.js",
+        "check:changelog": "node scripts/check-changelog.cjs",
         "tokenize": "node scripts/tokenize-sample.mjs",
         "regen-docs": "npm run compile && node scripts/regen-core-docs.cjs",
         "package": "vsce package",

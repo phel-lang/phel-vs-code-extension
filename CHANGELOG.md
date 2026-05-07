@@ -31,6 +31,7 @@
 - New command `Phel: Switch REPL to Current Namespace`.
 - Status bar: shows the current Phel namespace when editing a `.phel` file, or a `Phel` badge when the workspace has `phel-lang/phel` in its `composer.json`. Click it to start the REPL.
 - Build: ship a single bundled `dist/extension.js` via esbuild for faster activation and a smaller vsix.
+- CI: PRs must keep at least one bullet in `## [Unreleased]` (`scripts/check-changelog.cjs`).
 
 ### Changed
 
