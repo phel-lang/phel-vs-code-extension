@@ -23,6 +23,7 @@ import { registerPareditCommands } from './phelPareditProvider';
 import { registerReplCommands } from './phelReplProvider';
 import { registerSelectionCommands } from './phelSelectionProvider';
 import { PhelStatusBar } from './phelStatusBar';
+import { PhelTestController } from './phelTestController';
 
 let sourceMapManager: SourceMapManager;
 
@@ -220,6 +221,8 @@ export function activate(context: vscode.ExtensionContext) {
     registerSelectionCommands(context);
 
     void new PhelStatusBar().start(context);
+
+    context.subscriptions.push(new PhelTestController());
 
     // Provide hover information for breakpoints
     context.subscriptions.push(
