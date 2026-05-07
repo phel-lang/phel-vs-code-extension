@@ -10,12 +10,18 @@ VS Code support for [Phel](https://phel-lang.org/) - a functional Lisp that comp
 
 ## Why this extension
 
-Writing Phel without editor support means colourless code, no completion for the 400+ symbols in `phel.core`, and dropping back to PHP-level debugging. This extension fixes all three.
+Writing Phel without editor support means colourless code, no completion for the 400+ symbols in `phel.core`, and dropping back to PHP-level debugging. This extension covers the full IDE flow.
 
-- **Highlighting** - full coverage of forms, macros, reader macros, tagged literals (`#inst`, `#regex`, `#php`, …) and reader conditionals (`#?(...)`).
-- **Completion** for every public symbol in `phel.core` (47 special forms, ~70 macros, 394 functions).
-- **Snippets** for everyday scaffolding - `defn`, `let`, `cond`, `try`, `deftest`, `->`, …
+- **Highlighting** - forms, macros, reader macros, tagged literals (`#inst`, `#regex`, `#php`, …) and reader conditionals (`#?(...)`).
+- **Completion** for every public symbol in `phel.core` plus user `defn`/`defmacro`/`def` from anywhere in the workspace. Accepting a function in callee position fills in signature tabstops; cross-namespace symbols also auto-add the matching `:require`.
+- **Hover & signature help** - markdown docstring, examples, and per-arity parameter highlight.
+- **Go to / Find / Rename** - `F12` go-to-definition, `shift+F12` find-all-references, `F2` workspace rename, `cmd+T` go-to-symbol-in-workspace.
+- **Diagnostics on save** via `phel analyze`; **format on save** via `phel format`.
+- **REPL integration** - `Phel: Start REPL` opens an integrated terminal; `ctrl+enter` evals the form under the cursor in the file's namespace; history is appended to `.vscode/phel-repl-history.phel`.
+- **Test Explorer + CodeLens** - every `deftest` shows up in the testing panel; inline `▶ Run test` lenses run a single deftest.
+- **Paredit** - slurp/barf/raise/wrap commands; `cmd+shift+space` expands the selection by sexp.
 - **Native debug adapter** - set breakpoints in `.phel` files; the adapter translates between Phel and the compiled PHP via Xdebug.
+- **Snippets** for everyday scaffolding - `defn`, `let`, `cond`, `try`, `deftest`, `->`, …
 
 ## Install
 
@@ -31,8 +37,9 @@ Requires VS Code **1.75+**. Other paths (`.vsix` from GitHub releases, build fro
 
 1. **Open any `.phel` file** - highlighting kicks in automatically.
 2. **Try completion** - start typing `re-` or `swap` and accept a suggestion.
-3. **Expand a snippet** - type `defn` <kbd>Tab</kbd> and tab through the placeholders.
-4. **Set a breakpoint** in `.phel`, add a launch config (see [docs/debugging.md](docs/debugging.md)), press <kbd>F5</kbd>.
+3. **Run the REPL** - `cmd+shift+P` → `Phel: Start REPL`, then `ctrl+enter` over a form to eval it.
+4. **Find & rename** - place the cursor on a symbol, press <kbd>F2</kbd> to rename it across the workspace, <kbd>shift+F12</kbd> to list every usage.
+5. **Set a breakpoint** in `.phel`, add a launch config (see [docs/debugging.md](docs/debugging.md)), press <kbd>F5</kbd>.
 
 ## Documentation
 
@@ -41,6 +48,8 @@ Requires VS Code **1.75+**. Other paths (`.vsix` from GitHub releases, build fro
 | Installation paths | [docs/installation.md](docs/installation.md) |
 | Syntax highlighting reference | [docs/syntax.md](docs/syntax.md) |
 | Completion & snippets | [docs/completion.md](docs/completion.md) |
+| REPL & paredit | [docs/repl-and-paredit.md](docs/repl-and-paredit.md) |
+| Refactoring (rename / refs / symbols) | [docs/refactoring.md](docs/refactoring.md) |
 | Debugging with Xdebug | [docs/debugging.md](docs/debugging.md) |
 | Tracing with `tap>` | [docs/taps.md](docs/taps.md) |
 | Settings reference | [docs/settings.md](docs/settings.md) |
