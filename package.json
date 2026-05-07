@@ -264,6 +264,16 @@
                 "command": "phel.repl.evalFile",
                 "title": "Phel: Eval File",
                 "category": "Phel"
+            },
+            {
+                "command": "phel.selection.expand",
+                "title": "Phel: Expand Selection",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.selection.shrink",
+                "title": "Phel: Shrink Selection",
+                "category": "Phel"
             }
         ],
         "keybindings": [
@@ -312,6 +322,18 @@
                 "command": "phel.repl.evalSelection",
                 "key": "ctrl+shift+enter",
                 "mac": "cmd+shift+enter",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.selection.expand",
+                "key": "ctrl+shift+space",
+                "mac": "cmd+shift+space",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.selection.shrink",
+                "key": "ctrl+shift+alt+space",
+                "mac": "cmd+shift+alt+space",
                 "when": "editorTextFocus && editorLangId == phel"
             }
         ],

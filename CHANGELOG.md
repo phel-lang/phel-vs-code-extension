@@ -23,6 +23,7 @@
 - Find-all-references (`shift+F12`) across every indexed `.phel` file.
 - Document outline + Go to Symbol in Workspace (`cmd+T`).
 - Rename refactor (`F2`): renames the symbol in every workspace file; rejects invalid names.
+- Selection expand/shrink by sexp: `ctrl+shift+space` grows the selection to the enclosing form, `ctrl+shift+alt+space` undoes the last grow.
 
 ### Changed
 
