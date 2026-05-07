@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { PHEL_DOCS } from './phelCoreDocs';
 import { CORE_FNS, MACROS, SPECIAL_FORMS } from './phelCoreSymbols';
+import { buildCallSnippet, isCalleePosition } from './phelCallSnippet';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
 import { buildRequireEdit, parseNsForm, type NsForm } from './phelNsAnalyzer';
 import { combineDocs } from './phelWorkspaceIndex';
@@ -77,7 +78,8 @@ function buildItem(
     range: vscode.Range | undefined,
     docs: readonly import('./phelDocs').PhelDoc[],
     document: vscode.TextDocument,
-    nsForm: NsForm | null
+    nsForm: NsForm | null,
+    callee: boolean
 ): vscode.CompletionItem {
     const item = new vscode.CompletionItem(spec.label, spec.kind);
     item.detail = spec.detail;
@@ -87,6 +89,12 @@ function buildItem(
         md.isTrusted = false;
         md.supportHtml = false;
         item.documentation = md;
+        if (callee) {
+            const snippet = buildCallSnippet(spec.label, doc.signature);
+            if (snippet) {
+                item.insertText = new vscode.SnippetString(snippet);
+            }
+        }
     }
     if (range) {
         item.range = range;
@@ -130,6 +138,8 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
             : [...PHEL_DOCS];
         const specs = [...this.baseSpecs, ...workspaceSpecs(this.indexer)];
         const nsForm = parseNsForm(document.getText());
-        return specs.map((spec) => buildItem(spec, range, merged, document, nsForm));
+        const linePrefix = document.lineAt(position.line).text.slice(0, position.character);
+        const callee = isCalleePosition(linePrefix);
+        return specs.map((spec) => buildItem(spec, range, merged, document, nsForm, callee));
     }
 }
