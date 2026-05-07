@@ -63,7 +63,8 @@ Cut a release entirely from GitHub Actions: no local install, no manual marketpl
 2. Open <https://github.com/phel-lang/phel-vs-code-extension/actions/workflows/release.yml> and click **Run workflow**.
 3. Fill in:
    - `version`: e.g. `0.6.0`
-   - `dry_run`: leave unchecked for a real release; check it to package + push nothing.
+   - `publish_marketplace`: check to publish via `vsce publish` (requires `VSCE_PAT` secret). Uncheck to skip the Marketplace step and upload the vsix yourself via the [publisher web UI](https://marketplace.visualstudio.com/manage/publishers/Phel-Lang). The vsix is attached to the GitHub Release and uploaded as a workflow artifact either way.
+   - `dry_run`: check to bump + package only, with no git push, GH release, or Marketplace publish. Use it once before a real cut to confirm the pipeline.
 4. The workflow:
    - bumps `package.json` + `package-lock.json`,
    - rewrites `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and re-creates an empty `Unreleased`,

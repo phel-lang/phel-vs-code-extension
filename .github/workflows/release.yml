@@ -1,13 +1,15 @@
 name: Release
 
 # Manual release: bump version, package the vsix, push the tag, create the
-# GitHub Release, and publish to the VS Code Marketplace.
+# GitHub Release, and (optionally) publish to the VS Code Marketplace.
 #
-# One-time setup:
-#   * Repo secret `VSCE_PAT` with a Marketplace personal access token that
-#     can publish under the `Phel-Lang` publisher.
-#   * Default `GITHUB_TOKEN` is enough for `gh release create` and pushes
-#     because the `contents: write` permission is granted below.
+# Three modes via inputs:
+#   * dry_run = true                     -> bump + package, no push, no publish.
+#   * publish_marketplace = false        -> push tag, create GH release with
+#                                          vsix attached. You upload the vsix
+#                                          to the Marketplace web UI yourself.
+#   * publish_marketplace = true         -> full automation. Requires the
+#                                          `VSCE_PAT` repo secret.
 
 on:
   workflow_dispatch:
@@ -16,8 +18,13 @@ on:
         description: 'Semver version to cut (e.g. 0.6.0)'
         required: true
         type: string
+      publish_marketplace:
+        description: 'Also publish to the VS Code Marketplace (requires VSCE_PAT secret). Uncheck to upload the vsix manually.'
+        required: false
+        type: boolean
+        default: false
       dry_run:
-        description: 'Dry run: skip git push and Marketplace publish'
+        description: 'Dry run: skip git push, GH release, and Marketplace publish'
         required: false
         type: boolean
         default: false
@@ -60,13 +67,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
-          if [[ -z "${VSCE_PAT}" && "${{ inputs.dry_run }}" != "true" ]]; then
-            echo "VSCE_PAT secret is missing. Add it in repo Settings > Secrets, or rerun with dry_run=true." >&2
-            exit 1
-          fi
           flags=""
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             flags="--no-push --no-publish"
+          elif [[ "${{ inputs.publish_marketplace }}" != "true" ]]; then
+            flags="--no-publish"
+          else
+            if [[ -z "${VSCE_PAT}" ]]; then
+              echo "VSCE_PAT secret is missing but publish_marketplace=true. Add it in repo Settings > Secrets, or uncheck publish_marketplace to upload the vsix manually." >&2
+              exit 1
+            fi
           fi
           ./scripts/release.sh "${{ inputs.version }}" $flags
 
