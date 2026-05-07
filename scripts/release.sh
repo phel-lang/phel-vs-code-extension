@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Cut a new release of the Phel Lang VS Code extension.
 #
-#   scripts/release.sh <version> [--no-publish] [--no-push]
+#   scripts/release.sh <version> [--publish] [--no-push]
+#
+# Default flow (no flags): bump version, package the vsix, push the tag,
+# create the GitHub Release with the vsix attached. Marketplace publish is
+# OFF by default - drop the vsix into the Marketplace web UI yourself, or
+# pass `--publish` for full automation.
 #
 # What it does, in order:
 #   1. Sanity checks: on main, working tree clean, version not already tagged.
 #   2. Bumps package.json + package-lock.json to <version>.
 #   3. Renames the CHANGELOG "Unreleased" heading to "[<version>] - <today>"
-#      (if present); otherwise just leaves CHANGELOG as-is so the entry is
+#      (if present); otherwise leaves CHANGELOG as-is so the entry is
 #      assumed already authored.
 #   4. Runs the gate: npm run compile, npm test, npm run tokenize.
 #   5. Builds phel-lang-<version>.vsix via `vsce package`.
@@ -15,28 +20,29 @@
 #      (skip with --no-push to dry-run locally).
 #   7. Creates a GitHub Release with the .vsix attached, using the matching
 #      CHANGELOG section as the release notes.
-#   8. Publishes to the VS Code Marketplace via `vsce publish` (skip with
-#      --no-publish; useful when you want to upload manually via the
-#      Marketplace web UI).
+#   8. (Only with --publish) publishes to the VS Code Marketplace via
+#      `vsce publish`.
 #
 # Pre-reqs (one-time): see CONTRIBUTING.md "Marketplace setup".
-#   - vsce logged in (`npx @vscode/vsce login Phel-Lang`)
 #   - gh authed (`gh auth status`)
+#   - For --publish: vsce logged in (`npx @vscode/vsce login Phel-Lang`)
+#     or VSCE_PAT env var set.
 
 set -euo pipefail
 
-PUBLISH=1
+PUBLISH=0
 PUSH=1
 VERSION=""
 
 usage() {
-    sed -n '2,30p' "$0" >&2
+    sed -n '2,32p' "$0" >&2
     exit 1
 }
 
 for arg in "$@"; do
     case "$arg" in
-        --no-publish) PUBLISH=0 ;;
+        --publish)    PUBLISH=1 ;;
+        --no-publish) PUBLISH=0 ;;  # accepted for backwards compatibility
         --no-push)    PUSH=0 ;;
         -h|--help)    usage ;;
         -*)           echo "unknown flag: $arg" >&2; usage ;;
@@ -45,7 +51,7 @@ for arg in "$@"; do
 done
 
 if [[ -z "$VERSION" ]]; then
-    echo "usage: scripts/release.sh <version> [--no-publish] [--no-push]" >&2
+    echo "usage: scripts/release.sh <version> [--publish] [--no-push]" >&2
     exit 1
 fi
 

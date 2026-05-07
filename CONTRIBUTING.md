@@ -82,10 +82,12 @@ Same flow, run from a clean `main` checkout:
 npm run release -- 0.6.0
 ```
 
-Useful flags:
+Default behaviour: bump version, build the vsix, push the tag, create the GitHub Release with the vsix attached. Marketplace publish is **off** by default - download the vsix from the GH Release and drop it into <https://marketplace.visualstudio.com/manage/publishers/Phel-Lang>.
 
-- `--no-publish` - everything except the Marketplace upload.
-- `--no-push` - bumps versions and builds the `.vsix` locally, but does not push, tag remotely, create a release, or publish.
+Flags:
+
+- `--publish` - also run `vsce publish` (requires `vsce login Phel-Lang` cached or `VSCE_PAT` env var set).
+- `--no-push` - dry run: bumps versions and builds the `.vsix` locally, no push / tag / GH release.
 
 If the script fails partway through, fix the cause and re-run; each step checks for existing artefacts.
 

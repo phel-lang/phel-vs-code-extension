@@ -69,14 +69,13 @@ jobs:
         run: |
           flags=""
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            flags="--no-push --no-publish"
-          elif [[ "${{ inputs.publish_marketplace }}" != "true" ]]; then
-            flags="--no-publish"
-          else
+            flags="--no-push"
+          elif [[ "${{ inputs.publish_marketplace }}" == "true" ]]; then
             if [[ -z "${VSCE_PAT}" ]]; then
               echo "VSCE_PAT secret is missing but publish_marketplace=true. Add it in repo Settings > Secrets, or uncheck publish_marketplace to upload the vsix manually." >&2
               exit 1
             fi
+            flags="--publish"
           fi
           ./scripts/release.sh "${{ inputs.version }}" $flags
 
