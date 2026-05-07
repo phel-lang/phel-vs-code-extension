@@ -16,6 +16,8 @@
 - Bracket pair colorization for `.phel`.
 - Auto-close pair for `#(...)`.
 - Weekly scheduled workflow that regenerates the docs DB from phel-lang `main` and opens a PR.
+- Workspace indexer: parses every `.phel` in the workspace and surfaces user `defn`/`defmacro`/`def` forms in completion / hover / signature help.
+- Go-to-definition: jumps from a symbol to its workspace `defn`.
 
 ### Changed
 

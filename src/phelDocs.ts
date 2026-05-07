@@ -40,6 +40,10 @@ export interface PhelDoc {
     seeAlso?: string[];
     /** GitHub blob URL pointing at the file the form lives in. */
     sourceUrl?: string;
+    /** 0-based line number where the form starts (when known). */
+    line?: number;
+    /** 0-based column where the form starts (when known). */
+    column?: number;
 }
 
 export interface ParseOptions {
@@ -83,6 +87,9 @@ export function parsePhelFile(source: string, ns: string): PhelDoc[] {
         if (opSlice && isDefiningOp(opSlice.value)) {
             const doc = parseDefiningForm(source, formStart, formEnd, opSlice, ns);
             if (doc) {
+                const pos = positionAt(source, formStart);
+                doc.line = pos.line;
+                doc.column = pos.column;
                 docs.push(doc);
             }
         }
@@ -101,6 +108,17 @@ const DEFINING_OPS: Record<string, { kind: PhelDocKind; private: boolean }> = {
     def: { kind: 'def', private: false },
     'def-': { kind: 'def', private: true },
 };
+
+/**
+ * Convert a byte offset into a {line, column} pair (both 0-based).
+ */
+export function positionAt(source: string, offset: number): { line: number; column: number } {
+    const before = source.slice(0, offset);
+    const lastNewline = before.lastIndexOf('\n');
+    const line = (before.match(/\n/g) ?? []).length;
+    const column = lastNewline < 0 ? offset : offset - lastNewline - 1;
+    return { line, column };
+}
 
 function isDefiningOp(symbol: string): boolean {
     return Object.prototype.hasOwnProperty.call(DEFINING_OPS, symbol);
