@@ -35,7 +35,7 @@
     },
     "badges": [
         {
-            "url": "https://img.shields.io/visual-studio-marketplace/v/Phel-Lang.phel-lang?label=marketplace",
+            "url": "https://vsmarketplacebadges.dev/version-short/Phel-Lang.phel-lang.svg",
             "href": "https://marketplace.visualstudio.com/items?itemName=Phel-Lang.phel-lang",
             "description": "Marketplace version"
         },
