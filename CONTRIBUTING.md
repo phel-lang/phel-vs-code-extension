@@ -55,34 +55,42 @@ Keep the subject under ~70 characters; put the *why* in the body when it isn't o
 
 ## Releasing
 
-The end-to-end flow is automated by `scripts/release.sh` (also exposed as `npm run release`):
+Cut a release entirely from GitHub Actions: no local install, no manual marketplace upload.
+
+### One-click release (recommended)
+
+1. Make sure CHANGELOG `## [Unreleased]` is up to date on `main`.
+2. Open <https://github.com/phel-lang/phel-vs-code-extension/actions/workflows/release.yml> and click **Run workflow**.
+3. Fill in:
+   - `version`: e.g. `0.6.0`
+   - `dry_run`: leave unchecked for a real release; check it to package + push nothing.
+4. The workflow:
+   - bumps `package.json` + `package-lock.json`,
+   - rewrites `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` and re-creates an empty `Unreleased`,
+   - runs the gate (compile, lint, test, tokenize, bundle),
+   - packages the vsix,
+   - commits / tags / pushes,
+   - creates the GitHub Release with the vsix attached and the CHANGELOG section as the body,
+   - publishes to the VS Code Marketplace via `vsce publish`.
+
+### Local release
+
+Same flow, run from a clean `main` checkout:
 
 ```bash
-# from a clean main branch:
 npm run release -- 0.6.0
 ```
 
-That single command:
-
-1. Sanity-checks: on `main`, working tree clean, version not already tagged, local in sync with `origin/main`.
-2. Bumps `package.json` + `package-lock.json` to the requested version.
-3. Renames `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`, then inserts a fresh empty `## [Unreleased]` heading above it (no-op if no Unreleased section exists).
-4. Runs the gate: `npm run compile`, `npm test`, `npm run tokenize`.
-5. Builds `phel-lang-X.Y.Z.vsix` via `vsce package`.
-6. Commits `chore(release): vX.Y.Z`, tags `vX.Y.Z`, pushes both.
-7. Creates a GitHub Release with the `.vsix` attached, using the matching CHANGELOG section as the body.
-8. Publishes to the VS Code Marketplace via `vsce publish`.
-
 Useful flags:
 
-- `--no-publish` - everything except the Marketplace upload (use when you want to drag-and-drop the `.vsix` via the publisher web UI instead).
-- `--no-push` - dry run: bumps versions and builds the `.vsix` locally, but does not push, tag remotely, create a release, or publish.
+- `--no-publish` - everything except the Marketplace upload.
+- `--no-push` - bumps versions and builds the `.vsix` locally, but does not push, tag remotely, create a release, or publish.
 
-If the script fails partway through, fix the cause and re-run; it's safe to re-run from the same point because each step checks for existing artefacts.
+If the script fails partway through, fix the cause and re-run; each step checks for existing artefacts.
 
 ### Marketplace setup (one-time)
 
-The extension's `publisher` field is `Phel-Lang`. To publish you need a Personal Access Token (PAT) tied to that account:
+The extension's `publisher` field is `Phel-Lang`. To publish you need a Personal Access Token (PAT) tied to that account.
 
 1. Go to <https://dev.azure.com>, sign in with the same account that owns the [`Phel-Lang` publisher](https://marketplace.visualstudio.com/manage/publishers/Phel-Lang).
 2. **User settings → Personal Access Tokens → New Token**:
@@ -90,13 +98,14 @@ The extension's `publisher` field is `Phel-Lang`. To publish you need a Personal
    - Expiration: pick what you're comfortable with (max 1 year)
    - Scopes → **Custom defined** → check **Marketplace > Manage**
 3. Copy the token (shown once).
-4. Cache it locally:
+4. **For the GitHub workflow**: add it as a repo secret named `VSCE_PAT` (Settings → Secrets and variables → Actions → New repository secret).
+5. **For local publishing**: cache it on your machine:
    ```bash
    npx @vscode/vsce login Phel-Lang
    # paste the PAT when prompted
    ```
 
-Subsequent `vsce publish` calls reuse the cached credentials. To rotate, run `vsce logout Phel-Lang` and repeat.
+Rotation: regenerate in Azure DevOps, update the `VSCE_PAT` secret (and `vsce login` again locally if you use the local flow).
 
 ### Marketplace assets
 
