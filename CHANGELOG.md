@@ -2,61 +2,86 @@
 
 ## [Unreleased]
 
-### Added
+Largest release since the initial cut. Brings the extension up to a modern
+Lisp-IDE feature set: completion + hover + signature help backed by a
+generated symbol DB, workspace-aware refactoring, paredit, an integrated
+REPL, a Test Explorer, and inline debug values.
 
-- Symbol metadata DB (`src/phelCoreDocs.ts`): 1317 entries across 30 namespaces, regen via `npm run regen-docs`.
-- Hover docs: signature, doc, example, see-also, source link.
-- Completion items carry full Markdown documentation.
-- Signature help with active-param highlight.
-- `Phel: Show Documentation` command.
-- Diagnostics on save via `phel analyze`.
+### Editor intelligence
+
+- Generated symbol DB (`src/phelCoreDocs.ts`, 1317 entries across 30 namespaces; regenerate via `npm run regen-docs`).
+- Hover docs with signature, docstring, example, see-also, and source link.
+- Completion for every public `phel.core` symbol plus user `defn`/`defmacro`/`def` from anywhere in the workspace.
+- Signature help with active-parameter highlighting.
+- `Phel: Show Documentation` quick-pick command.
+- Workspace indexer parses every `.phel` and powers go-to / find-refs / rename / outline / symbol search.
+- **Go to Definition** (`F12`), **Find All References** (`shift+F12`), **Rename Symbol** (`F2`, validates the new name), document outline, and **Go to Symbol in Workspace** (`cmd+T`).
+- **Auto-import** on completion: choosing a symbol from another namespace also patches the current file's `(ns ...)` form with `[that.ns :refer [name]]`. Skipped for `phel.core` and same-ns symbols.
+- **Call-site snippets**: accepting a function in callee position inserts a `name ${1:arg1} ${2:arg2}` skeleton derived from the signature.
+- **Document highlight**: cursor on a symbol underlines every occurrence in the file (skipping strings and comments).
+
+### Structural editing
+
+- Paredit: slurp / barf (forward + backward), raise, and wrap with `( )` / `[ ]` / `{ }`.
+- Selection expand/shrink by sexp.
+- Subtle background tint on the form enclosing the cursor.
+- Bracket pair colorization for `.phel`; auto-close pair for `#(...)`.
+
+### REPL
+
+- `Phel: Start REPL` opens an integrated terminal running `phel repl`.
+- Evaluate form under cursor, selection (or current line), next form, or whole file. Multi-line forms are flattened so the terminal REPL sees a single line.
+- `(in-ns ...)` follow: cross-file evaluation switches the REPL into the source file's namespace automatically.
+- Every sent form is appended to `.vscode/phel-repl-history.phel` (timestamped). Toggle off with `phel.repl.history.enabled`.
+- `Phel: Switch REPL to Current Namespace` command.
+
+### Diagnostics, format, tests
+
+- Inline diagnostics on save via `phel analyze`.
 - Format-on-save via `phel format`.
-- CodeLens on `deftest`: ▶ Run test / ▶ Run all tests in file.
-- GitHub Actions CI on Node 20 + 22.
-- Bracket pair colorization for `.phel`.
-- Auto-close pair for `#(...)`.
-- Weekly scheduled workflow that regenerates the docs DB from phel-lang `main` and opens a PR.
-- Workspace indexer: parses every `.phel` in the workspace and surfaces user `defn`/`defmacro`/`def` forms in completion / hover / signature help.
-- Go-to-definition: jumps from a symbol to its workspace `defn`.
-- Paredit commands: slurp/barf forward and backward, raise, and wrap with `( )` / `[ ]` / `{ }`. Default keys for `.phel`: `ctrl+shift+]` / `ctrl+shift+[` (slurp/barf forward), `ctrl+shift+9` / `ctrl+shift+0` (slurp/barf backward), `ctrl+shift+r` (raise), `alt+w` (wrap).
-- REPL integration: `Phel: Start REPL` opens a terminal running `phel repl`; `ctrl+enter` evals the form under the cursor, `ctrl+shift+enter` evals the selection. Commands also include eval next form and eval file.
-- Find-all-references (`shift+F12`) across every indexed `.phel` file.
-- Document outline + Go to Symbol in Workspace (`cmd+T`).
-- Rename refactor (`F2`): renames the symbol in every workspace file; rejects invalid names.
-- Selection expand/shrink by sexp: `ctrl+shift+space` grows the selection to the enclosing form, `ctrl+shift+alt+space` undoes the last grow.
-- Auto-import: completing a workspace symbol from another namespace also inserts the matching `:require` entry into the current file's `(ns ...)` form (`:refer [name]`). Skipped for `phel.core` and same-ns symbols.
-- Call snippets: accepting a function completion in callee position (just after `(`) inserts a `name ${1:arg1} ${2:arg2}` skeleton with tab stops, derived from the function's signature.
-- REPL `(in-ns ...)` follow: evaluating from a different file automatically switches the REPL into that file's namespace first.
-- REPL history: every form sent to the REPL is appended to `.vscode/phel-repl-history.phel` (toggle via `phel.repl.history.enabled`).
-- New command `Phel: Switch REPL to Current Namespace`.
-- Status bar: shows the current Phel namespace when editing a `.phel` file, or a `Phel` badge when the workspace has `phel-lang/phel` in its `composer.json`. Click it to start the REPL.
-- Build: ship a single bundled `dist/extension.js` via esbuild for faster activation and a smaller vsix.
-- CI: PRs must keep at least one bullet in `## [Unreleased]` (`scripts/check-changelog.cjs`).
-- Test Explorer: every `deftest` shows up in VS Code's testing panel; running an item shells `phel test --filter` and reports pass/fail by exit code.
-- Enclosing-form highlight: subtle background tint on the form containing the cursor in `.phel` files. Toggle via `phel.formHighlight.enabled`.
-- README rewritten to cover REPL, paredit, refactoring, test explorer, diagnostics, and formatting alongside the original highlighting/completion/snippets/debug story. Added `docs/repl-and-paredit.md` and `docs/refactoring.md`.
-- Marketplace icon: 256x256 PNG generated from the official `phel-lang/phel-lang/logo_readme.svg`.
-- README tour: code-first walkthrough of completion + auto-import, hover, REPL, paredit, refactoring, and the test explorer at the top of the README.
-- Inline debug values: while a Phel debug session is paused, plain symbol tokens in the visible range get inline value annotations. Unresolved names (e.g. macros that didn't survive compilation) drop silently.
-- Document highlight: putting the cursor on a symbol underlines every occurrence of it in the current file (reusing the find-references scanner so strings and comments are skipped).
-- README + package.json: switch Marketplace / Installs badges from the retired shields.io endpoint to `vsmarketplacebadges.dev` so the badges render real values.
-- Release: new `Release` GitHub Actions workflow with manual `workflow_dispatch` trigger. Runs `scripts/release.sh` end-to-end (bump, tag, GH release, vsix attach, marketplace publish via `VSCE_PAT` secret). Local `npm run release -- X.Y.Z` still works.
-- Release: workflow now exposes a `publish_marketplace` toggle (default off) so you can ship the GitHub Release + vsix without needing the `VSCE_PAT` secret and upload the vsix manually via the Marketplace web UI.
-- Release: `scripts/release.sh` defaults flipped - GitHub Release is created by default, Marketplace publish is opt-in via `--publish`. Old `--no-publish` flag still accepted for backwards compatibility.
-- Release: `scripts/release.sh` no longer requires an explicit version. With no args it auto-bumps the minor of the current `package.json`. Override with `--bump patch|minor|major` or pass an explicit semver. Workflow exposes the same options.
+- CodeLens on `deftest`: `▶ Run test` / `▶ Run all tests in file`.
+- **Test Explorer** integration: every `deftest` is a TestItem; running shells `phel test --filter ^name$` and reports pass/fail by exit code. Saving a file refreshes the tree.
+
+### Debugging
+
+- Inline values during paused debug sessions: visible symbol tokens get rendered with their live values. Unresolved names drop silently rather than rendering placeholders.
+
+### Project & branding
+
+- Status bar item: current `(ns ...)` while editing a `.phel` file, or a `Phel` badge when the workspace's `composer.json` requires `phel-lang/phel`. Click to start the REPL.
+- Marketplace icon (256x256 PNG generated from the official `phel-lang/phel-lang` logo).
+- Marketplace / Installs README badges switched from the retired shields.io endpoint to `vsmarketplacebadges.dev`.
+
+### Build & release
+
+- Bundle the runtime via esbuild into a single minified `dist/extension.js`. The published vsix drops from a directory tree to ~155 KB and activation is faster.
+- New **Release** GitHub Actions workflow (`workflow_dispatch`): bumps version, packages the vsix, pushes the tag, creates the GitHub Release with the vsix attached. Marketplace publish is opt-in via the `publish_marketplace` toggle (requires the `VSCE_PAT` secret).
+- `scripts/release.sh` defaults: GitHub Release on, Marketplace publish off. With no args, auto-bumps the minor of the current `package.json`; override with `--bump patch|minor|major` or pass an explicit semver. `--publish` opts into `vsce publish`.
+- CI: PRs must keep at least one bullet under `## [Unreleased]` (`scripts/check-changelog.cjs`).
+- Weekly scheduled workflow regenerates the docs DB from phel-lang `main` and opens a PR.
+- GitHub Actions CI matrix on Node 20 + 22.
+
+### Docs
+
+- README rewritten with a feature tour (completion + auto-import, hover, REPL, paredit, refactoring, test explorer) and links to deeper pages under `docs/`.
+- New pages: `docs/repl-and-paredit.md`, `docs/refactoring.md`.
 
 ### Changed
 
-- `MACROS` / `CORE_FNS` derive from `PHEL_DOCS`.
+- `MACROS` / `CORE_FNS` derive from the generated `PHEL_DOCS` corpus.
 - Default `lineComment` is now `;` (was `#`, deprecated upstream).
 
 ### Settings
 
-- `phel.diagnostics.enabled`, `phel.diagnostics.command`
-- `phel.format.enabled`, `phel.format.command`
-- `phel.tests.codeLensEnabled`, `phel.test.command`
-- `phel.paredit.enabled`
-- `phel.repl.enabled`, `phel.repl.command`, `phel.repl.args`
+| Setting | Default | Purpose |
+|---|---|---|
+| `phel.diagnostics.enabled` / `phel.diagnostics.command` | `true` / `vendor/bin/phel` | `phel analyze` integration. |
+| `phel.format.enabled` / `phel.format.command` | `true` / `vendor/bin/phel` | `phel format` integration. |
+| `phel.tests.codeLensEnabled` / `phel.test.command` | `true` / `vendor/bin/phel` | Run-test CodeLens + Test Explorer command. |
+| `phel.paredit.enabled` | `true` | Register paredit commands. |
+| `phel.repl.enabled` / `phel.repl.command` / `phel.repl.args` | `true` / `vendor/bin/phel` / `["repl"]` | REPL terminal launch. |
+| `phel.repl.history.enabled` | `true` | Append every sent form to `.vscode/phel-repl-history.phel`. |
+| `phel.formHighlight.enabled` | `true` | Subtle highlight on the enclosing form. |
 
 ## [0.5.1] - 2026-05-06
 
