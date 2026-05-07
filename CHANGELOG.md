@@ -37,6 +37,7 @@
 - README rewritten to cover REPL, paredit, refactoring, test explorer, diagnostics, and formatting alongside the original highlighting/completion/snippets/debug story. Added `docs/repl-and-paredit.md` and `docs/refactoring.md`.
 - Marketplace icon: 256x256 PNG generated from the official `phel-lang/phel-lang/logo_readme.svg`.
 - README tour: code-first walkthrough of completion + auto-import, hover, REPL, paredit, refactoring, and the test explorer at the top of the README.
+- Inline debug values: while a Phel debug session is paused, plain symbol tokens in the visible range get inline value annotations. Unresolved names (e.g. macros that didn't survive compilation) drop silently.
 
 ### Changed
 
