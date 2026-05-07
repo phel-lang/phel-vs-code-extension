@@ -15,9 +15,19 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Semver version to cut (e.g. 0.6.0)'
-        required: true
+        description: 'Explicit semver version (leave empty to auto-bump using `bump`)'
+        required: false
         type: string
+        default: ''
+      bump:
+        description: 'Auto-bump level when `version` is empty'
+        required: false
+        type: choice
+        default: 'minor'
+        options:
+          - patch
+          - minor
+          - major
       publish_marketplace:
         description: 'Also publish to the VS Code Marketplace (requires VSCE_PAT secret). Uncheck to upload the vsix manually.'
         required: false
@@ -68,21 +78,26 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
           flags=""
+          if [[ -n "${{ inputs.version }}" ]]; then
+            flags+=" ${{ inputs.version }}"
+          else
+            flags+=" --bump ${{ inputs.bump }}"
+          fi
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            flags="--no-push"
+            flags+=" --no-push"
           elif [[ "${{ inputs.publish_marketplace }}" == "true" ]]; then
             if [[ -z "${VSCE_PAT}" ]]; then
               echo "VSCE_PAT secret is missing but publish_marketplace=true. Add it in repo Settings > Secrets, or uncheck publish_marketplace to upload the vsix manually." >&2
               exit 1
             fi
-            flags="--publish"
+            flags+=" --publish"
           fi
-          ./scripts/release.sh "${{ inputs.version }}" $flags
+          ./scripts/release.sh $flags
 
       - name: Upload vsix artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phel-lang-${{ inputs.version }}.vsix
-          path: phel-lang-${{ inputs.version }}.vsix
+          name: phel-lang-vsix
+          path: phel-lang-*.vsix
           if-no-files-found: warn

@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 # Cut a new release of the Phel Lang VS Code extension.
 #
-#   scripts/release.sh <version> [--publish] [--no-push]
+#   scripts/release.sh [<version>] [--bump <major|minor|patch>] [--publish] [--no-push]
 #
-# Default flow (no flags): bump version, package the vsix, push the tag,
-# create the GitHub Release with the vsix attached. Marketplace publish is
-# OFF by default - drop the vsix into the Marketplace web UI yourself, or
-# pass `--publish` for full automation.
+# Default flow (no args): bump the minor version of the current package.json,
+# package the vsix, push the tag, create the GitHub Release with the vsix
+# attached. Marketplace publish is OFF by default - drop the vsix into the
+# Marketplace web UI yourself, or pass `--publish` for full automation.
+#
+# Version selection precedence:
+#   1. Explicit `<version>` arg if given.
+#   2. `--bump major|minor|patch` of the current `package.json` version.
+#   3. Default: `--bump minor`.
 #
 # What it does, in order:
 #   1. Sanity checks: on main, working tree clean, version not already tagged.
-#   2. Bumps package.json + package-lock.json to <version>.
+#   2. Bumps package.json + package-lock.json to the chosen version.
 #   3. Renames the CHANGELOG "Unreleased" heading to "[<version>] - <today>"
 #      (if present); otherwise leaves CHANGELOG as-is so the entry is
 #      assumed already authored.
@@ -33,26 +38,44 @@ set -euo pipefail
 PUBLISH=0
 PUSH=1
 VERSION=""
+BUMP="minor"
 
 usage() {
-    sed -n '2,32p' "$0" >&2
+    sed -n '2,38p' "$0" >&2
     exit 1
 }
 
-for arg in "$@"; do
-    case "$arg" in
-        --publish)    PUBLISH=1 ;;
-        --no-publish) PUBLISH=0 ;;  # accepted for backwards compatibility
-        --no-push)    PUSH=0 ;;
+while (( $# > 0 )); do
+    case "$1" in
+        --publish)    PUBLISH=1; shift ;;
+        --no-publish) PUBLISH=0; shift ;;  # accepted for backwards compatibility
+        --no-push)    PUSH=0; shift ;;
+        --bump)
+            shift
+            case "${1:-}" in
+                major|minor|patch) BUMP="$1"; shift ;;
+                *) echo "--bump expects major|minor|patch (got '${1:-}')" >&2; exit 1 ;;
+            esac
+            ;;
         -h|--help)    usage ;;
-        -*)           echo "unknown flag: $arg" >&2; usage ;;
-        *)            VERSION="$arg" ;;
+        -*)           echo "unknown flag: $1" >&2; usage ;;
+        *)            VERSION="$1"; shift ;;
     esac
 done
 
 if [[ -z "$VERSION" ]]; then
-    echo "usage: scripts/release.sh <version> [--publish] [--no-push]" >&2
-    exit 1
+    CURRENT=$(node -p "require('./package.json').version")
+    VERSION=$(node -e "
+        const [v, level] = process.argv.slice(1);
+        const m = v.match(/^(\d+)\.(\d+)\.(\d+)/);
+        if (!m) { console.error('cannot parse current version: ' + v); process.exit(1); }
+        let [, maj, min, pat] = m.map(Number);
+        if (level === 'major')      { maj++; min = 0; pat = 0; }
+        else if (level === 'minor') { min++; pat = 0; }
+        else                        { pat++; }
+        console.log(\`\${maj}.\${min}.\${pat}\`);
+    " "$CURRENT" "$BUMP")
+    echo "==> auto-bumping $BUMP: $CURRENT -> $VERSION"
 fi
 
 if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then

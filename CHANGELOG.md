@@ -43,6 +43,7 @@
 - Release: new `Release` GitHub Actions workflow with manual `workflow_dispatch` trigger. Runs `scripts/release.sh` end-to-end (bump, tag, GH release, vsix attach, marketplace publish via `VSCE_PAT` secret). Local `npm run release -- X.Y.Z` still works.
 - Release: workflow now exposes a `publish_marketplace` toggle (default off) so you can ship the GitHub Release + vsix without needing the `VSCE_PAT` secret and upload the vsix manually via the Marketplace web UI.
 - Release: `scripts/release.sh` defaults flipped - GitHub Release is created by default, Marketplace publish is opt-in via `--publish`. Old `--no-publish` flag still accepted for backwards compatibility.
+- Release: `scripts/release.sh` no longer requires an explicit version. With no args it auto-bumps the minor of the current `package.json`. Override with `--bump patch|minor|major` or pass an explicit semver. Workflow exposes the same options.
 
 ### Changed
 
