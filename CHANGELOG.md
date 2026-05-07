@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-07
+
 Largest release since the initial cut. Brings the extension up to a modern
 Lisp-IDE feature set: completion + hover + signature help backed by a
 generated symbol DB, workspace-aware refactoring, paredit, an integrated
