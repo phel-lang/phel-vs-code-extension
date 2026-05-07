@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { buildFormatEdits } from './phelFormat';
+import { resolvePhelExecutable } from './phelExecutable';
 
 export class PhelFormatProvider implements vscode.DocumentFormattingEditProvider {
     async provideDocumentFormattingEdits(
@@ -47,18 +48,9 @@ function isEnabled(): boolean {
     return vscode.workspace.getConfiguration('phel').get<boolean>('format.enabled', true);
 }
 
-function resolveCommand(fileUri: vscode.Uri): string | null {
-    const config = vscode.workspace
-        .getConfiguration('phel')
-        .get<string>('format.command', 'vendor/bin/phel');
-    if (!config) {
-        return null;
-    }
-    if (path.isAbsolute(config)) {
-        return config;
-    }
+function resolveCommand(fileUri: vscode.Uri): string {
     const folder = vscode.workspace.getWorkspaceFolder(fileUri);
-    return folder ? path.join(folder.uri.fsPath, config) : config;
+    return resolvePhelExecutable('format.command', folder);
 }
 
 /**

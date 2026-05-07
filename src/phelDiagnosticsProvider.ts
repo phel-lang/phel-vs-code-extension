@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
-import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { parsePhelAnalyzeOutput, toZeroBasedRange, PhelDiagnostic } from './phelDiagnostics';
+import { affectsPhelExecutable, resolvePhelExecutable } from './phelExecutable';
 
 const COLLECTION_NAME = 'phel';
 
@@ -11,8 +11,9 @@ const COLLECTION_NAME = 'phel';
  *
  * Configuration:
  *   - `phel.diagnostics.enabled` (default `true`)
- *   - `phel.diagnostics.command` (default `vendor/bin/phel`, resolved
- *     relative to the workspace folder when not absolute)
+ *   - `phel.diagnostics.command` (overrides `phel.executablePath`; default
+ *     `vendor/bin/phel`, resolved relative to the workspace folder when
+ *     not absolute)
  */
 export function registerDiagnostics(context: vscode.ExtensionContext): void {
     const collection = vscode.languages.createDiagnosticCollection(COLLECTION_NAME);
@@ -45,10 +46,7 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
         vscode.workspace.onDidSaveTextDocument(runForDocument),
         vscode.workspace.onDidCloseTextDocument((doc) => collection.delete(doc.uri)),
         vscode.workspace.onDidChangeConfiguration((e) => {
-            if (
-                e.affectsConfiguration('phel.diagnostics.enabled') ||
-                e.affectsConfiguration('phel.diagnostics.command')
-            ) {
+            if (e.affectsConfiguration('phel.diagnostics.enabled') || affectsPhelExecutable(e)) {
                 collection.clear();
                 vscode.workspace.textDocuments.forEach(runForDocument);
             }
@@ -62,18 +60,9 @@ function isEnabled(): boolean {
     return vscode.workspace.getConfiguration('phel').get<boolean>('diagnostics.enabled', true);
 }
 
-function resolveCommand(fileUri: vscode.Uri): string | null {
-    const config = vscode.workspace
-        .getConfiguration('phel')
-        .get<string>('diagnostics.command', 'vendor/bin/phel');
-    if (!config) {
-        return null;
-    }
-    if (path.isAbsolute(config)) {
-        return config;
-    }
+function resolveCommand(fileUri: vscode.Uri): string {
     const folder = vscode.workspace.getWorkspaceFolder(fileUri);
-    return folder ? path.join(folder.uri.fsPath, config) : config;
+    return resolvePhelExecutable('diagnostics.command', folder);
 }
 
 function analyzeFile(command: string, filePath: string): Promise<PhelDiagnostic[]> {

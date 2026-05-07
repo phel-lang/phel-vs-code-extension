@@ -10,6 +10,7 @@ import { spawn } from 'node:child_process';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
+import { resolvePhelExecutable } from './phelExecutable';
 import { findDeftests } from './phelTestScanner';
 
 interface ResolvedCommand {
@@ -19,11 +20,11 @@ interface ResolvedCommand {
 }
 
 function resolveTestCommand(folder: vscode.WorkspaceFolder): ResolvedCommand {
-    const config = vscode.workspace.getConfiguration('phel', folder);
-    const cmd = config.get<string>('test.command', 'vendor/bin/phel');
-    const cwd = folder.uri.fsPath;
-    const command = path.isAbsolute(cmd) ? cmd : path.join(cwd, cmd);
-    return { command, args: ['test'], cwd };
+    return {
+        command: resolvePhelExecutable('test.command', folder),
+        args: ['test'],
+        cwd: folder.uri.fsPath,
+    };
 }
 
 async function readFile(uri: vscode.Uri): Promise<string | null> {
