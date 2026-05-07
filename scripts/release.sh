@@ -87,12 +87,22 @@ echo "==> releasing $TAG"
 npm version "$VERSION" --no-git-tag-version --allow-same-version >/dev/null
 echo "    package.json -> $VERSION"
 
-# 3. CHANGELOG: rewrite "## [Unreleased]" -> "## [X.Y.Z] - YYYY-MM-DD" if present.
+# 3. CHANGELOG: rewrite "## [Unreleased]" -> "## [X.Y.Z] - YYYY-MM-DD" and
+#    insert a fresh empty "## [Unreleased]" above it so the next contribution
+#    has a place to land.
 TODAY=$(date +%Y-%m-%d)
 if grep -q "^## \[Unreleased\]" CHANGELOG.md; then
     sed -i.bak -E "s/^## \[Unreleased\]/## [$VERSION] - $TODAY/" CHANGELOG.md
     rm CHANGELOG.md.bak
-    echo "    CHANGELOG.md: Unreleased -> [$VERSION] - $TODAY"
+    awk -v entry="## [$VERSION] - $TODAY" '
+        !inserted && $0 == entry {
+            print "## [Unreleased]"
+            print ""
+            inserted = 1
+        }
+        { print }
+    ' CHANGELOG.md > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
+    echo "    CHANGELOG.md: Unreleased -> [$VERSION] - $TODAY (fresh Unreleased restored)"
 else
     echo "    CHANGELOG.md: no [Unreleased] heading; assuming entry already in place"
 fi

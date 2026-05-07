@@ -1,5 +1,29 @@
 # Change Log
 
+## [Unreleased]
+
+### Added
+
+- Symbol metadata DB (`src/phelCoreDocs.ts`): 1317 entries across 30 namespaces, regen via `npm run regen-docs`.
+- Hover docs: signature, doc, example, see-also, source link.
+- Completion items carry full Markdown documentation.
+- Signature help with active-param highlight.
+- `Phel: Show Documentation` command.
+- Diagnostics on save via `phel analyze`.
+- Format-on-save via `phel format`.
+- CodeLens on `deftest`: ▶ Run test / ▶ Run all tests in file.
+- GitHub Actions CI on Node 20 + 22.
+
+### Changed
+
+- `MACROS` / `CORE_FNS` derive from `PHEL_DOCS`.
+
+### Settings
+
+- `phel.diagnostics.enabled`, `phel.diagnostics.command`
+- `phel.format.enabled`, `phel.format.command`
+- `phel.tests.codeLensEnabled`, `phel.test.command`
+
 ## [0.5.1] - 2026-05-06
 
 ### Changed
