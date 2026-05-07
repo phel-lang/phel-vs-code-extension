@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 out/
+dist/
 *.tsbuildinfo
 
 # VS Code test runner
