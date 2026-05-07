@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { PHEL_DOCS } from './phelCoreDocs';
 import { CORE_FNS, MACROS, SPECIAL_FORMS } from './phelCoreSymbols';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
+import { buildRequireEdit, parseNsForm, type NsForm } from './phelNsAnalyzer';
 import { combineDocs } from './phelWorkspaceIndex';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
@@ -11,6 +12,10 @@ interface ItemSpec {
     label: string;
     kind: vscode.CompletionItemKind;
     detail: string;
+    /** Namespace this symbol lives in. Used for auto-import. */
+    ns?: string;
+    /** Whether this symbol is a workspace doc (vs a core fn / built-in). */
+    workspace?: boolean;
 }
 
 function buildBaseSpecs(): ItemSpec[] {
@@ -60,6 +65,8 @@ function workspaceSpecs(indexer?: PhelWorkspaceIndexer): ItemSpec[] {
                     ? vscode.CompletionItemKind.Keyword
                     : vscode.CompletionItemKind.Function,
             detail: `${doc.ns} (workspace)`,
+            ns: doc.ns,
+            workspace: true,
         });
     }
     return specs;
@@ -68,7 +75,9 @@ function workspaceSpecs(indexer?: PhelWorkspaceIndexer): ItemSpec[] {
 function buildItem(
     spec: ItemSpec,
     range: vscode.Range | undefined,
-    docs: readonly import('./phelDocs').PhelDoc[]
+    docs: readonly import('./phelDocs').PhelDoc[],
+    document: vscode.TextDocument,
+    nsForm: NsForm | null
 ): vscode.CompletionItem {
     const item = new vscode.CompletionItem(spec.label, spec.kind);
     item.detail = spec.detail;
@@ -82,7 +91,28 @@ function buildItem(
     if (range) {
         item.range = range;
     }
+    if (spec.workspace && spec.ns && nsForm && shouldAutoImport(spec.ns, nsForm)) {
+        const edit = buildRequireEdit(nsForm, spec.ns, spec.label);
+        if (edit) {
+            const pos = document.positionAt(edit.insertAt);
+            item.additionalTextEdits = [vscode.TextEdit.insert(pos, edit.text)];
+            item.detail = `${spec.detail} (auto-add :require)`;
+        }
+    }
     return item;
+}
+
+function shouldAutoImport(targetNs: string, nsForm: NsForm): boolean {
+    if (!targetNs) {
+        return false;
+    }
+    if (targetNs === nsForm.name) {
+        return false;
+    }
+    if (targetNs === 'phel.core') {
+        return false;
+    }
+    return true;
 }
 
 export class PhelCompletionProvider implements vscode.CompletionItemProvider {
@@ -99,6 +129,7 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
             ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
             : [...PHEL_DOCS];
         const specs = [...this.baseSpecs, ...workspaceSpecs(this.indexer)];
-        return specs.map((spec) => buildItem(spec, range, merged));
+        const nsForm = parseNsForm(document.getText());
+        return specs.map((spec) => buildItem(spec, range, merged, document, nsForm));
     }
 }
