@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-05-07
+
 ### Settings
 
 - New `phel.executablePath` (default `vendor/bin/phel`) acts as a single workspace-wide pointer to the Phel CLI for diagnostics, format, test, and REPL. Existing per-subsystem settings (`phel.diagnostics.command`, `phel.format.command`, `phel.test.command`, `phel.repl.command`) still take precedence when set, but their defaults are now empty strings that fall back to `phel.executablePath`. Useful when the binary lives somewhere other than `vendor/bin/phel` (e.g. `bin/phel`, `/usr/local/bin/phel`).
