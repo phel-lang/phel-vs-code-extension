@@ -32,5 +32,6 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run tokenize
+      - run: npm run bundle:prod
       - name: vsce package (sanity)
         run: npx --yes @vscode/vsce package --out /tmp/phel-lang.vsix

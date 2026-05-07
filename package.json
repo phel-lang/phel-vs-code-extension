@@ -52,7 +52,7 @@
         "url": "https://github.com/phel-lang/phel-vs-code-extension/issues"
     },
     "homepage": "https://github.com/phel-lang/phel-vs-code-extension#readme",
-    "main": "./out/extension.js",
+    "main": "./dist/extension.js",
     "activationEvents": [
         "onLanguage:phel",
         "onDebugResolve:phel"
@@ -419,8 +419,12 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "vscode:prepublish": "npm run bundle:prod",
+        "bundle": "node esbuild.js",
+        "bundle:prod": "node esbuild.js --production",
+        "bundle:watch": "node esbuild.js --watch",
         "compile": "tsc -p ./",
+        "typecheck": "tsc --noEmit -p ./",
         "watch": "tsc -watch -p ./",
         "lint": "eslint src --ext ts",
         "lint:fix": "eslint src --ext ts --fix",
@@ -441,6 +445,7 @@
         "@typescript-eslint/eslint-plugin": "^7.0.0",
         "@typescript-eslint/parser": "^7.0.0",
         "@vscode/vsce": "^3.0.0",
+        "esbuild": "^0.28.0",
         "eslint": "^8.57.0",
         "mocha": "^11.7.5",
         "prettier": "^3.2.0",
