@@ -1,0 +1,79 @@
+name: Release
+
+# Manual release: bump version, package the vsix, push the tag, create the
+# GitHub Release, and publish to the VS Code Marketplace.
+#
+# One-time setup:
+#   * Repo secret `VSCE_PAT` with a Marketplace personal access token that
+#     can publish under the `Phel-Lang` publisher.
+#   * Default `GITHUB_TOKEN` is enough for `gh release create` and pushes
+#     because the `contents: write` permission is granted below.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semver version to cut (e.g. 0.6.0)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run: skip git push and Marketplace publish'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # release.sh checks current branch is `main`; ensure we're on main
+          # rather than a detached HEAD from `actions/checkout`.
+          git checkout -B main "$(git rev-parse HEAD)"
+
+      - run: npm ci
+
+      - name: Run release script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [[ -z "${VSCE_PAT}" && "${{ inputs.dry_run }}" != "true" ]]; then
+            echo "VSCE_PAT secret is missing. Add it in repo Settings > Secrets, or rerun with dry_run=true." >&2
+            exit 1
+          fi
+          flags=""
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            flags="--no-push --no-publish"
+          fi
+          ./scripts/release.sh "${{ inputs.version }}" $flags
+
+      - name: Upload vsix artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phel-lang-${{ inputs.version }}.vsix
+          path: phel-lang-${{ inputs.version }}.vsix
+          if-no-files-found: warn
