@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Docs
+
+- README trimmed to features + install + docs index. Marketplace install link added.
+
 ## [0.6.2] - 2026-05-07
 
 ### Editor intelligence
