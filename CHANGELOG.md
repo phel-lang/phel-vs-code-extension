@@ -13,10 +13,14 @@
 - Format-on-save via `phel format`.
 - CodeLens on `deftest`: ▶ Run test / ▶ Run all tests in file.
 - GitHub Actions CI on Node 20 + 22.
+- Bracket pair colorization for `.phel`.
+- Auto-close pair for `#(...)`.
+- Weekly scheduled workflow that regenerates the docs DB from phel-lang `main` and opens a PR.
 
 ### Changed
 
 - `MACROS` / `CORE_FNS` derive from `PHEL_DOCS`.
+- Default `lineComment` is now `;` (was `#`, deprecated upstream).
 
 ### Settings
 
