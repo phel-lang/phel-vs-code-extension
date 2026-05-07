@@ -199,6 +199,83 @@
                 "command": "phel.runTestsInFile",
                 "title": "Phel: Run All Tests in File",
                 "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.slurpForward",
+                "title": "Phel: Slurp Forward",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.barfForward",
+                "title": "Phel: Barf Forward",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.slurpBackward",
+                "title": "Phel: Slurp Backward",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.barfBackward",
+                "title": "Phel: Barf Backward",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.raise",
+                "title": "Phel: Raise Form",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.wrapRound",
+                "title": "Phel: Wrap with ( )",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.wrapSquare",
+                "title": "Phel: Wrap with [ ]",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.wrapCurly",
+                "title": "Phel: Wrap with { }",
+                "category": "Phel"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "phel.paredit.slurpForward",
+                "key": "ctrl+shift+]",
+                "mac": "cmd+shift+]",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.paredit.barfForward",
+                "key": "ctrl+shift+[",
+                "mac": "cmd+shift+[",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.paredit.slurpBackward",
+                "key": "ctrl+shift+9",
+                "mac": "cmd+shift+9",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.paredit.barfBackward",
+                "key": "ctrl+shift+0",
+                "mac": "cmd+shift+0",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.paredit.raise",
+                "key": "ctrl+shift+r",
+                "mac": "cmd+shift+r",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.paredit.wrapRound",
+                "key": "alt+w",
+                "when": "editorTextFocus && editorLangId == phel"
             }
         ],
         "configuration": {
@@ -243,6 +320,11 @@
                     "type": "string",
                     "default": "vendor/bin/phel",
                     "description": "Path to the Phel CLI used by the test CodeLens. Relative paths resolve against the workspace folder."
+                },
+                "phel.paredit.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Register paredit-style structural editing commands (slurp / barf / raise / wrap)."
                 }
             }
         }

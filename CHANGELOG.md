@@ -18,6 +18,7 @@
 - Weekly scheduled workflow that regenerates the docs DB from phel-lang `main` and opens a PR.
 - Workspace indexer: parses every `.phel` in the workspace and surfaces user `defn`/`defmacro`/`def` forms in completion / hover / signature help.
 - Go-to-definition: jumps from a symbol to its workspace `defn`.
+- Paredit commands: slurp/barf forward and backward, raise, and wrap with `( )` / `[ ]` / `{ }`. Default keys for `.phel`: `ctrl+shift+]` / `ctrl+shift+[` (slurp/barf forward), `ctrl+shift+9` / `ctrl+shift+0` (slurp/barf backward), `ctrl+shift+r` (raise), `alt+w` (wrap).
 
 ### Changed
 
@@ -29,6 +30,7 @@
 - `phel.diagnostics.enabled`, `phel.diagnostics.command`
 - `phel.format.enabled`, `phel.format.command`
 - `phel.tests.codeLensEnabled`, `phel.test.command`
+- `phel.paredit.enabled`
 
 ## [0.5.1] - 2026-05-06
 
