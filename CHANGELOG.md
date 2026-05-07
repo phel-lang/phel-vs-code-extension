@@ -29,6 +29,7 @@
 - REPL `(in-ns ...)` follow: evaluating from a different file automatically switches the REPL into that file's namespace first.
 - REPL history: every form sent to the REPL is appended to `.vscode/phel-repl-history.phel` (toggle via `phel.repl.history.enabled`).
 - New command `Phel: Switch REPL to Current Namespace`.
+- Status bar: shows the current Phel namespace when editing a `.phel` file, or a `Phel` badge when the workspace has `phel-lang/phel` in its `composer.json`. Click it to start the REPL.
 
 ### Changed
 
