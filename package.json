@@ -28,6 +28,7 @@
     ],
     "qna": false,
     "pricing": "Free",
+    "icon": "icon.png",
     "galleryBanner": {
         "color": "#1e1e1e",
         "theme": "dark"
