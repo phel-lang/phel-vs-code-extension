@@ -22,6 +22,7 @@ import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelS
 import { registerPareditCommands } from './phelPareditProvider';
 import { registerReplCommands } from './phelReplProvider';
 import { registerSelectionCommands } from './phelSelectionProvider';
+import { PhelFormHighlight } from './phelFormHighlight';
 import { PhelStatusBar } from './phelStatusBar';
 import { PhelTestController } from './phelTestController';
 
@@ -223,6 +224,7 @@ export function activate(context: vscode.ExtensionContext) {
     void new PhelStatusBar().start(context);
 
     context.subscriptions.push(new PhelTestController());
+    context.subscriptions.push(new PhelFormHighlight());
 
     // Provide hover information for breakpoints
     context.subscriptions.push(

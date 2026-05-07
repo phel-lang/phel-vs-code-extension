@@ -414,6 +414,11 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Append every form sent to the REPL to `.vscode/phel-repl-history.phel` in the workspace."
+                },
+                "phel.formHighlight.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Highlight the form enclosing the cursor with a subtle background tint."
                 }
             }
         }
