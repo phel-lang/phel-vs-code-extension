@@ -62,7 +62,8 @@ Cut a release entirely from GitHub Actions: no local install, no manual marketpl
 1. Make sure CHANGELOG `## [Unreleased]` is up to date on `main`.
 2. Open <https://github.com/phel-lang/phel-vs-code-extension/actions/workflows/release.yml> and click **Run workflow**.
 3. Fill in:
-   - `version`: e.g. `0.6.0`
+   - `version`: leave empty to auto-bump from the current `package.json`, or pin an explicit semver like `0.6.0`.
+   - `bump`: when `version` is empty, picks the auto-bump level (`patch` / `minor` / `major`). Default `minor`.
    - `publish_marketplace`: check to publish via `vsce publish` (requires `VSCE_PAT` secret). Uncheck to skip the Marketplace step and upload the vsix yourself via the [publisher web UI](https://marketplace.visualstudio.com/manage/publishers/Phel-Lang). The vsix is attached to the GitHub Release and uploaded as a workflow artifact either way.
    - `dry_run`: check to bump + package only, with no git push, GH release, or Marketplace publish. Use it once before a real cut to confirm the pipeline.
 4. The workflow:
@@ -79,14 +80,18 @@ Cut a release entirely from GitHub Actions: no local install, no manual marketpl
 Same flow, run from a clean `main` checkout:
 
 ```bash
-npm run release -- 0.6.0
+npm run release            # auto-bump minor, build vsix, push tag, create GH Release
+npm run release -- 0.6.0   # explicit version
+npm run release -- --bump patch
+npm run release -- --bump major
 ```
 
-Default behaviour: bump version, build the vsix, push the tag, create the GitHub Release with the vsix attached. Marketplace publish is **off** by default - download the vsix from the GH Release and drop it into <https://marketplace.visualstudio.com/manage/publishers/Phel-Lang>.
+Default behaviour: bump the minor version of the current `package.json`, build the vsix, push the tag, create the GitHub Release with the vsix attached. Marketplace publish is **off** by default - download the vsix from the GH Release and drop it into <https://marketplace.visualstudio.com/manage/publishers/Phel-Lang>.
 
 Flags:
 
 - `--publish` - also run `vsce publish` (requires `vsce login Phel-Lang` cached or `VSCE_PAT` env var set).
+- `--bump <patch|minor|major>` - choose the auto-bump level (default `minor`).
 - `--no-push` - dry run: bumps versions and builds the `.vsix` locally, no push / tag / GH release.
 
 If the script fails partway through, fix the cause and re-run; each step checks for existing artefacts.
