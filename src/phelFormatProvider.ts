@@ -15,10 +15,8 @@ export class PhelFormatProvider implements vscode.DocumentFormattingEditProvider
         if (!isEnabled()) {
             return [];
         }
-        const command = resolveCommand(document.uri);
-        if (!command) {
-            return [];
-        }
+        const folder = vscode.workspace.getWorkspaceFolder(document.uri);
+        const command = resolvePhelExecutable('format.command', folder);
 
         const original = document.getText();
         try {
@@ -46,11 +44,6 @@ export class PhelFormatProvider implements vscode.DocumentFormattingEditProvider
 
 function isEnabled(): boolean {
     return vscode.workspace.getConfiguration('phel').get<boolean>('format.enabled', true);
-}
-
-function resolveCommand(fileUri: vscode.Uri): string {
-    const folder = vscode.workspace.getWorkspaceFolder(fileUri);
-    return resolvePhelExecutable('format.command', folder);
 }
 
 /**

@@ -27,10 +27,8 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
             collection.delete(document.uri);
             return;
         }
-        const command = resolveCommand(document.uri);
-        if (!command) {
-            return;
-        }
+        const folder = vscode.workspace.getWorkspaceFolder(document.uri);
+        const command = resolvePhelExecutable('diagnostics.command', folder);
         analyzeFile(command, document.uri.fsPath)
             .then((diagnostics) => {
                 collection.set(document.uri, toVscodeDiagnostics(diagnostics));
@@ -58,11 +56,6 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
 
 function isEnabled(): boolean {
     return vscode.workspace.getConfiguration('phel').get<boolean>('diagnostics.enabled', true);
-}
-
-function resolveCommand(fileUri: vscode.Uri): string {
-    const folder = vscode.workspace.getWorkspaceFolder(fileUri);
-    return resolvePhelExecutable('diagnostics.command', folder);
 }
 
 function analyzeFile(command: string, filePath: string): Promise<PhelDiagnostic[]> {

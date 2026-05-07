@@ -1,33 +1,43 @@
-import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { resolveExecutablePath } from './phelExecutablePath';
 
-const DEFAULT_EXECUTABLE = 'vendor/bin/phel';
+const FALLBACK_KEY = 'executablePath';
 
-export const PHEL_EXECUTABLE_SETTINGS = [
-    'phel.executablePath',
-    'phel.diagnostics.command',
-    'phel.format.command',
-    'phel.test.command',
-    'phel.repl.command',
-] as const;
+export type PhelExecutableSubsystem =
+    | 'diagnostics.command'
+    | 'format.command'
+    | 'test.command'
+    | 'repl.command';
+
+const SUBSYSTEM_KEYS: readonly PhelExecutableSubsystem[] = [
+    'diagnostics.command',
+    'format.command',
+    'test.command',
+    'repl.command',
+];
+
+export const PHEL_EXECUTABLE_SETTINGS: readonly string[] = [
+    `phel.${FALLBACK_KEY}`,
+    ...SUBSYSTEM_KEYS.map((k) => `phel.${k}`),
+];
 
 /**
  * Resolves the Phel CLI path for a given subsystem.
  *
- * Precedence: per-command override (`phel.<key>`) → workspace fallback
+ * Precedence: per-command override (`phel.<subsystem>`) → workspace fallback
  * (`phel.executablePath`) → built-in default (`vendor/bin/phel`).
- * Relative paths resolve against `cwd`.
  */
 export function resolvePhelExecutable(
-    perCommandKey: string,
+    subsystem: PhelExecutableSubsystem,
     folder: vscode.WorkspaceFolder | undefined
 ): string {
     const config = vscode.workspace.getConfiguration('phel', folder);
-    const explicit = explicitString(config, perCommandKey);
-    const fallback = explicitString(config, 'executablePath') ?? DEFAULT_EXECUTABLE;
-    const cmd = explicit ?? fallback;
     const cwd = folder?.uri.fsPath ?? process.cwd();
-    return path.isAbsolute(cmd) ? cmd : path.join(cwd, cmd);
+    return resolveExecutablePath(
+        explicitString(config, subsystem),
+        explicitString(config, FALLBACK_KEY),
+        cwd
+    );
 }
 
 function explicitString(config: vscode.WorkspaceConfiguration, key: string): string | undefined {
