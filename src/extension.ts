@@ -14,6 +14,8 @@ import { buildQuickPickEntries } from './phelShowDoc';
 import { registerDiagnostics } from './phelDiagnosticsProvider';
 import { PhelFormatProvider } from './phelFormatProvider';
 import { PhelTestCodeLensProvider } from './phelTestCodeLensProvider';
+import { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
+import { PhelDefinitionProvider } from './phelDefinitionProvider';
 
 let sourceMapManager: SourceMapManager;
 
@@ -120,22 +122,45 @@ export function activate(context: vscode.ExtensionContext) {
         sourceMapManager.addCacheDirectory(cacheDir);
     }
 
+    const workspaceIndexer = new PhelWorkspaceIndexer();
+    context.subscriptions.push(workspaceIndexer);
+    void workspaceIndexer.start();
+
     context.subscriptions.push(
-        vscode.languages.registerCompletionItemProvider('phel', new PhelCompletionProvider())
+        vscode.languages.registerCompletionItemProvider(
+            'phel',
+            new PhelCompletionProvider(workspaceIndexer)
+        )
     );
 
     context.subscriptions.push(
-        vscode.languages.registerHoverProvider('phel', new PhelHoverProvider())
+        vscode.languages.registerHoverProvider('phel', new PhelHoverProvider(workspaceIndexer))
     );
 
     context.subscriptions.push(
         vscode.languages.registerSignatureHelpProvider(
             'phel',
-            new PhelSignatureHelpProvider(),
+            new PhelSignatureHelpProvider(workspaceIndexer),
             '(',
             ' '
         )
     );
+
+    context.subscriptions.push(
+        vscode.languages.registerDefinitionProvider(
+            'phel',
+            new PhelDefinitionProvider(workspaceIndexer)
+        )
+    );
+
+    workspaceIndexer.onDidChange(() => {
+        // Trigger re-evaluation of the active doc so providers refresh.
+        if (vscode.window.activeTextEditor?.document.languageId === 'phel') {
+            vscode.commands
+                .executeCommand('editor.action.triggerSuggest')
+                .then(undefined, () => undefined);
+        }
+    });
 
     registerDiagnostics(context);
 

@@ -8,8 +8,12 @@ import {
     parseSignatureParams,
     pickActiveSignature,
 } from './phelSignatureHelp';
+import { combineDocs } from './phelWorkspaceIndex';
+import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
 export class PhelSignatureHelpProvider implements vscode.SignatureHelpProvider {
+    constructor(private readonly indexer?: PhelWorkspaceIndexer) {}
+
     provideSignatureHelp(
         document: vscode.TextDocument,
         position: vscode.Position
@@ -20,7 +24,10 @@ export class PhelSignatureHelpProvider implements vscode.SignatureHelpProvider {
             return null;
         }
 
-        const doc = lookupSymbol(call.callee, PHEL_DOCS);
+        const merged = this.indexer
+            ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
+            : [...PHEL_DOCS];
+        const doc = lookupSymbol(call.callee, merged);
         if (!doc) {
             return null;
         }
