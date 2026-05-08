@@ -19,10 +19,17 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
     const collection = vscode.languages.createDiagnosticCollection(COLLECTION_NAME);
     context.subscriptions.push(collection);
 
-    const inFlight = new Map<string, Promise<void>>();
+    type State = { running: boolean; pending: vscode.TextDocument | null };
+    const states = new Map<string, State>();
+
+    const isOpen = (uri: vscode.Uri) =>
+        vscode.workspace.textDocuments.some((d) => d.uri.toString() === uri.toString());
 
     const runForDocument = (document: vscode.TextDocument) => {
         if (document.languageId !== 'phel') {
+            return;
+        }
+        if (document.uri.scheme !== 'file') {
             return;
         }
         if (!isEnabled()) {
@@ -30,14 +37,24 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
             return;
         }
         const key = document.uri.toString();
-        if (inFlight.has(key)) {
+        const state = states.get(key) ?? { running: false, pending: null };
+        if (state.running) {
+            state.pending = document;
+            states.set(key, state);
             return;
         }
+        state.running = true;
+        states.set(key, state);
+
         const folder = vscode.workspace.getWorkspaceFolder(document.uri);
         const command = resolvePhelExecutable('diagnostics.command', folder);
         const cwd = folder?.uri.fsPath;
-        const run = analyzeFile(command, document.uri.fsPath, cwd)
+        analyzeFile(command, document.uri.fsPath, cwd)
             .then((diagnostics) => {
+                if (!isOpen(document.uri)) {
+                    collection.delete(document.uri);
+                    return;
+                }
                 collection.set(document.uri, toVscodeDiagnostics(diagnostics));
             })
             .catch((err) => {
@@ -45,9 +62,16 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
                 collection.delete(document.uri);
             })
             .finally(() => {
-                inFlight.delete(key);
+                const next = states.get(key);
+                if (!next) {
+                    return;
+                }
+                const queued = next.pending;
+                states.delete(key);
+                if (queued && isOpen(queued.uri)) {
+                    runForDocument(queued);
+                }
             });
-        inFlight.set(key, run);
     };
 
     context.subscriptions.push(
