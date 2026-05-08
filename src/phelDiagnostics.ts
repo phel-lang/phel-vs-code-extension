@@ -136,9 +136,10 @@ function toSeverity(value: unknown): PhelSeverity {
 }
 
 /**
- * Convert a 1-based phel diagnostic to the half-open 0-based range
- * VS Code uses. `endCol` is treated as exclusive in the output (matching
- * `phel analyze`'s convention where it points one past the last char).
+ * Convert a phel diagnostic position to the VS Code range. Phel emits
+ * 1-based lines and 0-based columns, with `endCol` exclusive (one past
+ * the last char). VS Code wants 0-based lines and 0-based exclusive
+ * columns, so only lines need shifting.
  */
 export function toZeroBasedRange(diag: PhelDiagnostic): {
     startLine: number;
@@ -147,11 +148,10 @@ export function toZeroBasedRange(diag: PhelDiagnostic): {
     endCol: number;
 } {
     const startLine = Math.max(0, diag.startLine - 1);
-    const startCol = Math.max(0, diag.startCol - 1);
+    const startCol = Math.max(0, diag.startCol);
     const endLine = Math.max(startLine, diag.endLine - 1);
-    let endCol = Math.max(0, diag.endCol - 1);
+    let endCol = Math.max(0, diag.endCol);
     if (endLine === startLine && endCol <= startCol) {
-        // Empty range — VS Code prefers a 1-char wide marker for visibility.
         endCol = startCol + 1;
     }
     return { startLine, startCol, endLine, endCol };

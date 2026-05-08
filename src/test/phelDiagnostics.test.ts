@@ -116,12 +116,12 @@ describe('toZeroBasedRange', function () {
 
     it('translates to half-open zero-based positions', function () {
         const r = toZeroBasedRange(diag({ startLine: 12, startCol: 36, endLine: 12, endCol: 40 }));
-        assert.deepStrictEqual(r, { startLine: 11, startCol: 35, endLine: 11, endCol: 39 });
+        assert.deepStrictEqual(r, { startLine: 11, startCol: 36, endLine: 11, endCol: 40 });
     });
 
     it('expands a zero-width range so VS Code shows a marker', function () {
         const r = toZeroBasedRange(diag({ startLine: 5, startCol: 7, endLine: 5, endCol: 7 }));
-        assert.deepStrictEqual(r, { startLine: 4, startCol: 6, endLine: 4, endCol: 7 });
+        assert.deepStrictEqual(r, { startLine: 4, startCol: 7, endLine: 4, endCol: 8 });
     });
 
     it('clamps negative phel positions to zero', function () {

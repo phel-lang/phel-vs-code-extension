@@ -19,6 +19,8 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
     const collection = vscode.languages.createDiagnosticCollection(COLLECTION_NAME);
     context.subscriptions.push(collection);
 
+    const inFlight = new Map<string, Promise<void>>();
+
     const runForDocument = (document: vscode.TextDocument) => {
         if (document.languageId !== 'phel') {
             return;
@@ -27,16 +29,25 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
             collection.delete(document.uri);
             return;
         }
+        const key = document.uri.toString();
+        if (inFlight.has(key)) {
+            return;
+        }
         const folder = vscode.workspace.getWorkspaceFolder(document.uri);
         const command = resolvePhelExecutable('diagnostics.command', folder);
-        analyzeFile(command, document.uri.fsPath)
+        const cwd = folder?.uri.fsPath;
+        const run = analyzeFile(command, document.uri.fsPath, cwd)
             .then((diagnostics) => {
                 collection.set(document.uri, toVscodeDiagnostics(diagnostics));
             })
             .catch((err) => {
                 console.error(`phel analyze failed for ${document.uri.fsPath}:`, err);
                 collection.delete(document.uri);
+            })
+            .finally(() => {
+                inFlight.delete(key);
             });
+        inFlight.set(key, run);
     };
 
     context.subscriptions.push(
@@ -58,12 +69,16 @@ function isEnabled(): boolean {
     return vscode.workspace.getConfiguration('phel').get<boolean>('diagnostics.enabled', true);
 }
 
-function analyzeFile(command: string, filePath: string): Promise<PhelDiagnostic[]> {
+function analyzeFile(
+    command: string,
+    filePath: string,
+    cwd: string | undefined
+): Promise<PhelDiagnostic[]> {
     return new Promise((resolve, reject) => {
         execFile(
             command,
             ['analyze', filePath],
-            { maxBuffer: 8 * 1024 * 1024 },
+            { maxBuffer: 8 * 1024 * 1024, cwd },
             (err, stdout, stderr) => {
                 if (err && !stdout) {
                     reject(new Error(stderr || err.message));
