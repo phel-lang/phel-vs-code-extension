@@ -4,11 +4,11 @@
 
 ### Diagnostics
 
-- Fix off-by-one column shift in `phel analyze` diagnostics. Phel emits 0-based exclusive columns; the range converter was subtracting 1 again, pushing every marker one column to the left.
-- Run `phel analyze` with the workspace folder as `cwd` so phel resolves `phel-config.php` and the autoloader from the project root rather than inheriting the editor's working directory.
-- Drop overlapping analyze invocations per document on rapid open/save bursts and re-run once on the latest content when a save lands mid-analysis.
-- Skip non-`file:` URIs (git diff views, untitled buffers) so phel is never invoked with a virtual path.
-- Discard analyze results for documents that were closed before the run finished, preventing ghost diagnostics from sticking around.
+- Fix off-by-one column shift: phel emits 0-based exclusive columns, the range converter was subtracting again and pushing every marker one column left.
+- Run `phel analyze` with the workspace folder as `cwd` so `phel-config.php` and the autoloader resolve from the project root.
+- Coalesce overlapping analyze runs per document; the latest save's content wins.
+- Skip non-`file:` URIs (git diff views, untitled buffers).
+- Drop diagnostics for documents closed mid-analysis.
 
 ## [0.6.3] - 2026-05-07
 
