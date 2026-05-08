@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-05-08
+
 ### Diagnostics
 
 - Fix off-by-one column shift: phel emits 0-based exclusive columns, the range converter was subtracting again and pushing every marker one column left.
