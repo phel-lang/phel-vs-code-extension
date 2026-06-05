@@ -23,3 +23,9 @@ node_modules/**
 CONTRIBUTING.md
 docs/**
 scripts/**
+.agnostic-ai/**
+.claude/**
+.codex/**
+CLAUDE.md
+AGENTS.md
+agnostic-ai.yaml
