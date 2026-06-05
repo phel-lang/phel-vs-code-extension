@@ -13,6 +13,7 @@
 - Sync the symbol corpus to Phel v0.39.0 (Parity Pass): hover/doc text reflects the renamed runtime types (`Variable`→`Atom`, `Uuid`→`UUID`, `BigInteger`→`BigInt`, `Rational`→`Ratio`, `PhelFuture`→`Future`, `LazyCons`→`Cons`).
 - Sync the symbol corpus to Phel v0.40.0 (Sharper Edges): the new `phel\edn` and `phel\transit` namespaces (`read-string`, `read-string-all`, `write-string`, `write-string-all`) are now available in completion and hover.
 - Add the `defonce` special form: completion (`SPECIAL_FORMS`), keyword highlighting, and a `defonce` snippet.
+- Sync the symbol corpus to Phel v0.41.0 (Fold and Inline). The release's compiler optimizations are transparent to the editor; `View source` links now point at the v0.41.0 tag.
 
 ## [0.6.4] - 2026-05-08
 
