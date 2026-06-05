@@ -32,6 +32,11 @@
         "body": ["(def ${1:name} ${0:value})"],
         "description": "Top-level binding"
     },
+    "defonce": {
+        "prefix": "defonce",
+        "body": ["(defonce ${1:name} ${0:value})"],
+        "description": "Top-level binding evaluated once (survives REPL reloads)"
+    },
     "fn": {
         "prefix": "fn",
         "body": ["(fn [${1:args}] ${0})"],

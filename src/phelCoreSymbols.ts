@@ -19,6 +19,7 @@ export const SPECIAL_FORMS: readonly string[] = [
     'conj',
     'def',
     'def-',
+    'defonce',
     'defexception*',
     'definterface*',
     'defstruct*',
