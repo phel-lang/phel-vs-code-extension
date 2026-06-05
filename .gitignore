@@ -22,3 +22,6 @@ yarn-error.log
 
 # Editor directories
 .idea/
+agnostic-ai.local.yaml
+.agnostic-ai/.sync-state
+.agnostic-ai/packs/
