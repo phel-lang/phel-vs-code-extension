@@ -141,16 +141,15 @@ That uses the same `vscode-textmate` + `vscode-oniguruma` engine VS Code ships w
 
 ### Completion + docs database (`src/phelCoreDocs.ts`)
 
-`src/phelCoreDocs.ts` is a generated array of `PhelDoc` records (one per `defn` / `defmacro` / `def` form) extracted from a phel-lang checkout. It is the single source of truth for completion, hover, signature help, and the `Phel: Show Doc` command.
+`src/phelCoreDocs.ts` lazy-loads `assets/phel-core-docs.json`, a generated array of `PhelDoc` records (one per `defn` / `defmacro` / `def` form) extracted from a phel-lang checkout. It is the single source of truth for completion, hover, signature help, and the `Phel: Show Doc` command.
 
 To regenerate after bumping phel-lang:
 
 ```bash
-npm run compile
-node scripts/regen-core-docs.cjs /path/to/phel-lang --phel-version v0.35.0
+npm run regen-docs -- /path/to/phel-lang --phel-version v0.41.0
 ```
 
-The script walks `src/phel/**/*.phel`, detects each file's namespace from its `(ns ...)` or `(in-ns ...)` form, runs the parser in `src/phelDocs.ts`, and writes the typed module. `--phel-version` (default `main`) is the git ref used to build `View source` links.
+The script walks `src/phel/**/*.phel`, detects each file's namespace from its `(ns ...)` or `(in-ns ...)` form, runs the parser in `src/phelDocs.ts`, and writes the JSON corpus. `--phel-version` (default `main`) is the git ref used to build `View source` links.
 
 `src/phelCoreSymbols.ts` exposes flat name arrays projected from this database (`MACROS`, `CORE_FNS`) plus a hand-curated `SPECIAL_FORMS` for the engine special forms (which live in PHP, not in any `.phel` file).
 

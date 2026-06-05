@@ -4,16 +4,9 @@
 
 ### Language support
 
-- Sync the symbol corpus to Phel v0.36.0 (Precision): numeric tower (`bigint`, `bigdec`, `quot`, `rem`, `mod`, `floor`, `ceil`, `round`, `sqrt`, `numerator`, `denominator`, `rationalize`) and predicates (`bigint?`, `bigdec?`, `ratio?`, `queue?`, `decimal?`, `map-entry?`, `class?`), plus var helpers (`find-var`, `var-set`, `bound?`, `alter-meta!`, `reset-meta!`) now appear in completion, hover, and signature help.
-- Highlight the `#'sym` var-quote reader macro.
-- Sync the symbol corpus to Phel v0.37.0 (Type Inference).
-- Highlight type/metadata tags: `^int`, `^"?int"`, `^:memoize`, `^:async` (and any `^:keyword` / `^Type` tag) now render as type tags instead of a bare `^`.
-- Sync the symbol corpus to Phel v0.38.0 (Fanout): the new `phel\reflect` namespace (`class-info`, `methods`, `properties`, `supers`), multimethod helpers (`prefer-method`, `prefers`, `prefers?`), `eduction`, and `lazy-seq?` are now available in completion, hover, and signature help.
-- Highlight the `prefer-method` and `prefers` macros.
-- Sync the symbol corpus to Phel v0.39.0 (Parity Pass): hover/doc text reflects the renamed runtime types (`Variable`→`Atom`, `Uuid`→`UUID`, `BigInteger`→`BigInt`, `Rational`→`Ratio`, `PhelFuture`→`Future`, `LazyCons`→`Cons`).
-- Sync the symbol corpus to Phel v0.40.0 (Sharper Edges): the new `phel\edn` and `phel\transit` namespaces (`read-string`, `read-string-all`, `write-string`, `write-string-all`) are now available in completion and hover.
-- Add the `defonce` special form: completion (`SPECIAL_FORMS`), keyword highlighting, and a `defonce` snippet.
-- Sync the symbol corpus to Phel v0.41.0 (Fold and Inline). The release's compiler optimizations are transparent to the editor; `View source` links now point at the v0.41.0 tag.
+- Update the symbol corpus to Phel v0.41.0. Completion, hover, and signature help now cover everything added since v0.36: the numeric tower, the `phel\reflect`, `phel\edn`, and `phel\transit` namespaces, multimethod helpers, renamed runtime types, and `defonce`.
+- Add `defonce` as a known special form, with keyword highlighting and a snippet.
+- Highlight type/metadata tags (`^int`, `^:memoize`, …), the `#'sym` var-quote, and the `prefer-method` / `prefers` macros.
 
 ## [0.6.4] - 2026-05-08
 

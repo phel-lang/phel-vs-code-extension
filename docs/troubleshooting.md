@@ -27,7 +27,7 @@ Tagged literals scope as `storage.type.tagged.phel`. Most themes don't style tha
 Confirm the language mode is `phel` (see above). Completion lives in `src/phelCompletionProvider.ts` and registers on the `phel` language ID - if the file isn't recognised as Phel, the provider doesn't fire.
 
 **Suggestion list misses a function I just added in `phel-lang`.**
-The list is a static snapshot. Refresh it via `scripts/regen-core-symbols.sh` and rebuild - see [completion.md](completion.md).
+The list is a static snapshot. Refresh it via `npm run regen-docs` and rebuild - see [completion.md](completion.md).
 
 ## Debugging
 

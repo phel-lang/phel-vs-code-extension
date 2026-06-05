@@ -4,9 +4,9 @@
 
 The extension ships a static `CompletionItemProvider` for the `phel` language. It suggests every public symbol from `phel.core`:
 
-- **47 special forms** - `def`, `fn`, `let`, `loop`, `recur`, `try` / `catch` / `finally`, `ns`, `quote`, `var`, `deref`, all `php/*` interop forms, etc. (kind: `Keyword`)
-- **~70 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `cond`, `when-some`, `with-redefs`, `match`, threading variants, etc. (kind: `Keyword`)
-- **394 functions** - `assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, the full numeric tower (`+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`, …), and the rest of `phel.core`. (kind: `Function`)
+- **47 special forms** - `def`, `defonce`, `fn`, `let`, `loop`, `recur`, `try` / `catch` / `finally`, `ns`, `quote`, `var`, `deref`, all `php/*` interop forms, etc. (kind: `Keyword`)
+- **~75 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `cond`, `when-some`, `with-redefs`, `prefer-method`, `match`, threading variants, etc. (kind: `Keyword`)
+- **406 functions** - `assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, the full numeric tower (`+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`, `quot`, `rem`, `mod`, `floor`, `ceil`, `round`, `sqrt`, …), and the rest of `phel.core`. (kind: `Function`)
 
 The provider respects the word range so `defn|` completes correctly without duplicating the prefix.
 
@@ -22,11 +22,13 @@ Tagged literals (`#inst`, `#regex`) and PHP class names are not in completion - 
 
 ### Refreshing after a phel-lang bump
 
+The macro and function lists are projections of the symbol corpus in `assets/phel-core-docs.json`. Regenerate it from a phel-lang checkout:
+
 ```bash
-scripts/regen-core-symbols.sh /path/to/phel-lang > /tmp/phel-symbols.txt
+npm run regen-docs -- /path/to/phel-lang --phel-version v0.41.0
 ```
 
-Review the printed arrays and paste them into `src/phelCoreSymbols.ts`. The script does not write the file in place on purpose - manual review keeps private helpers out of the public completion surface. See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full procedure.
+`MACROS` and `CORE_FNS` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` is hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source) - add new entries there by hand. See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full procedure.
 
 ## Snippets
 
@@ -36,7 +38,7 @@ Review the printed arrays and paste them into `src/phelCoreSymbols.ts`. The scri
 |---|---|
 | `ns` | `(ns my-app.core (:require ...))` |
 | `defn`, `defn-` | Public / private function with docstring + args |
-| `def`, `fn`, `let` | Top-level binding, anonymous fn, local bindings |
+| `def`, `defonce`, `fn`, `let` | Top-level binding, once-only binding, anonymous fn, local bindings |
 | `if`, `when`, `cond`, `case` | Conditionals |
 | `doseq`, `for`, `loop` | Iteration (with `recur` skeleton) |
 | `try` | `try` + `catch \Throwable e` |
