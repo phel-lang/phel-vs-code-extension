@@ -8,6 +8,8 @@
 - Highlight the `#'sym` var-quote reader macro.
 - Sync the symbol corpus to Phel v0.37.0 (Type Inference).
 - Highlight type/metadata tags: `^int`, `^"?int"`, `^:memoize`, `^:async` (and any `^:keyword` / `^Type` tag) now render as type tags instead of a bare `^`.
+- Sync the symbol corpus to Phel v0.38.0 (Fanout): the new `phel\reflect` namespace (`class-info`, `methods`, `properties`, `supers`), multimethod helpers (`prefer-method`, `prefers`, `prefers?`), `eduction`, and `lazy-seq?` are now available in completion, hover, and signature help.
+- Highlight the `prefer-method` and `prefers` macros.
 
 ## [0.6.4] - 2026-05-08
 
