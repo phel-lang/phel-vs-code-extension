@@ -2,7 +2,7 @@
     "name": "phel-lang",
     "displayName": "Phel Lang",
     "description": "Phel language support for VS Code: syntax highlighting, code completion, and snippets for .phel files (plus an optional Xdebug-based debug adapter).",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "publisher": "Phel-Lang",
     "license": "MIT",
     "engines": {

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-05
+
 ### Language support
 
 - Track phel-lang `main` (ahead of v0.41.0) for the unreleased interop work: corpus now covers `defenum`, `hydrate`, `bean`, `iterator-seq`, the reflect enum/attribute bridges (`enum->keyword`, `keyword->enum`, `enum-values`, `class-attributes`, `method-attributes`, `property-attributes`), and `html-response` / `json-response`.
