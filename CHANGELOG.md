@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Language support
+
+- Sync the symbol corpus to Phel v0.36.0 (Precision): numeric tower (`bigint`, `bigdec`, `quot`, `rem`, `mod`, `floor`, `ceil`, `round`, `sqrt`, `numerator`, `denominator`, `rationalize`) and predicates (`bigint?`, `bigdec?`, `ratio?`, `queue?`, `decimal?`, `map-entry?`, `class?`), plus var helpers (`find-var`, `var-set`, `bound?`, `alter-meta!`, `reset-meta!`) now appear in completion, hover, and signature help.
+- Highlight the `#'sym` var-quote reader macro.
+
 ## [0.6.4] - 2026-05-08
 
 ### Diagnostics

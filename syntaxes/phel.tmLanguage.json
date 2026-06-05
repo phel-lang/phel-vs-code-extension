@@ -115,6 +115,10 @@
 					"match": "#_"
 				},
 				{
+					"name": "punctuation.other.phel",
+					"match": "#'"
+				},
+				{
 					"name": "punctuation.other.unquote-splicing.phel",
 					"match": "~@|,@"
 				},
