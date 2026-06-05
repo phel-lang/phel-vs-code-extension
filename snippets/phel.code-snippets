@@ -136,6 +136,11 @@
         "body": ["(defstruct ${1:name} [${0:fields}])"],
         "description": "Struct definition"
     },
+    "defenum": {
+        "prefix": "defenum",
+        "body": ["(defenum ${1:Name} ${2::case} ${0:value})"],
+        "description": "Native PHP-backed enum"
+    },
     "definterface": {
         "prefix": "definterface",
         "body": [

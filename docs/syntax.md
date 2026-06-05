@@ -1,10 +1,10 @@
 # Syntax highlighting
 
-Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) `v0.41.0`. Legacy forms are still recognised so older codebases keep highlighting.
+Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) `main` (v0.41.0 plus the unreleased interop work: `defenum`, `php/ref`, ...). Legacy forms are still recognised so older codebases keep highlighting.
 
 ## Special forms
 
-`def`, `def-`, `defonce`, `defn`, `defn-`, `defmacro`, `defmacro-`, `definterface*`, `defexception*`, `defstruct*`, `reify*`, `fn`, `let`, `loop`, `recur`, `if`, `do`, `quote`, `var`, `deref`, `new`, `apply`, `concat`, `conj`, `list`, `vector`, `hash-map`, `ns`, `in-ns`, `use`, `load`, `set-var`, `try`/`catch`/`finally`, `throw`, `foreach`, `unquote`, `unquote-splicing`, plus the `php/` interop family (`php/->`, `php/::`, `php/aget`, `php/aset`, `php/apush`, `php/aunset`, `php/new`, `php/oset`, and `*-in` variants).
+`def`, `def-`, `defonce`, `defenum*`, `defn`, `defn-`, `defmacro`, `defmacro-`, `definterface*`, `defexception*`, `defstruct*`, `reify*`, `fn`, `let`, `loop`, `recur`, `if`, `do`, `quote`, `var`, `deref`, `new`, `apply`, `concat`, `conj`, `list`, `vector`, `hash-map`, `ns`, `in-ns`, `use`, `load`, `set-var`, `try`/`catch`/`finally`, `throw`, `foreach`, `unquote`, `unquote-splicing`, plus the `php/` interop family (`php/->`, `php/::`, `php/aget`, `php/aset`, `php/apush`, `php/aunset`, `php/new`, `php/oset`, `php/ref`, and `*-in` variants).
 
 ## Macros (~70)
 
@@ -12,7 +12,7 @@ Threading: `->`, `->>`, `some->`, `some->>`, `as->`, `cond->`, `cond->>`.
 Conditionals: `if-let`, `if-not`, `if-some`, `when`, `when-let`, `when-not`, `when-some`, `when-first`, `cond`, `condp`, `case`.
 Iteration: `for`, `doseq`, `dofor`, `dotimes`, `doto`.
 Bindings: `binding`, `letfn`, `with-bindings`, `with-redefs`, `with-output-buffer`.
-Definitions: `defprotocol`, `defrecord`, `defmethod`, `defmulti`, `prefer-method`, `prefers`, `defspec`, `defstruct`, `definterface`, `defexception`, `deftype`, `declare`.
+Definitions: `defprotocol`, `defrecord`, `defmethod`, `defmulti`, `prefer-method`, `prefers`, `defspec`, `defstruct`, `defenum`, `definterface`, `defexception`, `deftype`, `declare`.
 Testing: `deftest`, `is`, `are`, `testing`, `assert`, `with-mocks`, `with-mock-wrapper`.
 REPL helpers: `dir`, `doc`, `source`, `require`, `symbol-info`, `explain-sym`.
 Other: `comment`, `time`, `lazy-seq`, `lazy-cat`, `match`, `instance?`, `pop`, `reify`, `delay`, `future`, `future-fiber`, `extend-protocol`, `extend-type`, `html`, `with-config`, `async`.

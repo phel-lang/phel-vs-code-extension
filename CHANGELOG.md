@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Language support
+
+- Track phel-lang `main` (ahead of v0.41.0) for the unreleased interop work: corpus now covers `defenum`, `hydrate`, `bean`, `iterator-seq`, the reflect enum/attribute bridges (`enum->keyword`, `keyword->enum`, `enum-values`, `class-attributes`, `method-attributes`, `property-attributes`), and `html-response` / `json-response`.
+- Add the `defenum` enum form: completion (`defenum*` special form), keyword highlighting, and a `defenum` snippet.
+- Add `php/ref` (by-reference PHP interop) to the `php/*` special-form completion list; it already highlighted via the generic `php/` rule.
+
 ## [0.7.0] - 2026-06-05
 
 ### Language support

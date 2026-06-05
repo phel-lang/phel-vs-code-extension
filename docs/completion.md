@@ -4,9 +4,9 @@
 
 The extension ships a static `CompletionItemProvider` for the `phel` language. It suggests every public symbol from `phel.core`:
 
-- **47 special forms** - `def`, `defonce`, `fn`, `let`, `loop`, `recur`, `try` / `catch` / `finally`, `ns`, `quote`, `var`, `deref`, all `php/*` interop forms, etc. (kind: `Keyword`)
-- **~75 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `cond`, `when-some`, `with-redefs`, `prefer-method`, `match`, threading variants, etc. (kind: `Keyword`)
-- **406 functions** - `assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, the full numeric tower (`+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`, `quot`, `rem`, `mod`, `floor`, `ceil`, `round`, `sqrt`, …), and the rest of `phel.core`. (kind: `Function`)
+- **49 special forms** - `def`, `defonce`, `defenum*`, `fn`, `let`, `loop`, `recur`, `try` / `catch` / `finally`, `ns`, `quote`, `var`, `deref`, all `php/*` interop forms (incl. `php/ref`), etc. (kind: `Keyword`)
+- **~76 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `defenum`, `cond`, `when-some`, `with-redefs`, `prefer-method`, `match`, threading variants, etc. (kind: `Keyword`)
+- **409 functions** - `assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, `hydrate`, `bean`, `iterator-seq`, the full numeric tower (`+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`, `quot`, `rem`, `mod`, `floor`, `ceil`, `round`, `sqrt`, …), and the rest of `phel.core`. (kind: `Function`)
 
 The provider respects the word range so `defn|` completes correctly without duplicating the prefix.
 
@@ -42,7 +42,7 @@ npm run regen-docs -- /path/to/phel-lang --phel-version v0.41.0
 | `if`, `when`, `cond`, `case` | Conditionals |
 | `doseq`, `for`, `loop` | Iteration (with `recur` skeleton) |
 | `try` | `try` + `catch \Throwable e` |
-| `defmacro`, `defstruct`, `definterface`, `defprotocol`, `defexception` | Definitions |
+| `defmacro`, `defstruct`, `defenum`, `definterface`, `defprotocol`, `defexception` | Definitions |
 | `deftest` | Test case with `(is ...)` |
 | `->`, `->>` | Threading skeletons |
 | `comment` | Form-aware comment block |
