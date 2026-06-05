@@ -33,6 +33,9 @@
 			"include": "#tagged-literal"
 		},
 		{
+			"include": "#metadata"
+		},
+		{
 			"include": "#readermac"
 		},
 		{
@@ -254,6 +257,33 @@
 				}
 			}
 		},
+		"metadata": {
+			"comment": "Type/metadata tags: ^int, ^\"?int\", ^:memoize, ^:async, ^:by-ref",
+			"patterns": [
+				{
+					"match": "(\\^)(:[^\\s\\#\\(\\)\\{\\}\\[\\]\\'\\\"\\,\\`]+)",
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.tag.phel"
+						},
+						"2": {
+							"name": "storage.type.tagged.phel"
+						}
+					}
+				},
+				{
+					"match": "(\\^)([a-zA-Z][\\w-]*|\"[^\"]*\")",
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.tag.phel"
+						},
+						"2": {
+							"name": "storage.type.tagged.phel"
+						}
+					}
+				}
+			]
+		},
 		"reader-conditional": {
 			"begin": "(#\\?@?)(\\()",
 			"beginCaptures": {
@@ -329,6 +359,9 @@
 				},
 				{
 					"include": "#tagged-literal"
+				},
+				{
+					"include": "#metadata"
 				},
 				{
 					"include": "#readermac"
