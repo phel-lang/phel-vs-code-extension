@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-05
+
 ### Language support
 
 - Update the symbol corpus to Phel v0.41.0. Completion, hover, and signature help now cover everything added since v0.36: the numeric tower, the `phel\reflect`, `phel\edn`, and `phel\transit` namespaces, multimethod helpers, renamed runtime types, and `defonce`.
