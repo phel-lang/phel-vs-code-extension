@@ -40,6 +40,7 @@ export const SPECIAL_FORMS: readonly string[] = [
     'ns',
     'php/->',
     'php/::',
+    'php/callable',
     'php/aget',
     'php/aget-in',
     'php/apush',

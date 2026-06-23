@@ -1,6 +1,6 @@
 # Syntax highlighting
 
-Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) `main` (v0.41.0 plus the unreleased interop work: `defenum`, `php/ref`, ...). Legacy forms are still recognised so older codebases keep highlighting.
+Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) `main` (v0.45.1 plus the unreleased work: the full PHP interop surface — `php/callable`, `php/ref`, named args via `:&`, the `:php/*` metadata tags, `defenum`/`defstruct` `:php` blocks — and the `*argv*` rename). Legacy forms are still recognised so older codebases keep highlighting.
 
 ## Special forms
 

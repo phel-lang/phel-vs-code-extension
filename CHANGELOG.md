@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Language support
+
+- Completion, hover, and signature help for the REPL workflow fns (`reload!`, `reload-all!`, `run-test`, `run-tests`), new core helpers (`clamp-int`, `defs->map`), and `phel.json` / `phel.string` / `phel.transit` / `phel.ai` additions.
+- Add `php/callable` (first-class callable interop) to the `php/*` completion list.
+- Rename `argv` → `*argv*`.
+
 ## [0.8.0] - 2026-06-05
 
 ### Language support
