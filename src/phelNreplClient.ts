@@ -98,6 +98,7 @@ export class PhelNreplConnection {
                     reject(new Error('Timed out waiting for the nREPL server to start.'));
                 }
             }, STARTUP_TIMEOUT_MS);
+            timer.unref(); // a pending timeout must not keep the host process alive
 
             const onData = (chunk: Buffer): void => {
                 const text = chunk.toString();
@@ -240,6 +241,7 @@ export class PhelNreplConnection {
                 this.pending.delete(id);
                 reject(new Error(`nREPL op "${asString(op['op'])}" timed out.`));
             }, OP_TIMEOUT_MS);
+            timer.unref(); // a pending timeout must not keep the host process alive
             const pending: PendingOp = {
                 resolve,
                 reject,
@@ -260,15 +262,18 @@ export class PhelNreplConnection {
     }
 
     eval(code: string, ns?: string): Promise<OpResult> {
-        const op: { [key: string]: BencodeValue } = { op: 'eval', code };
-        if (ns) {
-            op['ns'] = ns;
-        }
-        return this.send(op);
+        // The server evaluates in the session's current namespace and has no
+        // `ns` op param, so switch the session first with an in-ns form when a
+        // namespace is requested. (`*ns*` tracking across evals lives in the
+        // session, so this persists for follow-up evals in the same file.)
+        const source = ns ? `(in-ns '${ns})\n${code}` : code;
+        return this.send({ op: 'eval', code: source });
     }
 
     loadFile(content: string, filePath: string): Promise<OpResult> {
-        return this.send({ op: 'load-file', file: content, 'file-path': filePath });
+        // The server reads the source name from `file-name` (used in compile
+        // error locations); `file` carries the contents.
+        return this.send({ op: 'load-file', file: content, 'file-name': filePath });
     }
 
     reload(all = false): Promise<OpResult> {

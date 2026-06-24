@@ -26,9 +26,15 @@
 - Add `php/callable` (first-class callable interop) to the `php/*` completion list.
 - Rename `argv` → `*argv*`.
 
+### Fixed
+
+- Terminal commands (test / watch / build / init) now launch the CLI as the terminal's process instead of a shell-quoted command line, so they work on Windows (PowerShell/cmd) and with paths containing spaces.
+- nREPL eval now runs in the open file's namespace, and nREPL "load file" reports compile-error locations with the real file path instead of `NO_SOURCE_FILE`.
+- The language server now restarts automatically when `phel.lsp.command`, `phel.lsp.args`, or `phel.executablePath` changes (toggling `phel.lsp.enabled` offers a reload); coverage from several test files merges into one report per source; cancelling a test run resolves every started test.
+
 ### Internal
 
-- Deduplicate shared logic into focused modules: `xml` (attribute/entity/int parsing used by the JUnit and Clover parsers), `phelCli` (one-shot CLI spawn + output collection), `phelWorkspace` (active-folder resolution), and `phelTerminal` (terminal launch + shell quoting). Harden the nREPL reader against malformed frames and reap the server process on socket close; read test files concurrently when populating the Test Explorer.
+- Deduplicate shared logic into focused modules: `xml` (attribute/entity/int parsing used by the JUnit and Clover parsers), `phelCli` (one-shot CLI spawn + output collection), `phelWorkspace` (active-folder resolution), and `phelTerminal` (terminal launch). Harden the nREPL reader against malformed frames, unref pending timers, and reap the server process on socket close; dispose output channels, run profiles, and per-folder file watchers; read test files concurrently when populating the Test Explorer.
 
 ## [0.8.0] - 2026-06-05
 

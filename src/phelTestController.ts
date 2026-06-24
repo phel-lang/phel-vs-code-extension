@@ -217,25 +217,41 @@ function messageFor(aggregated: AggregatedCase): vscode.TestMessage[] {
     });
 }
 
-/** Build a FileCoverage (+ cache its per-line detail) from a Clover file entry. */
-function toFileCoverage(
-    entry: CloverFile,
+/**
+ * Build one FileCoverage (and cache its per-line detail) for a source file
+ * from all Clover entries that referenced it during the run. A line is covered
+ * if it was executed in any entry; the summary counts come from the merged set.
+ */
+function mergeCoverage(
+    entries: readonly CloverFile[],
     detailStore: Map<string, vscode.StatementCoverage[]>
 ): vscode.FileCoverage {
-    const uri = vscode.Uri.file(entry.file);
-    const details = entry.lines.map(
-        (l) =>
+    const uri = vscode.Uri.file(entries[0].file);
+
+    const coveredByLine = new Map<number, boolean>();
+    for (const entry of entries) {
+        for (const l of entry.lines) {
+            coveredByLine.set(l.line, (coveredByLine.get(l.line) ?? false) || l.covered);
+        }
+    }
+
+    const details: vscode.StatementCoverage[] = [];
+    let covered = 0;
+    for (const [line, isCovered] of coveredByLine) {
+        details.push(
             new vscode.StatementCoverage(
-                l.covered,
+                isCovered,
                 // Clover line numbers are 1-based; VS Code positions are 0-based.
-                new vscode.Position(Math.max(0, l.line - 1), 0)
+                new vscode.Position(Math.max(0, line - 1), 0)
             )
-    );
+        );
+        if (isCovered) {
+            covered += 1;
+        }
+    }
+
     detailStore.set(uri.toString(), details);
-    return new vscode.FileCoverage(
-        uri,
-        new vscode.TestCoverageCount(entry.coveredStatements, entry.statements)
-    );
+    return new vscode.FileCoverage(uri, new vscode.TestCoverageCount(covered, coveredByLine.size));
 }
 
 export class PhelTestController implements vscode.Disposable {
@@ -250,11 +266,13 @@ export class PhelTestController implements vscode.Disposable {
         this.controller.resolveHandler = async () => {
             await loadAllTests(this.controller);
         };
-        this.controller.createRunProfile(
-            'Run',
-            vscode.TestRunProfileKind.Run,
-            (request, token) => this.run(request, token, false),
-            true
+        this.disposables.push(
+            this.controller.createRunProfile(
+                'Run',
+                vscode.TestRunProfileKind.Run,
+                (request, token) => this.run(request, token, false),
+                true
+            )
         );
         if (COVERAGE_API_AVAILABLE) {
             const coverageProfile = this.controller.createRunProfile(
@@ -265,6 +283,7 @@ export class PhelTestController implements vscode.Disposable {
             );
             coverageProfile.loadDetailedCoverage = (_run, fileCoverage) =>
                 Promise.resolve(this.coverageDetails.get(fileCoverage.uri.toString()) ?? []);
+            this.disposables.push(coverageProfile);
         }
         this.disposables.push(
             vscode.workspace.onDidSaveTextDocument(async (doc) => {
@@ -292,61 +311,85 @@ export class PhelTestController implements vscode.Disposable {
         if (withCoverage) {
             this.coverageDetails = new Map();
         }
+        // Accumulate coverage across files so a source executed by several test
+        // files yields one merged FileCoverage rather than duplicate entries.
+        const coverageByUri = new Map<string, CloverFile[]>();
         let warnedNoDriver = false;
 
-        for (const [fileItem, leaves] of byFile) {
-            if (token.isCancellationRequested) {
-                break;
-            }
-            const folder = fileItem.uri
-                ? vscode.workspace.getWorkspaceFolder(fileItem.uri)
-                : undefined;
-            if (!folder || !fileItem.uri) {
-                leaves.forEach((l) => run.skipped(l));
-                continue;
-            }
-            leaves.forEach((l) => run.started(l));
-
-            const outcome = await runPhelTestFile(folder, fileItem.uri, token, withCoverage);
-
-            if (withCoverage) {
-                for (const entry of outcome.coverage) {
-                    run.addCoverage(toFileCoverage(entry, this.coverageDetails));
-                }
-                if (outcome.coverageDriverMissing && !warnedNoDriver) {
-                    warnedNoDriver = true;
-                    vscode.window.showWarningMessage(
-                        'Phel coverage needs the pcov or xdebug PHP extension; tests ran without coverage.'
-                    );
-                }
-            }
-
-            for (const leaf of leaves) {
-                const name = nameForLeaf(leaf);
-                // A leaf only knows the deftest name, not its namespace, so we
-                // match by name (test names are unique within a file).
-                const result = findByName(outcome.byName, name);
-                if (!result) {
-                    if (outcome.parsed) {
-                        run.skipped(leaf);
-                    } else {
-                        run.errored(
-                            leaf,
-                            new vscode.TestMessage(
-                                outcome.output.trim() || `phel test exited ${outcome.code}`
-                            )
-                        );
-                    }
+        try {
+            for (const [fileItem, leaves] of byFile) {
+                if (token.isCancellationRequested) {
+                    // VS Code expects every started item to reach a terminal
+                    // state; mark the rest skipped instead of leaving them spinning.
+                    leaves.forEach((l) => run.skipped(l));
                     continue;
                 }
-                if (result.passed) {
-                    run.passed(leaf);
-                } else {
-                    run.failed(leaf, messageFor(result));
+                const folder = fileItem.uri
+                    ? vscode.workspace.getWorkspaceFolder(fileItem.uri)
+                    : undefined;
+                if (!folder || !fileItem.uri) {
+                    leaves.forEach((l) => run.skipped(l));
+                    continue;
+                }
+                leaves.forEach((l) => run.started(l));
+
+                const outcome = await runPhelTestFile(folder, fileItem.uri, token, withCoverage);
+
+                if (token.isCancellationRequested) {
+                    leaves.forEach((l) => run.skipped(l));
+                    continue;
+                }
+
+                if (withCoverage) {
+                    for (const entry of outcome.coverage) {
+                        const list = coverageByUri.get(entry.file) ?? [];
+                        list.push(entry);
+                        coverageByUri.set(entry.file, list);
+                    }
+                    if (outcome.coverageDriverMissing && !warnedNoDriver) {
+                        warnedNoDriver = true;
+                        vscode.window.showWarningMessage(
+                            'Phel coverage needs the pcov or xdebug PHP extension; tests ran without coverage.'
+                        );
+                    }
+                }
+
+                for (const leaf of leaves) {
+                    const name = nameForLeaf(leaf);
+                    // A leaf only knows the deftest name, not its namespace, so we
+                    // match by name. Tests run one file per subprocess, so the
+                    // report only contains this file's tests — names are unique
+                    // within a file.
+                    const result = findByName(outcome.byName, name);
+                    if (!result) {
+                        if (outcome.parsed) {
+                            run.skipped(leaf);
+                        } else {
+                            run.errored(
+                                leaf,
+                                new vscode.TestMessage(
+                                    outcome.output.trim() || `phel test exited ${outcome.code}`
+                                )
+                            );
+                        }
+                        continue;
+                    }
+                    if (result.passed) {
+                        run.passed(leaf);
+                    } else {
+                        run.failed(leaf, messageFor(result));
+                    }
                 }
             }
+
+            if (withCoverage) {
+                for (const [, entries] of coverageByUri) {
+                    run.addCoverage(mergeCoverage(entries, this.coverageDetails));
+                }
+            }
+        } finally {
+            run.end();
         }
-        run.end();
     }
 
     dispose(): void {

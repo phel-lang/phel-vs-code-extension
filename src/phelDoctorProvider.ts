@@ -113,6 +113,7 @@ function prettyJson(raw: string): string | null {
 
 export function registerDoctorCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
+        channel(),
         vscode.commands.registerCommand('phel.doctor', runDoctor),
         vscode.commands.registerCommand('phel.showConfig', showConfig)
     );

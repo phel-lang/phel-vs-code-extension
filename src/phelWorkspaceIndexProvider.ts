@@ -18,7 +18,8 @@ const NAMESPACE_RE = /\((?:ns|in-ns)\s+([A-Za-z][\w.-]*)/;
 
 export class PhelWorkspaceIndexer implements vscode.Disposable {
     readonly index = new PhelWorkspaceIndex();
-    private readonly watchers: vscode.FileSystemWatcher[] = [];
+    /** One watcher (plus its event subscriptions) per workspace folder, by URI. */
+    private readonly watchers = new Map<string, vscode.Disposable>();
     private readonly disposables: vscode.Disposable[] = [];
     private readonly _onDidChange = new vscode.EventEmitter<void>();
     readonly onDidChange = this._onDidChange.event;
@@ -51,9 +52,10 @@ export class PhelWorkspaceIndexer implements vscode.Disposable {
         for (const d of this.disposables) {
             d.dispose();
         }
-        for (const w of this.watchers) {
+        for (const w of this.watchers.values()) {
             w.dispose();
         }
+        this.watchers.clear();
         this._onDidChange.dispose();
     }
 
@@ -63,20 +65,29 @@ export class PhelWorkspaceIndexer implements vscode.Disposable {
         await Promise.all(files.map((uri) => this.indexFile(uri.fsPath)));
 
         const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-        watcher.onDidCreate((uri) =>
-            this.indexFile(uri.fsPath).then(() => this._onDidChange.fire())
+        // Bundle the watcher with its event subscriptions so dropping a folder
+        // disposes all of them together (no leak on workspace-folder churn).
+        const subscription = vscode.Disposable.from(
+            watcher,
+            watcher.onDidCreate((uri) =>
+                this.indexFile(uri.fsPath).then(() => this._onDidChange.fire())
+            ),
+            watcher.onDidChange((uri) =>
+                this.indexFile(uri.fsPath).then(() => this._onDidChange.fire())
+            ),
+            watcher.onDidDelete((uri) => {
+                this.index.removeFile(uri.fsPath);
+                this._onDidChange.fire();
+            })
         );
-        watcher.onDidChange((uri) =>
-            this.indexFile(uri.fsPath).then(() => this._onDidChange.fire())
-        );
-        watcher.onDidDelete((uri) => {
-            this.index.removeFile(uri.fsPath);
-            this._onDidChange.fire();
-        });
-        this.watchers.push(watcher);
+        this.watchers.get(folder.uri.toString())?.dispose();
+        this.watchers.set(folder.uri.toString(), subscription);
     }
 
     private dropFolder(folder: vscode.WorkspaceFolder): void {
+        this.watchers.get(folder.uri.toString())?.dispose();
+        this.watchers.delete(folder.uri.toString());
+
         const prefix = folder.uri.fsPath + path.sep;
         for (const file of [...this.indexedFiles()]) {
             if (file.startsWith(prefix)) {

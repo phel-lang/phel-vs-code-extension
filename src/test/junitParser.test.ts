@@ -96,6 +96,25 @@ describe('junitParser.parseJUnit', () => {
         assert.deepEqual(cases[0].failures, []);
     });
 
+    it('keeps order and attribution when a self-closing case precedes a body case', () => {
+        // A single left-to-right pass must not let the body case swallow the
+        // self-closing one, nor misattribute the failure.
+        const xml =
+            '<testsuites><testsuite name="ns">' +
+            '<testcase name="self" file="/f.phel" line="1"/>' +
+            '<testcase name="body" file="/f.phel" line="2">' +
+            '<failure message="boom" type="T">(x)</failure></testcase>' +
+            '</testsuite></testsuites>';
+        const cases = parseJUnit(xml);
+        assert.deepEqual(
+            cases.map((c) => c.name),
+            ['self', 'body']
+        );
+        assert.deepEqual(cases[0].failures, []);
+        assert.equal(cases[1].failures.length, 1);
+        assert.equal(cases[1].failures[0].message, 'boom');
+    });
+
     it('returns an empty array for empty or malformed input', () => {
         assert.deepEqual(parseJUnit(''), []);
         assert.deepEqual(parseJUnit('not xml'), []);

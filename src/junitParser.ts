@@ -55,17 +55,13 @@ export function parseJUnit(xml: string): JUnitTestCase[] {
 }
 
 function collectCases(scope: string, suiteName: string, out: JUnitTestCase[]): void {
-    // Self-closing testcases (no failure/error child).
-    const selfClosingRe = /<testcase\b([^>]*?)\/>/g;
-    // Testcases with a body (may contain failure/error children).
-    const bodyRe = /<testcase\b([^>]*?)>([\s\S]*?)<\/testcase>/g;
-
+    // Match self-closing (`<testcase .../>`) and body (`<testcase ...>...</testcase>`)
+    // forms in a single left-to-right pass so document order is preserved and a
+    // self-closing element can't be swallowed by a following element's body.
+    const re = /<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g;
     let m: RegExpExecArray | null;
-    while ((m = bodyRe.exec(scope)) !== null) {
-        out.push(buildCase(m[1], m[2], suiteName));
-    }
-    while ((m = selfClosingRe.exec(scope)) !== null) {
-        out.push(buildCase(m[1], '', suiteName));
+    while ((m = re.exec(scope)) !== null) {
+        out.push(buildCase(m[1], m[2] ?? '', suiteName));
     }
 }
 
