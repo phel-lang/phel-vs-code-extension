@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Test Explorer
+
+- Report per-test pass/fail in the Test Explorer by running `phel test --reporter=junit-xml` and parsing the JUnit report, instead of inferring a single pass/fail from the process exit code. Failing tests now show the assertion message and the failing form, and each file's tests run in one subprocess. Tests absent from the report are marked skipped.
+
 ### REPL & runtime
 
 - Add an nREPL client that connects to a `phel nrepl` server (bencode-over-TCP, started automatically on a random free port). Commands: connect / disconnect, structured eval of the form under the cursor or the selection, load file, reload changed namespaces (`phel.nrepl.reload`) or all (`phel.nrepl.reloadAll`), run a namespace's tests (`phel.nrepl.runTestsInNs`), and run the `deftest` under the cursor (`phel.nrepl.runTestUnderCursor`). Results — values, captured stdout, and errors — are shown in a dedicated "Phel nREPL" output channel. New settings: `phel.nrepl.enabled` (default `true`) and `phel.nrepl.reloadOnSave` (default `false`).

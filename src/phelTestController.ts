@@ -1,28 +1,29 @@
 // VS Code Test Explorer integration for Phel.
 //
 // Each `.phel` file with at least one `deftest` becomes a TestItem; each
-// `deftest` becomes a child item. Running an item shells out to `phel test
-// --filter` and reports pass / fail based on the exit code. We don't parse
-// the textual output yet — when the Phel CLI gains structured (JSON / TAP)
-// output we can attach per-assertion messages.
+// `deftest` becomes a child item. Running items shells out to
+// `phel test --reporter=junit-xml -o <tmp>` and parses the JUnit report, so
+// individual tests get pass / fail status plus the failing assertion message
+// and (for the failing form) detail. Tests not present in the report are
+// marked skipped.
 
 import { spawn } from 'node:child_process';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { findDeftests } from './phelTestScanner';
+import { type AggregatedCase, groupByName, parseJUnit } from './junitParser';
 
 interface ResolvedCommand {
     command: string;
-    args: string[];
     cwd: string;
 }
 
 function resolveTestCommand(folder: vscode.WorkspaceFolder): ResolvedCommand {
     return {
         command: resolvePhelExecutable('test.command', folder),
-        args: ['test'],
         cwd: folder.uri.fsPath,
     };
 }
@@ -71,58 +72,113 @@ async function loadAllTests(controller: vscode.TestController): Promise<void> {
     }
 }
 
-interface TestRunOutcome {
-    code: number;
+interface JUnitRunOutcome {
+    /** Aggregated results keyed by test name (the deftest name). */
+    byName: Map<string, AggregatedCase>;
+    /** Raw combined stdout+stderr, surfaced when the report is missing. */
     output: string;
+    code: number;
+    /** True when a JUnit report was produced and parsed. */
+    parsed: boolean;
 }
 
-function runPhelTest(folder: vscode.WorkspaceFolder, filter: string): Promise<TestRunOutcome> {
-    return new Promise((resolve) => {
-        const cmd = resolveTestCommand(folder);
-        const proc = spawn(cmd.command, [...cmd.args, '--filter', filter], { cwd: cmd.cwd });
+/**
+ * Run `phel test` for one file with the JUnit reporter and return the parsed,
+ * per-test results. We pass the file as a positional path so every `deftest`
+ * in it runs in a single subprocess.
+ */
+async function runPhelTestFile(
+    folder: vscode.WorkspaceFolder,
+    fileUri: vscode.Uri,
+    token: vscode.CancellationToken
+): Promise<JUnitRunOutcome> {
+    const cmd = resolveTestCommand(folder);
+    const relPath = path.relative(cmd.cwd, fileUri.fsPath) || fileUri.fsPath;
+    const reportPath = path.join(
+        os.tmpdir(),
+        `phel-junit-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.xml`
+    );
+    const args = ['test', '--reporter=junit-xml', '-o', reportPath, relPath];
+
+    const outcome = await new Promise<{ code: number; output: string }>((resolve) => {
+        const proc = spawn(cmd.command, args, { cwd: cmd.cwd });
         let output = '';
-        proc.stdout?.on('data', (d) => {
-            output += d.toString();
-        });
-        proc.stderr?.on('data', (d) => {
-            output += d.toString();
-        });
+        proc.stdout?.on('data', (d) => (output += d.toString()));
+        proc.stderr?.on('data', (d) => (output += d.toString()));
         proc.on('close', (code) => resolve({ code: code ?? 1, output }));
         proc.on('error', (err) => resolve({ code: 1, output: err.message }));
+        token.onCancellationRequested(() => proc.kill());
     });
+
+    let byName = new Map<string, AggregatedCase>();
+    let parsed = false;
+    try {
+        const xml = await fs.readFile(reportPath, 'utf-8');
+        byName = groupByName(parseJUnit(xml));
+        parsed = byName.size > 0 || xml.includes('<testsuite');
+    } catch {
+        // No report written (e.g. a compile error before any test ran).
+    } finally {
+        await fs.rm(reportPath, { force: true }).catch(() => undefined);
+    }
+
+    return { byName, output: outcome.output, code: outcome.code, parsed };
 }
 
-function expandQueue(
+interface QueueGroups {
+    /** File item → the set of leaf test items requested under it. */
+    byFile: Map<vscode.TestItem, vscode.TestItem[]>;
+}
+
+function groupQueue(
     queue: readonly vscode.TestItem[],
     request: vscode.TestRunRequest
-): vscode.TestItem[] {
-    const flat: vscode.TestItem[] = [];
-    const visit = (item: vscode.TestItem): void => {
+): QueueGroups {
+    const byFile = new Map<vscode.TestItem, vscode.TestItem[]>();
+    const addLeaf = (item: vscode.TestItem): void => {
         if (request.exclude?.includes(item)) {
             return;
         }
-        if (item.children.size === 0) {
-            flat.push(item);
+        // A leaf (deftest) item has an id of the form "<fileUri>::<name>".
+        const isLeaf = item.id.includes('::');
+        const fileItem = isLeaf ? item.parent : item;
+        if (!fileItem) {
             return;
         }
-        item.children.forEach(visit);
+        const leaves = byFile.get(fileItem) ?? [];
+        if (isLeaf) {
+            leaves.push(item);
+        } else {
+            item.children.forEach((child) => {
+                if (!request.exclude?.includes(child)) {
+                    leaves.push(child);
+                }
+            });
+        }
+        byFile.set(fileItem, leaves);
     };
     for (const item of queue) {
-        visit(item);
+        addLeaf(item);
     }
-    return flat;
+    return { byFile };
 }
 
-function filterFor(item: vscode.TestItem): string {
+function nameForLeaf(item: vscode.TestItem): string {
     const sep = item.id.indexOf('::');
-    if (sep < 0) {
-        return '.*';
-    }
-    return `^${escapeRegex(item.id.slice(sep + 2))}$`;
+    return sep < 0 ? item.label : item.id.slice(sep + 2);
 }
 
-function escapeRegex(s: string): string {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function messageFor(aggregated: AggregatedCase): vscode.TestMessage[] {
+    return aggregated.failures.map((f) => {
+        const parts = [f.message || (f.isError ? 'Error' : 'Assertion failed')];
+        if (f.detail) {
+            parts.push('', f.detail);
+        }
+        if (f.type) {
+            parts.push('', `(${f.type})`);
+        }
+        return new vscode.TestMessage(parts.join('\n'));
+    });
 }
 
 export class PhelTestController implements vscode.Disposable {
@@ -161,23 +217,47 @@ export class PhelTestController implements vscode.Disposable {
         } else {
             this.controller.items.forEach((it) => queue.push(it));
         }
-        const items = expandQueue(queue, request);
+        const { byFile } = groupQueue(queue, request);
         const run = this.controller.createTestRun(request);
-        for (const item of items) {
+
+        for (const [fileItem, leaves] of byFile) {
             if (token.isCancellationRequested) {
                 break;
             }
-            const folder = item.uri ? vscode.workspace.getWorkspaceFolder(item.uri) : undefined;
-            if (!folder) {
-                run.skipped(item);
+            const folder = fileItem.uri
+                ? vscode.workspace.getWorkspaceFolder(fileItem.uri)
+                : undefined;
+            if (!folder || !fileItem.uri) {
+                leaves.forEach((l) => run.skipped(l));
                 continue;
             }
-            run.started(item);
-            const outcome = await runPhelTest(folder, filterFor(item));
-            if (outcome.code === 0) {
-                run.passed(item);
-            } else {
-                run.failed(item, new vscode.TestMessage(outcome.output || `exit ${outcome.code}`));
+            leaves.forEach((l) => run.started(l));
+
+            const outcome = await runPhelTestFile(folder, fileItem.uri, token);
+
+            for (const leaf of leaves) {
+                const name = nameForLeaf(leaf);
+                // A leaf only knows the deftest name, not its namespace, so we
+                // match by name (test names are unique within a file).
+                const result = findByName(outcome.byName, name);
+                if (!result) {
+                    if (outcome.parsed) {
+                        run.skipped(leaf);
+                    } else {
+                        run.errored(
+                            leaf,
+                            new vscode.TestMessage(
+                                outcome.output.trim() || `phel test exited ${outcome.code}`
+                            )
+                        );
+                    }
+                    continue;
+                }
+                if (result.passed) {
+                    run.passed(leaf);
+                } else {
+                    run.failed(leaf, messageFor(result));
+                }
             }
         }
         run.end();
@@ -188,4 +268,13 @@ export class PhelTestController implements vscode.Disposable {
             d.dispose();
         }
     }
+}
+
+function findByName(byName: Map<string, AggregatedCase>, name: string): AggregatedCase | undefined {
+    for (const value of byName.values()) {
+        if (value.name === name) {
+            return value;
+        }
+    }
+    return undefined;
 }
