@@ -17,18 +17,36 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import {
+    CloseAction,
+    type CloseHandlerResult,
+    ErrorAction,
+    type ErrorHandler,
+    type ErrorHandlerResult,
     LanguageClient,
     type LanguageClientOptions,
+    type Message,
     type ServerOptions,
     State,
     TransportKind,
 } from 'vscode-languageclient/node';
 import { resolvePhelExecutable } from './phelExecutable';
+import { LspRestartBudget } from './lspRestartBudget';
 
 const OUTPUT_CHANNEL_NAME = 'Phel Language Server';
 
+// The Phel server is a short-lived stdio process: it can exit between requests
+// (e.g. it returns 0 on an idle read). Transparently restart it a bounded
+// number of times so language features keep working without a reload, while
+// still giving up on a genuinely broken (or chronically idle-exiting) server
+// to avoid a spawn loop — at which point we hand off to the bundled providers.
+const MAX_SERVER_RESTARTS = 5;
+const RESTART_WINDOW_MS = 60_000;
+
 let client: LanguageClient | undefined;
 let outputChannel: vscode.OutputChannel | undefined;
+/** Invoked once when the server proves unusable, so the caller can fall back. */
+let onUnrecoverable: (() => void) | undefined;
+let gaveUp = false;
 
 export function isLanguageServerEnabled(): boolean {
     return vscode.workspace.getConfiguration('phel').get<boolean>('lsp.enabled', true);
@@ -66,8 +84,18 @@ function resolveServerCommand(folder: vscode.WorkspaceFolder | undefined): {
  * Start the language client. Returns true when the server was launched and
  * reached the running state, false when it could not be started (so the
  * caller can fall back to the bundled providers).
+ *
+ * `options.onUnrecoverable` is invoked at most once if the server later proves
+ * unusable (repeated crashes / idle-exits), so the caller can register the
+ * bundled providers as a permanent fallback for the session.
  */
-export async function startLanguageClient(context: vscode.ExtensionContext): Promise<boolean> {
+export async function startLanguageClient(
+    context: vscode.ExtensionContext,
+    options: { onUnrecoverable?: () => void } = {}
+): Promise<boolean> {
+    if (options.onUnrecoverable) {
+        onUnrecoverable = options.onUnrecoverable;
+    }
     if (client) {
         return isLanguageServerRunning();
     }
@@ -101,6 +129,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
         // Phel diagnostics already flow through the server's publishDiagnostics;
         // don't also reveal the output on every error.
         revealOutputChannelOn: 4, // RevealOutputChannelOn.Never
+        errorHandler: createErrorHandler(),
     };
 
     client = new LanguageClient('phel', 'Phel Language Server', serverOptions, clientOptions);
@@ -148,6 +177,69 @@ export async function restartLanguageClient(context: vscode.ExtensionContext): P
     log('Restarting Phel language server (configuration changed).');
     await stopLanguageClient();
     await startLanguageClient(context);
+}
+
+/**
+ * Restart the server when its connection closes (it may exit between requests),
+ * capped within a sliding window so a genuinely broken binary can't spin
+ * forever. Read/write errors are tolerated briefly, then the connection is
+ * shut down (which triggers `closed()` and the restart path).
+ */
+function createErrorHandler(): ErrorHandler {
+    const budget = new LspRestartBudget(MAX_SERVER_RESTARTS, RESTART_WINDOW_MS);
+
+    return {
+        error(
+            _error: Error,
+            _message: Message | undefined,
+            count: number | undefined
+        ): ErrorHandlerResult {
+            // Tolerate a few transient transport errors before tearing down.
+            return {
+                action:
+                    count !== undefined && count <= 3 ? ErrorAction.Continue : ErrorAction.Shutdown,
+            };
+        },
+        closed(): CloseHandlerResult {
+            if (!budget.shouldRestart()) {
+                log(
+                    `Phel language server exited ${budget.count} times within ` +
+                        `${Math.round(RESTART_WINDOW_MS / 1000)}s; not restarting it again. ` +
+                        'Falling back to the bundled language providers.'
+                );
+                giveUpAndFallBack();
+                return {
+                    action: CloseAction.DoNotRestart,
+                    message:
+                        'Phel language server is unavailable; using the bundled language providers.',
+                    handled: true,
+                };
+            }
+            log(
+                `Phel language server connection closed; restarting (${budget.count}/${MAX_SERVER_RESTARTS}).`
+            );
+            return { action: CloseAction.Restart, handled: true };
+        },
+    };
+}
+
+/**
+ * The server proved unusable. Hand off to the bundled providers exactly once
+ * for the rest of the session. The library tears the client down itself when
+ * we return `DoNotRestart`, so we only clear our reference and fire the
+ * fallback (deferred, so it runs after the library finishes its cleanup).
+ */
+function giveUpAndFallBack(): void {
+    if (gaveUp) {
+        return;
+    }
+    gaveUp = true;
+    client = undefined;
+    const fallback = onUnrecoverable;
+    onUnrecoverable = undefined;
+    if (fallback) {
+        setImmediate(fallback);
+    }
 }
 
 function log(message: string): void {

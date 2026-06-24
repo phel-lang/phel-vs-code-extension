@@ -42,6 +42,8 @@ import {
 import { affectsPhelExecutable } from './phelExecutable';
 
 let sourceMapManager: SourceMapManager;
+/** Guards against registering the bundled providers twice (startup + later fallback). */
+let languageProvidersRegistered = false;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Phel extension activated');
@@ -56,15 +58,18 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
-    // Register the debug adapter factory
-    const factory = new PhelDebugAdapterFactory();
-    context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('phel', factory));
+    // Register the debug adapter (honoring the `phel.debug.enabled` toggle).
+    if (vscode.workspace.getConfiguration('phel').get<boolean>('debug.enabled', true)) {
+        const factory = new PhelDebugAdapterFactory();
+        context.subscriptions.push(
+            vscode.debug.registerDebugAdapterDescriptorFactory('phel', factory)
+        );
 
-    // Register debug configuration provider
-    const configProvider = new PhelDebugConfigurationProvider();
-    context.subscriptions.push(
-        vscode.debug.registerDebugConfigurationProvider('phel', configProvider)
-    );
+        const configProvider = new PhelDebugConfigurationProvider();
+        context.subscriptions.push(
+            vscode.debug.registerDebugConfigurationProvider('phel', configProvider)
+        );
+    }
 
     // Register command: Show compiled PHP location
     context.subscriptions.push(
@@ -167,12 +172,15 @@ export function activate(context: vscode.ExtensionContext) {
     // bundled TypeScript providers as a fallback. We never run both, to avoid
     // duplicate completions and conflicting results.
     if (isLanguageServerEnabled()) {
-        void startLanguageClient(context).then((started) => {
+        // The fallback can be triggered either at startup (server can't launch)
+        // or later (server proves unusable); register the providers at most once.
+        const fallBack = (): void => registerLanguageProviders(context);
+        void startLanguageClient(context, { onUnrecoverable: fallBack }).then((started) => {
             if (!started) {
                 console.warn(
                     'Phel language server could not start; using bundled language providers.'
                 );
-                registerLanguageProviders(context);
+                fallBack();
             }
         });
     } else {
@@ -274,6 +282,11 @@ async function promptReloadForLspToggle(): Promise<void> {
  * serves these features (with PHP-interop intelligence the TS providers lack).
  */
 function registerLanguageProviders(context: vscode.ExtensionContext): void {
+    if (languageProvidersRegistered) {
+        return;
+    }
+    languageProvidersRegistered = true;
+
     const workspaceIndexer = new PhelWorkspaceIndexer();
     context.subscriptions.push(workspaceIndexer);
     void workspaceIndexer.start();
