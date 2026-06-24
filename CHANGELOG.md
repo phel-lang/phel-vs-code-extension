@@ -4,7 +4,7 @@
 
 ### Language server
 
-- Delegate language intelligence (completion, hover, signature help, go-to-definition, references, rename, symbols, formatting, diagnostics) to the Phel language server (`phel lsp`) when available, gaining PHP-interop intelligence (`php/->`, `php/::`, `php/new`) and scoped rename/references. Falls back to the bundled providers when disabled or unavailable. Settings: `phel.lsp.enabled` (default `true`), `phel.lsp.command`, `phel.lsp.args`.
+- Optional Phel language-server integration via `phel lsp` (`phel.lsp.enabled`, **default off**): when enabled and the server is healthy, delegates completion, hover, signature help, go-to-definition, references, rename, symbols, formatting, and diagnostics to the Phel-compiler-backed server, gaining PHP-interop intelligence (`php/->`, `php/::`, `php/new`) and scoped rename/references. Best-effort: it falls back to the bundled providers when off, unavailable, or unstable — some current `phel lsp` builds exit on idle, so it ships opt-in. Settings: `phel.lsp.command`, `phel.lsp.args`. Note: the LSP path does not yet replace the bundled providers (no auto-import or call-site snippets over LSP), and both ship together.
 
 ### REPL & runtime
 
@@ -38,6 +38,7 @@
 ### Internal
 
 - Deduplicate shared logic into focused modules: `xml` (attribute/entity/int parsing used by the JUnit and Clover parsers), `phelCli` (one-shot CLI spawn + output collection), `phelWorkspace` (active-folder resolution), and `phelTerminal` (terminal launch). Harden the nREPL reader against malformed frames, unref pending timers, and reap the server process on socket close; dispose output channels, run profiles, and per-folder file watchers; read test files concurrently when populating the Test Explorer.
+- The language client (`vscode-languageclient`) ships alongside the existing bundled providers and symbol corpus rather than replacing them, so the packaged extension is larger than 0.8.0 (~265 KB vsix, `extension.js` ~98 KB → ~463 KB).
 
 ## [0.8.0] - 2026-06-05
 
