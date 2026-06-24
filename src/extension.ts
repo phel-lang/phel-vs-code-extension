@@ -28,6 +28,11 @@ import { PhelFormHighlight } from './phelFormHighlight';
 import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
 import { PhelStatusBar } from './phelStatusBar';
 import { PhelTestController } from './phelTestController';
+import {
+    isLanguageServerEnabled,
+    startLanguageClient,
+    stopLanguageClient,
+} from './phelLanguageClient';
 
 let sourceMapManager: SourceMapManager;
 
@@ -134,6 +139,97 @@ export function activate(context: vscode.ExtensionContext) {
         sourceMapManager.addCacheDirectory(cacheDir);
     }
 
+    // Language intelligence (completion / hover / signature help / definition /
+    // references / rename / symbols / diagnostics / formatting) is provided
+    // either by the Phel language server (`phel lsp`, the default) or by the
+    // bundled TypeScript providers as a fallback. We never run both, to avoid
+    // duplicate completions and conflicting results.
+    if (isLanguageServerEnabled()) {
+        void startLanguageClient(context).then((started) => {
+            if (!started) {
+                console.warn(
+                    'Phel language server could not start; using bundled language providers.'
+                );
+                registerLanguageProviders(context);
+            }
+        });
+    } else {
+        registerLanguageProviders(context);
+    }
+
+    context.subscriptions.push(
+        vscode.languages.registerCodeLensProvider('phel', new PhelTestCodeLensProvider())
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('phel.runTest', (uri?: vscode.Uri, testName?: string) => {
+            runPhelTests(uri, testName);
+        }),
+        vscode.commands.registerCommand('phel.runTestsInFile', (uri?: vscode.Uri) => {
+            runPhelTests(uri);
+        })
+    );
+
+    if (vscode.workspace.getConfiguration('phel').get<boolean>('paredit.enabled', true)) {
+        registerPareditCommands(context);
+    }
+
+    if (vscode.workspace.getConfiguration('phel').get<boolean>('repl.enabled', true)) {
+        registerReplCommands(context);
+    }
+
+    registerSelectionCommands(context);
+
+    void new PhelStatusBar().start(context);
+
+    context.subscriptions.push(new PhelTestController());
+    context.subscriptions.push(new PhelFormHighlight());
+
+    context.subscriptions.push(
+        vscode.languages.registerInlineValuesProvider('phel', new PhelInlineValuesProvider())
+    );
+
+    // Provide hover information for breakpoints
+    context.subscriptions.push(
+        vscode.languages.registerHoverProvider('phel', {
+            provideHover(document, position, _token) {
+                // Check if there's a breakpoint on this line
+                const breakpoints = vscode.debug.breakpoints.filter(
+                    (bp) =>
+                        bp instanceof vscode.SourceBreakpoint &&
+                        bp.location.uri.fsPath === document.fileName &&
+                        bp.location.range.start.line === position.line
+                );
+
+                if (breakpoints.length > 0) {
+                    const line = position.line + 1;
+                    const translation = sourceMapManager.translateToPhp(document.fileName, line);
+
+                    if (translation) {
+                        return new vscode.Hover(
+                            new vscode.MarkdownString(
+                                `**Phel Breakpoint**\n\nMaps to: \`${path.basename(translation.file)}:${translation.line}\``
+                            )
+                        );
+                    }
+                }
+
+                return null;
+            },
+        })
+    );
+}
+
+export function deactivate(): Thenable<void> | undefined {
+    return stopLanguageClient();
+}
+
+/**
+ * Register the bundled TypeScript language-feature providers. Used only when
+ * the Phel language server is disabled or fails to start; otherwise `phel lsp`
+ * serves these features (with PHP-interop intelligence the TS providers lack).
+ */
+function registerLanguageProviders(context: vscode.ExtensionContext): void {
     const workspaceIndexer = new PhelWorkspaceIndexer();
     context.subscriptions.push(workspaceIndexer);
     void workspaceIndexer.start();
@@ -207,72 +303,6 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.languages.registerDocumentFormattingEditProvider('phel', new PhelFormatProvider())
     );
-
-    context.subscriptions.push(
-        vscode.languages.registerCodeLensProvider('phel', new PhelTestCodeLensProvider())
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('phel.runTest', (uri?: vscode.Uri, testName?: string) => {
-            runPhelTests(uri, testName);
-        }),
-        vscode.commands.registerCommand('phel.runTestsInFile', (uri?: vscode.Uri) => {
-            runPhelTests(uri);
-        })
-    );
-
-    if (vscode.workspace.getConfiguration('phel').get<boolean>('paredit.enabled', true)) {
-        registerPareditCommands(context);
-    }
-
-    if (vscode.workspace.getConfiguration('phel').get<boolean>('repl.enabled', true)) {
-        registerReplCommands(context);
-    }
-
-    registerSelectionCommands(context);
-
-    void new PhelStatusBar().start(context);
-
-    context.subscriptions.push(new PhelTestController());
-    context.subscriptions.push(new PhelFormHighlight());
-
-    context.subscriptions.push(
-        vscode.languages.registerInlineValuesProvider('phel', new PhelInlineValuesProvider())
-    );
-
-    // Provide hover information for breakpoints
-    context.subscriptions.push(
-        vscode.languages.registerHoverProvider('phel', {
-            provideHover(document, position, _token) {
-                // Check if there's a breakpoint on this line
-                const breakpoints = vscode.debug.breakpoints.filter(
-                    (bp) =>
-                        bp instanceof vscode.SourceBreakpoint &&
-                        bp.location.uri.fsPath === document.fileName &&
-                        bp.location.range.start.line === position.line
-                );
-
-                if (breakpoints.length > 0) {
-                    const line = position.line + 1;
-                    const translation = sourceMapManager.translateToPhp(document.fileName, line);
-
-                    if (translation) {
-                        return new vscode.Hover(
-                            new vscode.MarkdownString(
-                                `**Phel Breakpoint**\n\nMaps to: \`${path.basename(translation.file)}:${translation.line}\``
-                            )
-                        );
-                    }
-                }
-
-                return null;
-            },
-        })
-    );
-}
-
-export function deactivate() {
-    // Cleanup
 }
 
 /**
