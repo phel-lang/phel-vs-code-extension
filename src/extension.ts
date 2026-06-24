@@ -24,6 +24,7 @@ import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelS
 import { registerPareditCommands } from './phelPareditProvider';
 import { registerReplCommands } from './phelReplProvider';
 import { registerNreplCommands } from './phelNreplProvider';
+import { registerDoctorCommands } from './phelDoctorProvider';
 import { registerSelectionCommands } from './phelSelectionProvider';
 import { PhelFormHighlight } from './phelFormHighlight';
 import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
@@ -184,6 +185,8 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     registerSelectionCommands(context);
+
+    registerDoctorCommands(context);
 
     void new PhelStatusBar().start(context);
 

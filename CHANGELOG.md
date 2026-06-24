@@ -2,19 +2,22 @@
 
 ## [Unreleased]
 
-### Test Explorer
+### Language server
 
-- Add a "Run with Coverage" profile that runs `phel test --coverage=clover` and lights up native line coverage (gutter highlights + the Test Coverage view) from the Clover report, mapped back to `.phel` sources. When neither pcov nor xdebug is installed, tests still run and a one-time warning explains why coverage is empty.
-- Raise the minimum VS Code version to **1.88** (required for the test-coverage API).
-- Report per-test pass/fail in the Test Explorer by running `phel test --reporter=junit-xml` and parsing the JUnit report, instead of inferring a single pass/fail from the process exit code. Failing tests now show the assertion message and the failing form, and each file's tests run in one subprocess. Tests absent from the report are marked skipped.
+- Delegate language intelligence (completion, hover, signature help, go-to-definition, references, rename, symbols, formatting, diagnostics) to the Phel language server (`phel lsp`) when available, gaining PHP-interop intelligence (`php/->`, `php/::`, `php/new`) and scoped rename/references. Falls back to the bundled providers when disabled or unavailable. Settings: `phel.lsp.enabled` (default `true`), `phel.lsp.command`, `phel.lsp.args`.
 
 ### REPL & runtime
 
-- Add an nREPL client that connects to a `phel nrepl` server (bencode-over-TCP, started automatically on a random free port). Commands: connect / disconnect, structured eval of the form under the cursor or the selection, load file, reload changed namespaces (`phel.nrepl.reload`) or all (`phel.nrepl.reloadAll`), run a namespace's tests (`phel.nrepl.runTestsInNs`), and run the `deftest` under the cursor (`phel.nrepl.runTestUnderCursor`). Results — values, captured stdout, and errors — are shown in a dedicated "Phel nREPL" output channel. New settings: `phel.nrepl.enabled` (default `true`) and `phel.nrepl.reloadOnSave` (default `false`).
+- Add an nREPL client (`phel nrepl`, bencode-over-TCP, auto-started on a free port): connect/disconnect, structured eval of the form/selection, load file, reload changed (`phel.nrepl.reload`) or all (`phel.nrepl.reloadAll`) namespaces, run a namespace's tests (`phel.nrepl.runTestsInNs`), and run the test under the cursor (`phel.nrepl.runTestUnderCursor`). Results show in a "Phel nREPL" channel. Settings: `phel.nrepl.enabled` (default `true`), `phel.nrepl.reloadOnSave` (default `false`).
 
-### Language server
+### Test Explorer
 
-- Delegate language intelligence to the Phel language server (`phel lsp`) when available (the default). Completion, hover, signature help, go-to-definition, find references, rename, document/workspace symbols, formatting, and diagnostics now come from the Phel compiler itself — adding PHP-interop intelligence (`php/->`, `php/::`, `php/new`) and semantically scoped rename/references that the bundled providers could not offer. New settings: `phel.lsp.enabled` (default `true`), `phel.lsp.command`, `phel.lsp.args`. When the server is disabled or the installed Phel is too old to provide `phel lsp`, the extension falls back to its bundled TypeScript providers.
+- Report per-test results via `phel test --reporter=junit-xml`: failing tests show the assertion message and failing form (was: one pass/fail per run from the exit code).
+- Add a "Run with Coverage" profile (`phel test --coverage=clover`) showing native line coverage; warns once when pcov/xdebug is missing. Requires VS Code **1.88+** (raised minimum).
+
+### Commands
+
+- Add **Phel: Doctor** (`phel doctor`) for project/environment health, and **Phel: Show Effective Configuration** (`phel config`).
 
 ### Language support
 

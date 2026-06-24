@@ -23,6 +23,7 @@ VS Code support for [Phel](https://phel-lang.org/), a functional Lisp that compi
 - **Test Explorer + CodeLens** for `deftest`, with per-test results and a **Run with Coverage** profile (`phel test --coverage=clover`, VS Code 1.88+).
 - **Paredit**: slurp / barf / raise / wrap, sexp selection.
 - **Native debug adapter** with breakpoints in `.phel` files.
+- **Project health** commands: **Phel: Doctor** (`phel doctor`) and **Phel: Show Effective Configuration** (`phel config`).
 - **Snippets** for `defn`, `let`, `cond`, `try`, `deftest`, `->`, …
 
 ## Install
