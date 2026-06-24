@@ -192,6 +192,16 @@
                 "category": "Phel"
             },
             {
+                "command": "phel.doctor",
+                "title": "Phel: Doctor (check project health)",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.showConfig",
+                "title": "Phel: Show Effective Configuration",
+                "category": "Phel"
+            },
+            {
                 "command": "phel.runTest",
                 "title": "Phel: Run Test",
                 "category": "Phel"
