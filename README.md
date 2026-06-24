@@ -35,7 +35,7 @@ Open Extensions (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>), search **"Phel L
 code --install-extension Phel-Lang.phel-lang
 ```
 
-Requires VS Code **1.75+**.
+Requires VS Code **1.88+**.
 
 ## Configuration
 
