@@ -1,5 +1,29 @@
 import * as assert from 'node:assert/strict';
-import { buildArgs, parseTemplates } from '../phelCliCommands';
+import { buildArgs, parseTemplates, shellQuote } from '../phelCliCommands';
+
+describe('phelCliCommands.shellQuote', () => {
+    it('leaves simple tokens unquoted', () => {
+        assert.equal(shellQuote('test'), 'test');
+        assert.equal(shellQuote('vendor/bin/phel'), 'vendor/bin/phel');
+        assert.equal(shellQuote('--filter'), '--filter');
+    });
+
+    it('quotes arguments containing spaces', () => {
+        assert.equal(shellQuote('my test'), "'my test'");
+        assert.equal(shellQuote('/path with spaces/phel'), "'/path with spaces/phel'");
+    });
+
+    it('quotes shell-significant characters', () => {
+        assert.equal(shellQuote('a$b'), "'a$b'");
+        assert.equal(shellQuote('a`b'), "'a`b'");
+        assert.equal(shellQuote('a"b'), "'a\"b'");
+        assert.equal(shellQuote('a\\b'), "'a\\b'");
+    });
+
+    it('escapes embedded single quotes', () => {
+        assert.equal(shellQuote("it's"), "'it'\\''s'");
+    });
+});
 
 // Captured verbatim from `phel init --list-templates`.
 const LIST_OUTPUT = [

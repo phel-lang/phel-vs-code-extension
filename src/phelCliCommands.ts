@@ -1,5 +1,10 @@
 // Pure helpers for the Phel CLI command wrappers (template parsing, build
-// args). Kept free of `vscode` so they can be unit-tested.
+// args, shell quoting). Kept free of `vscode` so they can be unit-tested.
+
+/** POSIX-quote a single argument so paths/names with spaces survive the shell. */
+export function shellQuote(arg: string): string {
+    return /[\s"'$`\\]/.test(arg) ? `'${arg.replace(/'/g, "'\\''")}'` : arg;
+}
 
 export interface PhelTemplate {
     name: string;

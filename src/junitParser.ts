@@ -16,6 +16,8 @@
 // several rows that share `name`/`file`/`line`; rows carry a `<failure>` only
 // when that assertion failed. Callers aggregate by name (see groupByName).
 
+import { decodeEntities, readAttr as attr } from './xml';
+
 export interface JUnitFailure {
     message: string;
     type: string;
@@ -92,29 +94,6 @@ function parseFailures(body: string): JUnitFailure[] {
         });
     }
     return failures;
-}
-
-/** Read a double- or single-quoted attribute value (raw, not entity-decoded). */
-function attr(attrs: string, name: string): string | undefined {
-    const re = new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)')`);
-    const m = re.exec(attrs);
-    if (!m) {
-        return undefined;
-    }
-    return m[2] ?? m[3] ?? '';
-}
-
-function decodeEntities(text: string): string {
-    return text
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number.parseInt(code, 10)))
-        .replace(/&#x([0-9a-fA-F]+);/g, (_, code: string) =>
-            String.fromCodePoint(Number.parseInt(code, 16))
-        )
-        .replace(/&amp;/g, '&'); // last, so we don't double-decode
 }
 
 export interface AggregatedCase {

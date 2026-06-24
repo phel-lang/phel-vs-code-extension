@@ -5,9 +5,10 @@
 //   phel.showConfig  — run `phel config --format=json` and open the effective
 //                      configuration as a pretty-printed JSON document.
 
-import { spawn } from 'node:child_process';
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
+import { runPhelCli } from './phelCli';
+import { activeWorkspaceFolder } from './phelWorkspace';
 
 const OUTPUT_CHANNEL_NAME = 'Phel Doctor';
 
@@ -18,49 +19,18 @@ function channel(): vscode.OutputChannel {
     return output;
 }
 
-function activeFolder(): vscode.WorkspaceFolder | undefined {
-    const doc = vscode.window.activeTextEditor?.document;
-    if (doc && doc.uri.scheme === 'file') {
-        const folder = vscode.workspace.getWorkspaceFolder(doc.uri);
-        if (folder) {
-            return folder;
-        }
-    }
-    return vscode.workspace.workspaceFolders?.[0];
-}
-
-interface RunResult {
-    code: number;
-    stdout: string;
-    stderr: string;
-}
-
 function runPhel(
     args: string[],
     folder: vscode.WorkspaceFolder,
     onStdout?: (chunk: string) => void
-): Promise<RunResult> {
-    return new Promise((resolve) => {
-        // doctor/config follow the same executable precedence as diagnostics.
-        const command = resolvePhelExecutable('diagnostics.command', folder);
-        const proc = spawn(command, args, { cwd: folder.uri.fsPath });
-        let stdout = '';
-        let stderr = '';
-        proc.stdout?.on('data', (d) => {
-            const text = d.toString();
-            stdout += text;
-            onStdout?.(text);
-        });
-        proc.stderr?.on('data', (d) => {
-            stderr += d.toString();
-        });
-        proc.on('close', (code) => resolve({ code: code ?? 1, stdout, stderr }));
-        proc.on('error', (err) => resolve({ code: 1, stdout, stderr: err.message }));
-    });
+): ReturnType<typeof runPhelCli> {
+    // doctor/config have no per-command override; resolve from phel.executablePath.
+    const command = resolvePhelExecutable(undefined, folder);
+    return runPhelCli(command, args, folder.uri.fsPath, { onStdout });
 }
 
 async function runDoctor(): Promise<void> {
-    const folder = activeFolder();
+    const folder = activeWorkspaceFolder();
     if (!folder) {
         vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
@@ -91,7 +61,7 @@ async function runDoctor(): Promise<void> {
 }
 
 async function showConfig(): Promise<void> {
-    const folder = activeFolder();
+    const folder = activeWorkspaceFolder();
     if (!folder) {
         vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;

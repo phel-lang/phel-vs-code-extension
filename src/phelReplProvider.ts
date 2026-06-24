@@ -16,6 +16,7 @@ import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { parseNsForm } from './phelNsAnalyzer';
 import { flattenForTerminal, nextTopLevelFormAfter, topLevelFormAt } from './phelRepl';
+import { folderForDocument as workspaceFolderForDoc } from './phelWorkspace';
 
 const REPL_TERMINAL_NAME = 'Phel REPL';
 const HISTORY_FILE = '.vscode/phel-repl-history.phel';
@@ -25,13 +26,6 @@ interface ReplCommandConfig {
     command: string;
     args: readonly string[];
     cwd: string;
-}
-
-function workspaceFolderForDoc(doc?: vscode.TextDocument): vscode.WorkspaceFolder | undefined {
-    if (doc && doc.uri.scheme === 'file') {
-        return vscode.workspace.getWorkspaceFolder(doc.uri) ?? undefined;
-    }
-    return vscode.workspace.workspaceFolders?.[0];
 }
 
 function resolveCommand(folder: vscode.WorkspaceFolder | undefined): ReplCommandConfig {

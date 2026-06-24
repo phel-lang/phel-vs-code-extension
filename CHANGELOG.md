@@ -26,6 +26,10 @@
 - Add `php/callable` (first-class callable interop) to the `php/*` completion list.
 - Rename `argv` → `*argv*`.
 
+### Internal
+
+- Deduplicate shared logic into focused modules: `xml` (attribute/entity/int parsing used by the JUnit and Clover parsers), `phelCli` (one-shot CLI spawn + output collection), `phelWorkspace` (active-folder resolution), and `phelTerminal` (terminal launch + shell quoting). Harden the nREPL reader against malformed frames and reap the server process on socket close; read test files concurrently when populating the Test Explorer.
+
 ## [0.8.0] - 2026-06-05
 
 ### Language support

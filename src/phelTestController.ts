@@ -7,12 +7,12 @@
 // and (for the failing form) detail. Tests not present in the report are
 // marked skipped.
 
-import { spawn } from 'node:child_process';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
+import { runPhelCli } from './phelCli';
 import { findDeftests } from './phelTestScanner';
 import { type AggregatedCase, groupByName, parseJUnit } from './junitParser';
 import { type CloverFile, parseClover } from './cloverParser';
@@ -72,12 +72,13 @@ function attachItems(
 
 async function loadAllTests(controller: vscode.TestController): Promise<void> {
     const uris = await vscode.workspace.findFiles('**/*.phel', '**/node_modules/**');
-    for (const uri of uris) {
-        const text = await readFile(uri);
-        if (text === null) {
-            continue;
+    // Read files concurrently; attach serially afterwards (attachItems mutates
+    // the controller and is cheap/synchronous).
+    const read = await Promise.all(uris.map(async (uri) => ({ uri, text: await readFile(uri) })));
+    for (const { uri, text } of read) {
+        if (text !== null) {
+            attachItems(controller, uri, text);
         }
-        attachItems(controller, uri, text);
     }
 }
 
@@ -124,15 +125,8 @@ async function runPhelTestFile(
     }
     args.push(relPath);
 
-    const outcome = await new Promise<{ code: number; output: string }>((resolve) => {
-        const proc = spawn(cmd.command, args, { cwd: cmd.cwd });
-        let output = '';
-        proc.stdout?.on('data', (d) => (output += d.toString()));
-        proc.stderr?.on('data', (d) => (output += d.toString()));
-        proc.on('close', (code) => resolve({ code: code ?? 1, output }));
-        proc.on('error', (err) => resolve({ code: 1, output: err.message }));
-        token.onCancellationRequested(() => proc.kill());
-    });
+    const result = await runPhelCli(cmd.command, args, cmd.cwd, { token });
+    const outcome = { code: result.code, output: result.stdout + result.stderr };
 
     let byName = new Map<string, AggregatedCase>();
     let parsed = false;
