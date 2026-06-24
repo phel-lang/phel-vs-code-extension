@@ -4,7 +4,7 @@
 
 ### Language server
 
-- Optional Phel language-server integration via `phel lsp` (`phel.lsp.enabled`, **default off**): when enabled and the server is healthy, delegates completion, hover, signature help, go-to-definition, references, rename, symbols, formatting, and diagnostics to the Phel-compiler-backed server, gaining PHP-interop intelligence (`php/->`, `php/::`, `php/new`) and scoped rename/references. Best-effort: it falls back to the bundled providers when off, unavailable, or unstable — some current `phel lsp` builds exit on idle, so it ships opt-in. Settings: `phel.lsp.command`, `phel.lsp.args`. Note: the LSP path does not yet replace the bundled providers (no auto-import or call-site snippets over LSP), and both ship together.
+- Optional Phel language-server integration via `phel lsp` (`phel.lsp.enabled`, **default off**): when enabled and the server is healthy, delegates completion, hover, signature help, go-to-definition, references, rename, symbols, formatting, and diagnostics to the Phel-compiler-backed server, gaining PHP-interop intelligence (`php/->`, `php/::`, `php/new`) and scoped rename/references. Best-effort: it falls back to the bundled providers when off, unavailable, or unstable — some current `phel lsp` builds exit on idle, so it ships opt-in. Settings: `phel.lsp.command`, `phel.lsp.args`. The server and the bundled providers are mutually exclusive at runtime (never both, to avoid duplicate results); note the LSP path does not provide the bundled providers' auto-import-on-accept or call-site snippets.
 
 ### REPL & runtime
 

@@ -168,9 +168,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Language intelligence (completion / hover / signature help / definition /
     // references / rename / symbols / diagnostics / formatting) is provided
-    // either by the Phel language server (`phel lsp`, the default) or by the
-    // bundled TypeScript providers as a fallback. We never run both, to avoid
-    // duplicate completions and conflicting results.
+    // either by the Phel language server (`phel lsp`, opt-in) or by the bundled
+    // TypeScript providers (the default). We never run both, to avoid duplicate
+    // completions and conflicting results.
     if (isLanguageServerEnabled()) {
         // The fallback can be triggered either at startup (server can't launch)
         // or later (server proves unusable); register the providers at most once.
