@@ -3,7 +3,7 @@ import { LspRestartBudget } from '../lspRestartBudget';
 
 describe('LspRestartBudget', () => {
     it('allows up to maxRestarts within the window, then refuses', () => {
-        let now = 1000;
+        const now = 1000;
         const budget = new LspRestartBudget(3, 60_000, () => now);
         assert.equal(budget.shouldRestart(), true, '1st');
         assert.equal(budget.shouldRestart(), true, '2nd');
