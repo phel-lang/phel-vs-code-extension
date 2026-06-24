@@ -82,7 +82,10 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
         return false;
     }
 
-    outputChannel ??= vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
+    if (!outputChannel) {
+        outputChannel = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
+        context.subscriptions.push(outputChannel);
+    }
 
     const serverOptions: ServerOptions = {
         run: { command, args, transport: TransportKind.stdio },
@@ -131,6 +134,20 @@ export async function stopLanguageClient(): Promise<void> {
     } catch {
         // ignore: the server may already be gone
     }
+}
+
+/**
+ * Restart the running language client (e.g. after the executable path or args
+ * change). No-op when no client is currently running so it can't accidentally
+ * start the server when the fallback providers are in use.
+ */
+export async function restartLanguageClient(context: vscode.ExtensionContext): Promise<void> {
+    if (!client) {
+        return;
+    }
+    log('Restarting Phel language server (configuration changed).');
+    await stopLanguageClient();
+    await startLanguageClient(context);
 }
 
 function log(message: string): void {

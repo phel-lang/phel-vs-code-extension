@@ -30,6 +30,14 @@ describe('findDeftests', function () {
         assert.strictEqual(refs[0].nameCol, 16);
     });
 
+    it('skips map-form metadata before the test name', function () {
+        const source = '(deftest ^{:slow true} my-test\n  (is true))\n';
+        const refs = findDeftests(source);
+        assert.strictEqual(refs.length, 1);
+        assert.strictEqual(refs[0].name, 'my-test');
+        assert.strictEqual(refs[0].nameCol, 23);
+    });
+
     it('reports the column relative to the line, not the file', function () {
         const source = 'leading line\n  (deftest indented-test [] (is true))\n';
         const [ref] = findDeftests(source);

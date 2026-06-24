@@ -15,7 +15,9 @@ export interface PhelTestRef {
     nameCol: number;
 }
 
-const DEFTEST_RE = /^[ \t]*\((deftest)\s+(?:\^:[^\s()[\]{}]+\s+)?([^\s()[\]{}]+)/gm;
+// Optional metadata before the test name takes either the keyword-shorthand
+// form (`^:slow`) or the map form (`^{:slow true}`); both are skipped.
+const DEFTEST_RE = /^[ \t]*\((deftest)\s+(?:\^(?::[^\s()[\]{}]+|\{[^}]*\})\s+)?([^\s()[\]{}]+)/gm;
 
 export function findDeftests(source: string): PhelTestRef[] {
     const out: PhelTestRef[] = [];

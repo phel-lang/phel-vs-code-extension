@@ -34,9 +34,12 @@ import { PhelStatusBar } from './phelStatusBar';
 import { PhelTestController } from './phelTestController';
 import {
     isLanguageServerEnabled,
+    isLanguageServerRunning,
+    restartLanguageClient,
     startLanguageClient,
     stopLanguageClient,
 } from './phelLanguageClient';
+import { affectsPhelExecutable } from './phelExecutable';
 
 let sourceMapManager: SourceMapManager;
 
@@ -132,6 +135,21 @@ export function activate(context: vscode.ExtensionContext) {
                 if (cacheDir) {
                     sourceMapManager.addCacheDirectory(cacheDir);
                 }
+            }
+
+            // Toggling the server on/off swaps the entire provider stack, which
+            // can't be done safely in place — ask for a reload.
+            if (e.affectsConfiguration('phel.lsp.enabled')) {
+                void promptReloadForLspToggle();
+            } else if (
+                isLanguageServerRunning() &&
+                (e.affectsConfiguration('phel.lsp.command') ||
+                    e.affectsConfiguration('phel.lsp.args') ||
+                    affectsPhelExecutable(e))
+            ) {
+                // Path/args changed while the server is up — restart it so the
+                // change takes effect without a reload.
+                void restartLanguageClient(context);
             }
         })
     );
@@ -234,6 +252,20 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate(): Thenable<void> | undefined {
     return stopLanguageClient();
+}
+
+/**
+ * `phel.lsp.enabled` switches between the language server and the bundled
+ * providers; swapping the whole stack live is error-prone, so offer a reload.
+ */
+async function promptReloadForLspToggle(): Promise<void> {
+    const choice = await vscode.window.showInformationMessage(
+        'Phel: the language-server setting changed. Reload the window to apply it.',
+        'Reload Window'
+    );
+    if (choice === 'Reload Window') {
+        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+    }
 }
 
 /**
@@ -366,7 +398,10 @@ function runPhelTests(uri?: vscode.Uri, testName?: string): void {
     const filePath = path.relative(cwd, target.fsPath) || target.fsPath;
     const args = ['test'];
     if (testName) {
-        args.push('--filter', testName);
+        // `--filter` is a regex; anchor and escape so "foo" doesn't also match
+        // "foobar" (matches the Test Explorer's exact-name behavior).
+        const escaped = testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        args.push('--filter', `^${escaped}$`);
     }
     args.push(filePath);
     runInTerminal('Phel Tests', command, args, cwd);

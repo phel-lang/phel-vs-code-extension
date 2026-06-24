@@ -424,7 +424,7 @@
                 "phel.lsp.command": {
                     "type": "string",
                     "default": "",
-                    "markdownDescription": "Override `#phel.executablePath#` for the language server only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
+                    "markdownDescription": "Override `#phel.executablePath#` for the language server only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder. Changing this restarts a running server automatically."
                 },
                 "phel.lsp.args": {
                     "type": "array",
@@ -434,7 +434,7 @@
                     "default": [
                         "lsp"
                     ],
-                    "description": "Arguments passed to the Phel CLI when starting the language server."
+                    "description": "Arguments passed to the Phel CLI when starting the language server. Changing this restarts a running server automatically."
                 },
                 "phel.cacheDirectory": {
                     "type": "string",

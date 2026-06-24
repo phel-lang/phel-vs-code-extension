@@ -42,6 +42,11 @@ async function getConnection(
     if (existing && existing.connected) {
         return existing;
     }
+    if (existing) {
+        // A stale (closed) connection lingered; drop it before reconnecting.
+        existing.dispose();
+        connections.delete(key);
+    }
     if (!create) {
         return undefined;
     }
@@ -107,11 +112,14 @@ function reportResult(label: string, result: OpResult): void {
     for (const value of result.values) {
         ch.appendLine(`=> ${value}`);
     }
-    const failed = result.status.includes('error') || result.status.includes('eval-error');
+    const hasError =
+        result.status.includes('error') ||
+        result.status.includes('eval-error') ||
+        result.err.trim() !== '';
     if (result.err.trim()) {
         ch.appendLine(result.err.trim());
     }
-    if (failed) {
+    if (hasError) {
         ch.show(true);
     }
 }
@@ -260,6 +268,7 @@ function disposeAll(): void {
 
 export function registerNreplCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
+        channel(),
         vscode.commands.registerCommand('phel.nrepl.connect', connect),
         vscode.commands.registerCommand('phel.nrepl.disconnect', disconnect),
         vscode.commands.registerCommand('phel.nrepl.eval', evalForm),
