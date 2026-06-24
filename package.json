@@ -272,6 +272,51 @@
                 "category": "Phel"
             },
             {
+                "command": "phel.nrepl.connect",
+                "title": "Phel: Connect to nREPL Server",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.disconnect",
+                "title": "Phel: Disconnect from nREPL Server",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.eval",
+                "title": "Phel: nREPL Eval Form Under Cursor",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.evalSelection",
+                "title": "Phel: nREPL Eval Selection",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.loadFile",
+                "title": "Phel: nREPL Load File",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.reload",
+                "title": "Phel: nREPL Reload Changed Namespaces",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.reloadAll",
+                "title": "Phel: nREPL Reload All Namespaces",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.runTestsInNs",
+                "title": "Phel: nREPL Run Tests in Namespace",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.runTestUnderCursor",
+                "title": "Phel: nREPL Run Test Under Cursor",
+                "category": "Phel"
+            },
+            {
                 "command": "phel.selection.expand",
                 "title": "Phel: Expand Selection",
                 "category": "Phel"
@@ -445,6 +490,16 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Append every form sent to the REPL to `.vscode/phel-repl-history.phel` in the workspace."
+                },
+                "phel.nrepl.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Register Phel nREPL commands (connect, structured eval, reload, run tests in namespace / under cursor). The extension starts `phel nrepl` on a random free port and connects over the bencode-over-TCP protocol, giving structured eval results and live-runtime test runs."
+                },
+                "phel.nrepl.reloadOnSave": {
+                    "type": "boolean",
+                    "default": false,
+                    "markdownDescription": "When an nREPL connection is active, reload changed namespaces automatically every time a `.phel` file is saved. Does not start a connection on its own."
                 },
                 "phel.formHighlight.enabled": {
                     "type": "boolean",

@@ -15,10 +15,11 @@ VS Code support for [Phel](https://phel-lang.org/), a functional Lisp that compi
 ## Features
 
 - **Highlighting** for forms, macros, reader macros, tagged literals, and reader conditionals.
-- **Completion, hover, signature help** for every public `phel.core` symbol and workspace `defn`/`defmacro`/`def`. Cross-namespace accepts auto-add the `:require`.
+- **Language server** (`phel lsp`, on by default): completion, hover, signature help, go-to-definition, find references, rename, symbols, formatting, and diagnostics straight from the Phel compiler — including PHP-interop intelligence for `php/->`, `php/::`, and `php/new`. Falls back to bundled providers when disabled or unavailable.
 - **Go to / Find / Rename** (`F12`, `shift+F12`, `F2`, `cmd+T`).
-- **Diagnostics** on save (`phel analyze`), **format** on save (`phel format`).
+- **Diagnostics** and **format** on save.
 - **REPL** in an integrated terminal with `(in-ns)` follow and history.
+- **nREPL client** (`phel nrepl`): structured eval results, reload changed namespaces, and run a namespace's tests or the test under the cursor against the live runtime.
 - **Test Explorer + CodeLens** for `deftest`.
 - **Paredit**: slurp / barf / raise / wrap, sexp selection.
 - **Native debug adapter** with breakpoints in `.phel` files.
