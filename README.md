@@ -20,7 +20,7 @@ VS Code support for [Phel](https://phel-lang.org/), a functional Lisp that compi
 - **Diagnostics** and **format** on save.
 - **REPL** in an integrated terminal with `(in-ns)` follow and history.
 - **nREPL client** (`phel nrepl`): structured eval results, reload changed namespaces, and run a namespace's tests or the test under the cursor against the live runtime.
-- **Test Explorer + CodeLens** for `deftest`.
+- **Test Explorer + CodeLens** for `deftest`, with per-test results and a **Run with Coverage** profile (`phel test --coverage=clover`, VS Code 1.88+).
 - **Paredit**: slurp / barf / raise / wrap, sexp selection.
 - **Native debug adapter** with breakpoints in `.phel` files.
 - **Snippets** for `defn`, `let`, `cond`, `try`, `deftest`, `->`, …
