@@ -4,7 +4,8 @@
 
 ### Test Explorer
 
-- Add a "Run with Coverage" profile that runs `phel test --coverage=clover` and lights up native line coverage (gutter highlights + the Test Coverage view) from the Clover report, mapped back to `.phel` sources. Available on VS Code 1.88+ (the coverage API); older builds keep the plain Run profile. When neither pcov nor xdebug is installed, tests still run and a one-time warning explains why coverage is empty.
+- Add a "Run with Coverage" profile that runs `phel test --coverage=clover` and lights up native line coverage (gutter highlights + the Test Coverage view) from the Clover report, mapped back to `.phel` sources. When neither pcov nor xdebug is installed, tests still run and a one-time warning explains why coverage is empty.
+- Raise the minimum VS Code version to **1.88** (required for the test-coverage API).
 - Report per-test pass/fail in the Test Explorer by running `phel test --reporter=junit-xml` and parsing the JUnit report, instead of inferring a single pass/fail from the process exit code. Failing tests now show the assertion message and the failing form, and each file's tests run in one subprocess. Tests absent from the report are marked skipped.
 
 ### REPL & runtime

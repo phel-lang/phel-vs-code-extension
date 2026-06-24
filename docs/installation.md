@@ -1,6 +1,6 @@
 # Installation
 
-Requires **VS Code 1.75+**. Published on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Phel-Lang.phel-lang) under publisher `Phel-Lang`.
+Requires **VS Code 1.88+**. Published on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Phel-Lang.phel-lang) under publisher `Phel-Lang`.
 
 ## Option 1 - Marketplace (recommended)
 
