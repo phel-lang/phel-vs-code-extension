@@ -10,9 +10,11 @@ The extension ships a static `CompletionItemProvider` for the `phel` language. I
 
 The provider respects the word range so `defn|` completes correctly without duplicating the prefix.
 
-### Why not a language server?
+### Bundled providers vs. the language server
 
-A real LSP (hover docs, go-to-def, namespace-aware suggestions) is the long-term answer and is on the roadmap. The static list covers ~80% of the daily friction with zero runtime cost - works offline, no extra processes, no warmup latency.
+These bundled providers are the zero-config default: they work offline, with no extra process or warmup, and cover ~80% of the daily friction.
+
+For deeper, compiler-backed intelligence (namespace-aware completion, PHP-interop hover/signature help for `php/->` / `php/::` / `php/new`, and scoped rename/references) the extension can delegate to Phel's own language server, `phel lsp`. It is **opt-in** via `phel.lsp.enabled` (off by default): when enabled and the server is healthy the LSP serves these features; otherwise the bundled providers above are used. See the language-server bullet in the README.
 
 ### Why isn't symbol X suggested?
 
