@@ -18,6 +18,7 @@
 ### Commands
 
 - Add **Phel: Doctor** (`phel doctor`) for project/environment health, and **Phel: Show Effective Configuration** (`phel config`).
+- Add **Phel: Watch Tests** (`phel test --watch`), **Phel: Build** (`phel build`, with optimization-level / report prompts), and **Phel: Init Project** (`phel init`, with a template picker).
 
 ### Language support
 

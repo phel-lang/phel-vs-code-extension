@@ -212,6 +212,21 @@
                 "category": "Phel"
             },
             {
+                "command": "phel.test.watch",
+                "title": "Phel: Watch Tests",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.build",
+                "title": "Phel: Build",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.init",
+                "title": "Phel: Init Project",
+                "category": "Phel"
+            },
+            {
                 "command": "phel.paredit.slurpForward",
                 "title": "Phel: Slurp Forward",
                 "category": "Phel"
