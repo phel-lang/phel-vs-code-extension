@@ -15,6 +15,15 @@ import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { findDeftests } from './phelTestScanner';
 import { type AggregatedCase, groupByName, parseJUnit } from './junitParser';
+import { type CloverFile, parseClover } from './cloverParser';
+
+/** True when the running VS Code build exposes the test-coverage API (1.88+). */
+const COVERAGE_API_AVAILABLE =
+    typeof vscode.TestRunProfileKind.Coverage === 'number' &&
+    typeof vscode.FileCoverage === 'function' &&
+    typeof vscode.StatementCoverage === 'function';
+
+const NO_COVERAGE_DRIVER_RE = /--coverage requires the pcov or xdebug extension/i;
 
 interface ResolvedCommand {
     command: string;
@@ -80,25 +89,40 @@ interface JUnitRunOutcome {
     code: number;
     /** True when a JUnit report was produced and parsed. */
     parsed: boolean;
+    /** Per-file line coverage, when a coverage run produced a Clover report. */
+    coverage: CloverFile[];
+    /** True when coverage was requested but no pcov/xdebug driver was available. */
+    coverageDriverMissing: boolean;
+}
+
+function tmpReport(kind: string, ext: string): string {
+    return path.join(
+        os.tmpdir(),
+        `phel-${kind}-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    );
 }
 
 /**
- * Run `phel test` for one file with the JUnit reporter and return the parsed,
- * per-test results. We pass the file as a positional path so every `deftest`
- * in it runs in a single subprocess.
+ * Run `phel test` for one file with the JUnit reporter (and optionally the
+ * Clover coverage reporter) and return the parsed, per-test results. We pass
+ * the file as a positional path so every `deftest` in it runs in a single
+ * subprocess.
  */
 async function runPhelTestFile(
     folder: vscode.WorkspaceFolder,
     fileUri: vscode.Uri,
-    token: vscode.CancellationToken
+    token: vscode.CancellationToken,
+    withCoverage: boolean
 ): Promise<JUnitRunOutcome> {
     const cmd = resolveTestCommand(folder);
     const relPath = path.relative(cmd.cwd, fileUri.fsPath) || fileUri.fsPath;
-    const reportPath = path.join(
-        os.tmpdir(),
-        `phel-junit-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.xml`
-    );
-    const args = ['test', '--reporter=junit-xml', '-o', reportPath, relPath];
+    const reportPath = tmpReport('junit', 'xml');
+    const coveragePath = withCoverage ? tmpReport('clover', 'xml') : undefined;
+    const args = ['test', '--reporter=junit-xml', '-o', reportPath];
+    if (coveragePath) {
+        args.push('--coverage=clover', `--coverage-output=${coveragePath}`);
+    }
+    args.push(relPath);
 
     const outcome = await new Promise<{ code: number; output: string }>((resolve) => {
         const proc = spawn(cmd.command, args, { cwd: cmd.cwd });
@@ -122,7 +146,25 @@ async function runPhelTestFile(
         await fs.rm(reportPath, { force: true }).catch(() => undefined);
     }
 
-    return { byName, output: outcome.output, code: outcome.code, parsed };
+    let coverage: CloverFile[] = [];
+    if (coveragePath) {
+        try {
+            coverage = parseClover(await fs.readFile(coveragePath, 'utf-8'));
+        } catch {
+            // No coverage file (driver missing, or no source executed).
+        } finally {
+            await fs.rm(coveragePath, { force: true }).catch(() => undefined);
+        }
+    }
+
+    return {
+        byName,
+        output: outcome.output,
+        code: outcome.code,
+        parsed,
+        coverage,
+        coverageDriverMissing: withCoverage && NO_COVERAGE_DRIVER_RE.test(outcome.output),
+    };
 }
 
 interface QueueGroups {
@@ -181,9 +223,32 @@ function messageFor(aggregated: AggregatedCase): vscode.TestMessage[] {
     });
 }
 
+/** Build a FileCoverage (+ cache its per-line detail) from a Clover file entry. */
+function toFileCoverage(
+    entry: CloverFile,
+    detailStore: Map<string, vscode.StatementCoverage[]>
+): vscode.FileCoverage {
+    const uri = vscode.Uri.file(entry.file);
+    const details = entry.lines.map(
+        (l) =>
+            new vscode.StatementCoverage(
+                l.covered,
+                // Clover line numbers are 1-based; VS Code positions are 0-based.
+                new vscode.Position(Math.max(0, l.line - 1), 0)
+            )
+    );
+    detailStore.set(uri.toString(), details);
+    return new vscode.FileCoverage(
+        uri,
+        new vscode.TestCoverageCount(entry.coveredStatements, entry.statements)
+    );
+}
+
 export class PhelTestController implements vscode.Disposable {
     private readonly controller: vscode.TestController;
     private readonly disposables: vscode.Disposable[] = [];
+    /** Per-run cache of detailed line coverage, keyed by file URI string. */
+    private coverageDetails = new Map<string, vscode.StatementCoverage[]>();
 
     constructor() {
         this.controller = vscode.tests.createTestController('phel-tests', 'Phel');
@@ -194,9 +259,19 @@ export class PhelTestController implements vscode.Disposable {
         this.controller.createRunProfile(
             'Run',
             vscode.TestRunProfileKind.Run,
-            (request, token) => this.run(request, token),
+            (request, token) => this.run(request, token, false),
             true
         );
+        if (COVERAGE_API_AVAILABLE) {
+            const coverageProfile = this.controller.createRunProfile(
+                'Run with Coverage',
+                vscode.TestRunProfileKind.Coverage,
+                (request, token) => this.run(request, token, true),
+                true
+            );
+            coverageProfile.loadDetailedCoverage = (_run, fileCoverage) =>
+                Promise.resolve(this.coverageDetails.get(fileCoverage.uri.toString()) ?? []);
+        }
         this.disposables.push(
             vscode.workspace.onDidSaveTextDocument(async (doc) => {
                 if (doc.languageId !== 'phel') {
@@ -209,7 +284,8 @@ export class PhelTestController implements vscode.Disposable {
 
     private async run(
         request: vscode.TestRunRequest,
-        token: vscode.CancellationToken
+        token: vscode.CancellationToken,
+        withCoverage: boolean
     ): Promise<void> {
         const queue: vscode.TestItem[] = [];
         if (request.include) {
@@ -219,6 +295,10 @@ export class PhelTestController implements vscode.Disposable {
         }
         const { byFile } = groupQueue(queue, request);
         const run = this.controller.createTestRun(request);
+        if (withCoverage) {
+            this.coverageDetails = new Map();
+        }
+        let warnedNoDriver = false;
 
         for (const [fileItem, leaves] of byFile) {
             if (token.isCancellationRequested) {
@@ -233,7 +313,19 @@ export class PhelTestController implements vscode.Disposable {
             }
             leaves.forEach((l) => run.started(l));
 
-            const outcome = await runPhelTestFile(folder, fileItem.uri, token);
+            const outcome = await runPhelTestFile(folder, fileItem.uri, token, withCoverage);
+
+            if (withCoverage) {
+                for (const entry of outcome.coverage) {
+                    run.addCoverage(toFileCoverage(entry, this.coverageDetails));
+                }
+                if (outcome.coverageDriverMissing && !warnedNoDriver) {
+                    warnedNoDriver = true;
+                    vscode.window.showWarningMessage(
+                        'Phel coverage needs the pcov or xdebug PHP extension; tests ran without coverage.'
+                    );
+                }
+            }
 
             for (const leaf of leaves) {
                 const name = nameForLeaf(leaf);
