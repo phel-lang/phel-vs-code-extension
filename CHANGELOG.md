@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Language server
+
+- Delegate language intelligence to the Phel language server (`phel lsp`) when available (the default). Completion, hover, signature help, go-to-definition, find references, rename, document/workspace symbols, formatting, and diagnostics now come from the Phel compiler itself — adding PHP-interop intelligence (`php/->`, `php/::`, `php/new`) and semantically scoped rename/references that the bundled providers could not offer. New settings: `phel.lsp.enabled` (default `true`), `phel.lsp.command`, `phel.lsp.args`. When the server is disabled or the installed Phel is too old to provide `phel lsp`, the extension falls back to its bundled TypeScript providers.
+
 ### Language support
 
 - Completion, hover, and signature help for the REPL workflow fns (`reload!`, `reload-all!`, `run-test`, `run-tests`), new core helpers (`clamp-int`, `defs->map`), and `phel.json` / `phel.string` / `phel.transit` / `phel.ai` additions.

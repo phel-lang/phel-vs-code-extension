@@ -346,6 +346,26 @@
         "configuration": {
             "title": "Phel",
             "properties": {
+                "phel.lsp.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Use the Phel language server (`phel lsp`) for completion, hover, signature help, go-to-definition, find references, rename, symbols, formatting, and diagnostics. The server is backed by the Phel compiler and understands PHP interop (`php/->`, `php/::`, `php/new`). When disabled (or when the installed Phel is too old to provide `phel lsp`), the extension falls back to its bundled providers. Requires a reload to take effect."
+                },
+                "phel.lsp.command": {
+                    "type": "string",
+                    "default": "",
+                    "markdownDescription": "Override `#phel.executablePath#` for the language server only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
+                },
+                "phel.lsp.args": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "lsp"
+                    ],
+                    "description": "Arguments passed to the Phel CLI when starting the language server."
+                },
                 "phel.cacheDirectory": {
                     "type": "string",
                     "default": "",
@@ -364,7 +384,7 @@
                         "bin/phel",
                         "/usr/local/bin/phel"
                     ],
-                    "markdownDescription": "Workspace-wide path to the Phel CLI. Used by diagnostics, format, test, and REPL unless a per-command setting (`#phel.diagnostics.command#`, `#phel.format.command#`, `#phel.test.command#`, `#phel.repl.command#`) overrides it. Relative paths resolve against the workspace folder; absolute paths are used as-is."
+                    "markdownDescription": "Workspace-wide path to the Phel CLI. Used by the language server, diagnostics, format, test, and REPL unless a per-command setting (`#phel.lsp.command#`, `#phel.diagnostics.command#`, `#phel.format.command#`, `#phel.test.command#`, `#phel.repl.command#`) overrides it. Relative paths resolve against the workspace folder; absolute paths are used as-is."
                 },
                 "phel.diagnostics.enabled": {
                     "type": "boolean",
@@ -472,7 +492,8 @@
     },
     "dependencies": {
         "@vscode/debugadapter": "^1.64.0",
-        "@vscode/debugprotocol": "^1.64.0"
+        "@vscode/debugprotocol": "^1.64.0",
+        "vscode-languageclient": "^8.1.0"
     },
     "overrides": {
         "serialize-javascript": "^7.0.5",

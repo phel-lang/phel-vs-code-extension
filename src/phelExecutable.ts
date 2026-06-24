@@ -7,13 +7,15 @@ export type PhelExecutableSubsystem =
     | 'diagnostics.command'
     | 'format.command'
     | 'test.command'
-    | 'repl.command';
+    | 'repl.command'
+    | 'lsp.command';
 
 const SUBSYSTEM_KEYS: readonly PhelExecutableSubsystem[] = [
     'diagnostics.command',
     'format.command',
     'test.command',
     'repl.command',
+    'lsp.command',
 ];
 
 export const PHEL_EXECUTABLE_SETTINGS: readonly string[] = [
