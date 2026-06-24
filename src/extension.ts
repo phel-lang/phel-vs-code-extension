@@ -26,6 +26,7 @@ import { registerReplCommands } from './phelReplProvider';
 import { registerNreplCommands } from './phelNreplProvider';
 import { registerDoctorCommands } from './phelDoctorProvider';
 import { registerCliCommands } from './phelCliCommandsProvider';
+import { runInTerminal } from './phelTerminal';
 import { registerSelectionCommands } from './phelSelectionProvider';
 import { PhelFormHighlight } from './phelFormHighlight';
 import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
@@ -368,9 +369,7 @@ function runPhelTests(uri?: vscode.Uri, testName?: string): void {
         args.push('--filter', testName);
     }
     args.push(filePath);
-    const terminal = vscode.window.createTerminal({ name: 'Phel Tests', cwd });
-    terminal.show(true);
-    terminal.sendText(`${command} ${args.join(' ')}`);
+    runInTerminal('Phel Tests', command, args, cwd);
 }
 
 async function pickSymbol(): Promise<string | undefined> {

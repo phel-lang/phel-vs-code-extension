@@ -153,7 +153,20 @@ export class PhelNreplConnection {
 
     private onSocketData(chunk: Buffer): void {
         this.buffer = Buffer.concat([this.buffer, chunk]);
-        const { values, consumed } = decode(this.buffer);
+        let values;
+        let consumed;
+        try {
+            ({ values, consumed } = decode(this.buffer));
+        } catch (err) {
+            // A malformed frame would otherwise throw out of this 'data' handler
+            // as an unhandled error and hang every pending op. Recover instead:
+            // log, drop the corrupt buffer, and reject in-flight ops.
+            const message = err instanceof Error ? err.message : String(err);
+            this.output.appendLine(`nREPL: discarding malformed frame (${message}).`);
+            this.buffer = Buffer.alloc(0);
+            this.failAllPending(new Error(`nREPL protocol error: ${message}`));
+            return;
+        }
         if (consumed > 0) {
             this.buffer = this.buffer.subarray(consumed);
         }
@@ -284,6 +297,12 @@ export class PhelNreplConnection {
         }
         this.failAllPending(new Error('nREPL connection closed.'));
         this.sessionId = '';
+        // Reap the server process if it outlived the socket so it isn't orphaned
+        // until the next explicit disconnect.
+        if (this.proc && !this.proc.killed) {
+            this.proc.kill();
+        }
+        this.proc = undefined;
     }
 
     dispose(): void {

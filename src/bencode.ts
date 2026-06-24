@@ -20,6 +20,12 @@ const DICT = 0x64; // 'd'
 const ZERO = 0x30; // '0'
 const NINE = 0x39; // '9'
 
+// Structural bytes are never mutated, so they're allocated once and shared
+// across every encode call.
+const BUF_LIST = Buffer.from('l');
+const BUF_DICT = Buffer.from('d');
+const BUF_END = Buffer.from('e');
+
 export function encode(value: BencodeValue): Buffer {
     const parts: Buffer[] = [];
     encodeInto(value, parts);
@@ -40,20 +46,20 @@ function encodeInto(value: BencodeValue, out: Buffer[]): void {
         return;
     }
     if (Array.isArray(value)) {
-        out.push(Buffer.from('l', 'utf-8'));
+        out.push(BUF_LIST);
         for (const item of value) {
             encodeInto(item, out);
         }
-        out.push(Buffer.from('e', 'utf-8'));
+        out.push(BUF_END);
         return;
     }
     // dictionary — keys sorted lexicographically per the spec
-    out.push(Buffer.from('d', 'utf-8'));
+    out.push(BUF_DICT);
     for (const key of Object.keys(value).sort()) {
         encodeInto(key, out);
         encodeInto(value[key], out);
     }
-    out.push(Buffer.from('e', 'utf-8'));
+    out.push(BUF_END);
 }
 
 export interface DecodeResult {

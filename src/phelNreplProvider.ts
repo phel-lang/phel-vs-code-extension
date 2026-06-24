@@ -19,6 +19,7 @@ import * as vscode from 'vscode';
 import { type OpResult, PhelNreplConnection } from './phelNreplClient';
 import { parseNsForm } from './phelNsAnalyzer';
 import { topLevelFormAt } from './phelRepl';
+import { folderForDocument as folderForDoc } from './phelWorkspace';
 
 const OUTPUT_CHANNEL_NAME = 'Phel nREPL';
 const DEFTEST_HEAD_RE = /^\(deftest\s+(?:\^\S+\s+)*([^\s()[\]{}]+)/;
@@ -30,13 +31,6 @@ const connecting = new Map<string, Promise<PhelNreplConnection>>();
 function channel(): vscode.OutputChannel {
     output ??= vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
     return output;
-}
-
-function folderForDoc(doc?: vscode.TextDocument): vscode.WorkspaceFolder | undefined {
-    if (doc && doc.uri.scheme === 'file') {
-        return vscode.workspace.getWorkspaceFolder(doc.uri) ?? undefined;
-    }
-    return vscode.workspace.workspaceFolders?.[0];
 }
 
 async function getConnection(

@@ -28,15 +28,18 @@ export const PHEL_EXECUTABLE_SETTINGS: readonly string[] = [
  *
  * Precedence: per-command override (`phel.<subsystem>`) → workspace fallback
  * (`phel.executablePath`) → built-in default (`vendor/bin/phel`).
+ *
+ * Pass `undefined` for commands without their own override (doctor, config,
+ * build, init) to resolve straight from `phel.executablePath`.
  */
 export function resolvePhelExecutable(
-    subsystem: PhelExecutableSubsystem,
+    subsystem: PhelExecutableSubsystem | undefined,
     folder: vscode.WorkspaceFolder | undefined
 ): string {
     const config = vscode.workspace.getConfiguration('phel', folder);
     const cwd = folder?.uri.fsPath ?? process.cwd();
     return resolveExecutablePath(
-        explicitString(config, subsystem),
+        subsystem !== undefined ? explicitString(config, subsystem) : undefined,
         explicitString(config, FALLBACK_KEY),
         cwd
     );

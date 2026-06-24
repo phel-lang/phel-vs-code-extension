@@ -16,6 +16,8 @@
 // `count` is binary (0 = not executed, 1 = executed) and `num` is a 1-based
 // line number into the `.phel` source named by the enclosing `<file>`.
 
+import { decodeEntities, readAttr as attr, toInt } from './xml';
+
 export interface CloverLine {
     /** 1-based line number. */
     line: number;
@@ -85,30 +87,4 @@ function lastMetrics(body: string): { statements?: number; coveredStatements?: n
     const statements = toInt(attr(last, 'statements'));
     const coveredStatements = toInt(attr(last, 'coveredstatements'));
     return { statements, coveredStatements };
-}
-
-function toInt(value: string | undefined): number | undefined {
-    if (value === undefined) {
-        return undefined;
-    }
-    const n = Number.parseInt(value, 10);
-    return Number.isFinite(n) ? n : undefined;
-}
-
-function attr(attrs: string, name: string): string | undefined {
-    const re = new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)')`);
-    const m = re.exec(attrs);
-    if (!m) {
-        return undefined;
-    }
-    return m[2] ?? m[3] ?? '';
-}
-
-function decodeEntities(text: string): string {
-    return text
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&amp;/g, '&');
 }

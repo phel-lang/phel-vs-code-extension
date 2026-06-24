@@ -7,9 +7,11 @@
 // These run in an integrated terminal (they are long-running or scaffold files
 // the user wants to see), matching the existing terminal-based test commands.
 
-import { spawn } from 'node:child_process';
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
+import { runPhelCli } from './phelCli';
+import { runInTerminal } from './phelTerminal';
+import { activeWorkspaceFolder } from './phelWorkspace';
 import {
     buildArgs,
     type OptimizationLevel,
@@ -17,29 +19,8 @@ import {
     type PhelTemplate,
 } from './phelCliCommands';
 
-function activeFolder(): vscode.WorkspaceFolder | undefined {
-    const doc = vscode.window.activeTextEditor?.document;
-    if (doc && doc.uri.scheme === 'file') {
-        const folder = vscode.workspace.getWorkspaceFolder(doc.uri);
-        if (folder) {
-            return folder;
-        }
-    }
-    return vscode.workspace.workspaceFolders?.[0];
-}
-
-function quote(arg: string): string {
-    return /[\s"'$`\\]/.test(arg) ? `'${arg.replace(/'/g, "'\\''")}'` : arg;
-}
-
-function runInTerminal(name: string, command: string, args: string[], cwd: string): void {
-    const terminal = vscode.window.createTerminal({ name, cwd });
-    terminal.show(true);
-    terminal.sendText([command, ...args].map(quote).join(' '));
-}
-
 function testWatch(): void {
-    const folder = activeFolder();
+    const folder = activeWorkspaceFolder();
     if (!folder) {
         vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
@@ -49,7 +30,7 @@ function testWatch(): void {
 }
 
 async function build(): Promise<void> {
-    const folder = activeFolder();
+    const folder = activeWorkspaceFolder();
     if (!folder) {
         vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
@@ -83,26 +64,22 @@ async function build(): Promise<void> {
     if (report === undefined) {
         return; // cancelled
     }
-    const command = resolvePhelExecutable('diagnostics.command', folder);
+    // build has no per-command override; resolve from phel.executablePath.
+    const command = resolvePhelExecutable(undefined, folder);
     const args = buildArgs({ optimizationLevel: level.value, report: report.value });
     runInTerminal('Phel Build', command, args, folder.uri.fsPath);
 }
 
-function listTemplates(command: string, cwd: string): Promise<PhelTemplate[]> {
-    return new Promise((resolve) => {
-        const proc = spawn(command, ['init', '--list-templates'], { cwd });
-        let output = '';
-        proc.stdout?.on('data', (d) => (output += d.toString()));
-        proc.stderr?.on('data', (d) => (output += d.toString()));
-        proc.on('close', () => resolve(parseTemplates(output)));
-        proc.on('error', () => resolve([]));
-    });
+async function listTemplates(command: string, cwd: string): Promise<PhelTemplate[]> {
+    const result = await runPhelCli(command, ['init', '--list-templates'], cwd);
+    return parseTemplates(result.stdout + result.stderr);
 }
 
 async function init(): Promise<void> {
-    const folder = activeFolder();
+    const folder = activeWorkspaceFolder();
     const cwd = folder?.uri.fsPath ?? process.cwd();
-    const command = resolvePhelExecutable('diagnostics.command', folder);
+    // init has no per-command override; resolve from phel.executablePath.
+    const command = resolvePhelExecutable(undefined, folder);
 
     const templates = await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Window, title: 'Loading Phel templates…' },
