@@ -49,7 +49,8 @@ let onUnrecoverable: (() => void) | undefined;
 let gaveUp = false;
 
 export function isLanguageServerEnabled(): boolean {
-    return vscode.workspace.getConfiguration('phel').get<boolean>('lsp.enabled', true);
+    // Opt-in: current `phel lsp` builds can exit on idle, so default off until upstream is stable.
+    return vscode.workspace.getConfiguration('phel').get<boolean>('lsp.enabled', false);
 }
 
 export function isLanguageServerRunning(): boolean {

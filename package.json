@@ -418,8 +418,8 @@
             "properties": {
                 "phel.lsp.enabled": {
                     "type": "boolean",
-                    "default": true,
-                    "markdownDescription": "Use the Phel language server (`phel lsp`) for completion, hover, signature help, go-to-definition, find references, rename, symbols, formatting, and diagnostics. The server is backed by the Phel compiler and understands PHP interop (`php/->`, `php/::`, `php/new`). When disabled (or when the installed Phel is too old to provide `phel lsp`), the extension falls back to its bundled providers. Requires a reload to take effect."
+                    "default": false,
+                    "markdownDescription": "Opt-in (default off): use the Phel language server (`phel lsp`) for completion, hover, signature help, go-to-definition, find references, rename, symbols, formatting, and diagnostics, backed by the Phel compiler with PHP-interop awareness (`php/->`, `php/::`, `php/new`). Best-effort today: some Phel releases ship a `phel lsp` that exits on idle, in which case the extension restarts it a few times and then falls back to its bundled providers. Enable once your Phel provides a stable server. Requires a reload to take effect."
                 },
                 "phel.lsp.command": {
                     "type": "string",
