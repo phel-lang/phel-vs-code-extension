@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### REPL & runtime
+
+- Add an nREPL client that connects to a `phel nrepl` server (bencode-over-TCP, started automatically on a random free port). Commands: connect / disconnect, structured eval of the form under the cursor or the selection, load file, reload changed namespaces (`phel.nrepl.reload`) or all (`phel.nrepl.reloadAll`), run a namespace's tests (`phel.nrepl.runTestsInNs`), and run the `deftest` under the cursor (`phel.nrepl.runTestUnderCursor`). Results — values, captured stdout, and errors — are shown in a dedicated "Phel nREPL" output channel. New settings: `phel.nrepl.enabled` (default `true`) and `phel.nrepl.reloadOnSave` (default `false`).
+
 ### Language server
 
 - Delegate language intelligence to the Phel language server (`phel lsp`) when available (the default). Completion, hover, signature help, go-to-definition, find references, rename, document/workspace symbols, formatting, and diagnostics now come from the Phel compiler itself — adding PHP-interop intelligence (`php/->`, `php/::`, `php/new`) and semantically scoped rename/references that the bundled providers could not offer. New settings: `phel.lsp.enabled` (default `true`), `phel.lsp.command`, `phel.lsp.args`. When the server is disabled or the installed Phel is too old to provide `phel lsp`, the extension falls back to its bundled TypeScript providers.

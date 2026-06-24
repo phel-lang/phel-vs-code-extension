@@ -23,6 +23,7 @@ import { PhelRenameProvider } from './phelRenameProvider';
 import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelSymbolProviders';
 import { registerPareditCommands } from './phelPareditProvider';
 import { registerReplCommands } from './phelReplProvider';
+import { registerNreplCommands } from './phelNreplProvider';
 import { registerSelectionCommands } from './phelSelectionProvider';
 import { PhelFormHighlight } from './phelFormHighlight';
 import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
@@ -176,6 +177,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     if (vscode.workspace.getConfiguration('phel').get<boolean>('repl.enabled', true)) {
         registerReplCommands(context);
+    }
+
+    if (vscode.workspace.getConfiguration('phel').get<boolean>('nrepl.enabled', true)) {
+        registerNreplCommands(context);
     }
 
     registerSelectionCommands(context);
