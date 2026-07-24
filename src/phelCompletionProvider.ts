@@ -5,6 +5,7 @@ import { buildCallSnippet, isCalleePosition } from './phelCallSnippet';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
 import { buildRequireEdit, parseNsForm, type NsForm } from './phelNsAnalyzer';
 import { combineDocs } from './phelWorkspaceIndex';
+import { localsInScopeAt } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
 const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
@@ -40,6 +41,31 @@ function buildBaseSpecs(): ItemSpec[] {
             label: name,
             kind: vscode.CompletionItemKind.Function,
             detail: 'Phel core function',
+        });
+    }
+    return specs;
+}
+
+/** Private defs from the current file — offerable unqualified inside their own file. */
+function privateFileSpecs(
+    indexer: PhelWorkspaceIndexer | undefined,
+    document: vscode.TextDocument
+): ItemSpec[] {
+    if (!indexer) {
+        return [];
+    }
+    const specs: ItemSpec[] = [];
+    for (const doc of indexer.index.docsForFile(document.uri.fsPath)) {
+        if (!doc.private) {
+            continue; // publics are already covered by workspaceSpecs
+        }
+        specs.push({
+            label: doc.name,
+            kind:
+                doc.kind === 'macro'
+                    ? vscode.CompletionItemKind.Keyword
+                    : vscode.CompletionItemKind.Function,
+            detail: `${doc.ns} (private)`,
         });
     }
     return specs;
@@ -133,13 +159,31 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
         position: vscode.Position
     ): vscode.ProviderResult<vscode.CompletionItem[]> {
         const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
+        const src = document.getText();
         const merged = this.indexer
             ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
             : [...PHEL_DOCS];
-        const specs = [...this.baseSpecs, ...workspaceSpecs(this.indexer)];
-        const nsForm = parseNsForm(document.getText());
+        const specs = [
+            ...this.baseSpecs,
+            ...workspaceSpecs(this.indexer),
+            ...privateFileSpecs(this.indexer, document),
+        ];
+        const nsForm = parseNsForm(src);
         const linePrefix = document.lineAt(position.line).text.slice(0, position.character);
         const callee = isCalleePosition(linePrefix);
-        return specs.map((spec) => buildItem(spec, range, merged, document, nsForm, callee));
+        const items = specs.map((spec) => buildItem(spec, range, merged, document, nsForm, callee));
+
+        // In-scope locals (params, let/loop names, …) are the most relevant
+        // suggestions while writing a body, so surface them first.
+        for (const name of localsInScopeAt(src, document.offsetAt(position))) {
+            const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Variable);
+            item.detail = 'local binding';
+            item.sortText = `0_${name}`;
+            if (range) {
+                item.range = range;
+            }
+            items.push(item);
+        }
+        return items;
     }
 }

@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Language support
+
+- **Scope-aware navigation for locals.** Go-to-definition, find-references, rename, and document-highlight now understand lexical scope: `fn` / `defn` parameters, `let` / `loop` / `binding` / `with-open` bindings, `if-let` / `when-let`, `for` / `doseq` / `dofor` loop vars, `foreach` key/value vars, `catch` exception vars, and vector / `:keys` / `:as` destructuring. A local now resolves to its binding site and renames **only within its own scope** — same-named globals and bindings shadowed in other scopes are left untouched (previously every matching token in the file was rewritten). Go-to-definition on a parameter jumps to the parameter, not to an unrelated global of the same name.
+- **In-scope locals in completion.** While writing a body, completion surfaces the bindings visible at the cursor (parameters, `let` names, loop vars, …) ranked above core and workspace symbols, plus the current file's own private (`defn-`) definitions.
+
+### Docs
+
+- Bump corpus / extension version references in `CONTRIBUTING.md` (regen example → v0.49.0) and `docs/installation.md` (dev symlink → 0.9.0).
+
 ## [0.9.0] - 2026-07-24
 
 ### Language server

@@ -4,6 +4,7 @@ import { aliasMapFromSource } from './phelNsAnalyzer';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { combineDocs } from './phelWorkspaceIndex';
 import { PHEL_DOCS } from './phelCoreDocs';
+import { resolveLocalAt } from './phelScope';
 
 const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
 
@@ -19,6 +20,20 @@ export class PhelDefinitionProvider implements vscode.DefinitionProvider {
             return null;
         }
         const word = document.getText(range);
+
+        // A locally-bound symbol (fn/let/loop param, catch var, …) resolves to
+        // its binding site in this document, never to a same-named global.
+        const src = document.getText();
+        const local = resolveLocalAt(src, document.offsetAt(range.start));
+        if (local) {
+            return new vscode.Location(
+                document.uri,
+                new vscode.Range(
+                    document.positionAt(local.declStart),
+                    document.positionAt(local.declEnd)
+                )
+            );
+        }
 
         const merged = combineDocs(this.indexer.index.allDocs(), PHEL_DOCS);
         const aliases = aliasMapFromSource(document.getText());

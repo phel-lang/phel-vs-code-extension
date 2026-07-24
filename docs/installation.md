@@ -39,7 +39,7 @@ Iterate on grammar / TypeScript without rebuilding the `.vsix` each time. Pair t
 **macOS / Linux**
 ```bash
 cd ~/.vscode/extensions
-ln -s /absolute/path/to/phel-vs-code-extension phel-lang.phel-lang-0.5.0
+ln -s /absolute/path/to/phel-vs-code-extension phel-lang.phel-lang-0.9.0
 ```
 
 **Windows** (PowerShell, Administrator)
@@ -47,7 +47,7 @@ ln -s /absolute/path/to/phel-vs-code-extension phel-lang.phel-lang-0.5.0
 cd $env:USERPROFILE\.vscode\extensions
 New-Item -ItemType SymbolicLink `
     -Target "C:\absolute\path\to\phel-vs-code-extension" `
-    -Path "phel-lang.phel-lang-0.5.0"
+    -Path "phel-lang.phel-lang-0.9.0"
 ```
 
 Restart VS Code (or run **Developer: Reload Window**) and changes to `syntaxes/`, `snippets/`, and the compiled `out/` directory pick up immediately.
