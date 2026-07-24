@@ -1,5 +1,11 @@
 import * as assert from 'node:assert/strict';
-import { resolveLocalAt, localOccurrences, localsInScopeAt } from '../phelScope';
+import {
+    resolveLocalAt,
+    localOccurrences,
+    localsInScopeAt,
+    collectAllBindings,
+    findUnusedLocals,
+} from '../phelScope';
 
 /** Offset of the `nth` (0-based) occurrence of `token` in `src`. */
 function idx(src: string, token: string, nth = 0): number {
@@ -173,5 +179,40 @@ describe('phelScope.localsInScopeAt', () => {
         const inG = localsInScopeAt(src, idx(src, 'b', 1));
         assert.ok(inG.includes('b'));
         assert.ok(!inG.includes('a'));
+    });
+});
+
+describe('phelScope.collectAllBindings', () => {
+    it('collects nested bindings across every form', () => {
+        const src = '(defn f [a] (let [b 1] (+ a b)))\n(fn [c] c)';
+        const names = collectAllBindings(src)
+            .map((b) => b.name)
+            .sort();
+        assert.deepEqual(names, ['a', 'b', 'c']);
+    });
+
+    it('tags parameters distinctly from let names', () => {
+        const src = '(defn f [a] (let [b 1] b))';
+        const all = collectAllBindings(src);
+        assert.equal(all.find((b) => b.name === 'a')?.param, true);
+        assert.ok(!all.find((b) => b.name === 'b')?.param);
+    });
+});
+
+describe('phelScope.findUnusedLocals', () => {
+    it('flags a let binding that is never read', () => {
+        const src = '(let [used 1 dead 2] used)';
+        const unused = findUnusedLocals(src).map((u) => u.name);
+        assert.deepEqual(unused, ['dead']);
+    });
+
+    it('does not flag used bindings', () => {
+        const src = '(let [x 1] (+ x x))';
+        assert.deepEqual(findUnusedLocals(src), []);
+    });
+
+    it('exempts parameters and _-prefixed names', () => {
+        const src = '(defn f [a] (let [_ignored 1] 42))';
+        assert.deepEqual(findUnusedLocals(src), []);
     });
 });

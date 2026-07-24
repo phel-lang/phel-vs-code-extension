@@ -21,6 +21,8 @@ import { PhelDocumentHighlightProvider } from './phelDocumentHighlight';
 import { PhelReferenceProvider } from './phelReferenceProvider';
 import { PhelRenameProvider } from './phelRenameProvider';
 import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelSymbolProviders';
+import { PhelSemanticTokensProvider, SEMANTIC_LEGEND } from './phelSemanticTokens';
+import { PhelUnusedLocals } from './phelUnusedLocals';
 import { registerPareditCommands } from './phelPareditProvider';
 import { registerReplCommands } from './phelReplProvider';
 import { registerNreplCommands } from './phelNreplProvider';
@@ -345,6 +347,16 @@ function registerLanguageProviders(context: vscode.ExtensionContext): void {
             new PhelWorkspaceSymbolProvider(workspaceIndexer)
         )
     );
+
+    context.subscriptions.push(
+        vscode.languages.registerDocumentSemanticTokensProvider(
+            'phel',
+            new PhelSemanticTokensProvider(),
+            SEMANTIC_LEGEND
+        )
+    );
+
+    context.subscriptions.push(new PhelUnusedLocals());
 
     workspaceIndexer.onDidChange(() => {
         // Trigger re-evaluation of the active doc so providers refresh.
