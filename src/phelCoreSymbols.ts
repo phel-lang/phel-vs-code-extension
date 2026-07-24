@@ -14,6 +14,7 @@ import type { PhelDoc } from './phelDocs';
 
 export const SPECIAL_FORMS: readonly string[] = [
     'apply',
+    'break',
     'catch',
     'concat',
     'conj',

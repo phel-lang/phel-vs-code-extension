@@ -4,9 +4,9 @@
 
 The extension ships a static `CompletionItemProvider` for the `phel` language. It suggests every public symbol from `phel.core`:
 
-- **49 special forms** - `def`, `defonce`, `defenum*`, `fn`, `let`, `loop`, `recur`, `try` / `catch` / `finally`, `ns`, `quote`, `var`, `deref`, all `php/*` interop forms (incl. `php/ref`), etc. (kind: `Keyword`)
-- **~76 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `defenum`, `cond`, `when-some`, `with-redefs`, `prefer-method`, `match`, threading variants, etc. (kind: `Keyword`)
-- **409 functions** - `assoc`, `map`, `reduce`, `swap!`, `re-find`, `parse-uuid`, `hydrate`, `bean`, `iterator-seq`, the full numeric tower (`+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`, `quot`, `rem`, `mod`, `floor`, `ceil`, `round`, `sqrt`, …), and the rest of `phel.core`. (kind: `Function`)
+- **51 special forms** - `def`, `defonce`, `defenum*`, `fn`, `let`, `loop`, `recur`, `break`, `try` / `catch` / `finally`, `ns`, `quote`, `var`, `deref`, all `php/*` interop forms (incl. `php/ref`), etc. (kind: `Keyword`)
+- **81 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `defenum`, `cond`, `when-some`, `while`, `with-redefs`, `with-open`, `dbg`, `deftrace`, `prefer-method`, `match`, threading variants, etc. (kind: `Keyword`)
+- **444 functions** - `assoc`, `map`, `mapv`, `filterv`, `reduce`, `reduce-kv`, `trampoline`, `swap!`, `re-find`, `parse-uuid`, `hydrate`, `bean`, `iterator-seq`, the full numeric tower (`+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`, `quot`, `rem`, `mod`, `gcd`, `lcm`, `floor`, `ceil`, `round`, `sqrt`, …), and the rest of `phel.core`. (kind: `Function`)
 
 The provider respects the word range so `defn|` completes correctly without duplicating the prefix.
 
@@ -27,7 +27,7 @@ Tagged literals (`#inst`, `#regex`) and PHP class names are not in completion - 
 The macro and function lists are projections of the symbol corpus in `assets/phel-core-docs.json`. Regenerate it from a phel-lang checkout:
 
 ```bash
-npm run regen-docs -- /path/to/phel-lang --phel-version v0.45.1
+npm run regen-docs -- /path/to/phel-lang --phel-version v0.49.0
 ```
 
 `MACROS` and `CORE_FNS` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` is hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source) - add new entries there by hand. See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full procedure.
@@ -48,5 +48,7 @@ npm run regen-docs -- /path/to/phel-lang --phel-version v0.45.1
 | `deftest` | Test case with `(is ...)` |
 | `->`, `->>` | Threading skeletons |
 | `comment` | Form-aware comment block |
+| `while`, `with-open` | While loop, scoped resource cleanup |
+| `dbg`, `deftrace` | Debug-print a value, traced fn (`phel.trace`) |
 
 Add or refine entries when a form is fiddly enough that scaffolding helps. Keep the `prefix` matching the form name so it composes with completion.
