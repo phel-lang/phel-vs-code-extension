@@ -12,6 +12,14 @@
 | `Phel: Eval File` | _unbound_ | Sends the entire buffer. |
 | `Phel: Switch REPL to Current Namespace` | _unbound_ | Sends `(in-ns 'this.ns)` for the active file. |
 
+### Inline results (nREPL)
+
+`Phel: nREPL Eval Form Inline` (`ctrl+alt+enter` / `cmd+alt+enter`) evaluates the
+top-level form under the cursor over the nREPL connection and shows the value as
+a dimmed `=> …` decoration at the end of the form's line (errors in the error
+colour). The decoration clears as soon as you edit the buffer. The full value,
+captured stdout, and stack traces still go to the **Phel nREPL** output channel.
+
 ### Namespace tracking
 
 Each REPL terminal remembers which namespace it last switched into. When you eval from a different file, the extension first sends `(in-ns 'that.ns)` so cross-file evals don't silently land in the previous namespace.

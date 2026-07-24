@@ -332,6 +332,11 @@
                 "category": "Phel"
             },
             {
+                "command": "phel.nrepl.evalInline",
+                "title": "Phel: nREPL Eval Form Inline",
+                "category": "Phel"
+            },
+            {
                 "command": "phel.nrepl.evalSelection",
                 "title": "Phel: nREPL Eval Selection",
                 "category": "Phel"
@@ -434,6 +439,12 @@
                 "command": "phel.repl.evalForm",
                 "key": "ctrl+enter",
                 "mac": "cmd+enter",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.nrepl.evalInline",
+                "key": "ctrl+alt+enter",
+                "mac": "cmd+alt+enter",
                 "when": "editorTextFocus && editorLangId == phel"
             },
             {
