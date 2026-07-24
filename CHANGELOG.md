@@ -7,6 +7,11 @@
 - **Semantic highlighting for locals.** A `DocumentSemanticTokensProvider` tags every `fn` / `defn` parameter (as `parameter`) and every `let` / `loop` / `for` / `catch` / … binding (as `variable`), with each declaration site flagged, so colour themes render locals distinctly from globals and core symbols. It reuses the `phelScope` analyzer, so highlighting and go-to-definition always agree on what a local is.
 - **Unused-local hints.** Bindings that are declared but never read are marked with `DiagnosticTag.Unnecessary` (VS Code renders them faded); parameters and `_`-prefixed names are exempt. Both features are part of the bundled providers and stand down when the Phel language server is active.
 
+### Refactoring & code actions
+
+- **Structural refactorings** on the form at the cursor (lightbulb / `Ctrl+.`): **Thread first** (`->`) and **Thread last** (`->>`), each fully unwinding the threaded-argument spine (`(map f (filter p xs))` → `(->> xs (filter p) (map f))`); **Unwind thread**, the inverse; and **Cycle collection**, rotating a collection's delimiters `(` → `[` → `{` → `(`.
+- **Add missing `:require`** quick-fix: when the bare symbol under the cursor is a known core/workspace name that the file has not imported, offers to insert the matching `(:require [ns :refer [name]])` entry into the `(ns …)` form. Bundled-only; stands down under `phel lsp`.
+
 ## [0.10.0] - 2026-07-24
 
 ### Language support
