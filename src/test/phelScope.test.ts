@@ -75,10 +75,7 @@ describe('phelScope.localOccurrences', () => {
     it('excludes a same-named global outside the scope', () => {
         const src = '(def x 1)\n(let [x 2] x)';
         // Rename target is the *local* x; the global def x must be untouched.
-        assert.deepEqual(occStarts(src, idx(src, 'x', 2)), [
-            idx(src, 'x', 1),
-            idx(src, 'x', 2),
-        ]);
+        assert.deepEqual(occStarts(src, idx(src, 'x', 2)), [idx(src, 'x', 1), idx(src, 'x', 2)]);
     });
 
     it('respects inner shadowing (a nested let re-binds the name)', () => {
@@ -94,10 +91,7 @@ describe('phelScope.localOccurrences', () => {
     it('keeps separate fn arities apart', () => {
         const src = '(fn ([a] a) ([a b] (+ a b)))';
         // First arity a: decl + one use.
-        assert.deepEqual(occStarts(src, idx(src, 'a', 1)), [
-            idx(src, 'a', 0),
-            idx(src, 'a', 1),
-        ]);
+        assert.deepEqual(occStarts(src, idx(src, 'a', 1)), [idx(src, 'a', 0), idx(src, 'a', 1)]);
     });
 
     it('scopes fn parameters', () => {
@@ -139,10 +133,10 @@ describe('phelScope binding forms', () => {
         const b = resolveLocalAt(src, idx(src, 'ex', 1));
         assert.ok(b);
         assert.equal(b.name, 'ex');
-        assert.deepEqual(localOccurrences(src, b).map((o) => o.start), [
-            idx(src, 'ex', 0),
-            idx(src, 'ex', 1),
-        ]);
+        assert.deepEqual(
+            localOccurrences(src, b).map((o) => o.start),
+            [idx(src, 'ex', 0), idx(src, 'ex', 1)]
+        );
     });
 
     it('binds a for loop var', () => {
