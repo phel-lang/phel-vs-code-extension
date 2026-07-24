@@ -267,6 +267,26 @@
                 "category": "Phel"
             },
             {
+                "command": "phel.paredit.dragForward",
+                "title": "Phel: Drag Form Forward",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.dragBackward",
+                "title": "Phel: Drag Form Backward",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.splice",
+                "title": "Phel: Splice Form",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.paredit.kill",
+                "title": "Phel: Kill Form",
+                "category": "Phel"
+            },
+            {
                 "command": "phel.repl.start",
                 "title": "Phel: Start REPL",
                 "category": "Phel"
@@ -386,6 +406,28 @@
             {
                 "command": "phel.paredit.wrapRound",
                 "key": "alt+w",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.paredit.dragForward",
+                "key": "ctrl+shift+.",
+                "mac": "cmd+shift+.",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.paredit.dragBackward",
+                "key": "ctrl+shift+,",
+                "mac": "cmd+shift+,",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.paredit.splice",
+                "key": "alt+shift+s",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.paredit.kill",
+                "key": "alt+shift+k",
                 "when": "editorTextFocus && editorLangId == phel"
             },
             {

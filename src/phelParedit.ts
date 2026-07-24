@@ -563,3 +563,99 @@ export function wrap(src: string, offset: number, open: '(' | '[' | '{'): Paredi
         cursor: target.start + 1,
     };
 }
+
+/** The form at `offset` together with its sibling list and index within it. */
+function currentAndSiblings(
+    forms: readonly Form[],
+    offset: number
+): { current: Form; siblings: readonly Form[]; index: number } | null {
+    const path = pathAt(forms, offset);
+    if (path.length === 0) {
+        return null;
+    }
+    const current = path[path.length - 1];
+    const parent = path.length >= 2 ? path[path.length - 2] : null;
+    const siblings = parent ? parent.children : forms;
+    const index = siblings.indexOf(current);
+    if (index < 0) {
+        return null;
+    }
+    return { current, siblings, index };
+}
+
+/** Swap the form at `offset` with its next sibling, preserving the separator. */
+export function dragForward(src: string, offset: number): PareditEdit | null {
+    const ctx = currentAndSiblings(parseAll(src), offset);
+    if (!ctx || ctx.index + 1 >= ctx.siblings.length) {
+        return null;
+    }
+    const a = ctx.siblings[ctx.index];
+    const b = ctx.siblings[ctx.index + 1];
+    const sep = src.slice(a.end, b.start);
+    const aText = src.slice(a.start, a.end);
+    const bText = src.slice(b.start, b.end);
+    return {
+        replaceStart: a.start,
+        replaceEnd: b.end,
+        replacement: bText + sep + aText,
+        cursor: a.start + bText.length + sep.length + (offset - a.start),
+    };
+}
+
+/** Swap the form at `offset` with its previous sibling, preserving the separator. */
+export function dragBackward(src: string, offset: number): PareditEdit | null {
+    const ctx = currentAndSiblings(parseAll(src), offset);
+    if (!ctx || ctx.index === 0) {
+        return null;
+    }
+    const a = ctx.siblings[ctx.index - 1];
+    const b = ctx.siblings[ctx.index];
+    const sep = src.slice(a.end, b.start);
+    const aText = src.slice(a.start, a.end);
+    const bText = src.slice(b.start, b.end);
+    return {
+        replaceStart: a.start,
+        replaceEnd: b.end,
+        replacement: bText + sep + aText,
+        cursor: a.start + (offset - b.start),
+    };
+}
+
+/** Remove the enclosing container's brackets, lifting its children into the parent. */
+export function spliceForm(src: string, offset: number): PareditEdit | null {
+    const container = enclosingContainer(parseAll(src), offset);
+    if (!container) {
+        return null;
+    }
+    // Only plain containers: splicing `#(` / `#{` would leave a dangling `#`.
+    if (container.kind !== 'list' && container.kind !== 'vector' && container.kind !== 'map') {
+        return null;
+    }
+    const removedBefore = container.innerStart - container.start;
+    return {
+        replaceStart: container.start,
+        replaceEnd: container.end,
+        replacement: src.slice(container.innerStart, container.innerEnd),
+        cursor: Math.max(container.start, offset - removedBefore),
+    };
+}
+
+/** Delete the form at `offset` (innermost), tidying one adjacent space. */
+export function killForm(src: string, offset: number): PareditEdit | null {
+    const target = formAt(parseAll(src), offset);
+    if (!target) {
+        return null;
+    }
+    let end = target.end;
+    while (end < src.length && (src[end] === ' ' || src[end] === '\t')) {
+        end++;
+    }
+    let start = target.start;
+    if (end === target.end) {
+        // Nothing trailing consumed; drop one leading space instead.
+        while (start > 0 && (src[start - 1] === ' ' || src[start - 1] === '\t')) {
+            start--;
+        }
+    }
+    return { replaceStart: start, replaceEnd: end, replacement: '', cursor: start };
+}

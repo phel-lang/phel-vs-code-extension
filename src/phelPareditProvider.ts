@@ -6,9 +6,13 @@ import * as vscode from 'vscode';
 import {
     barfBackward,
     barfForward,
+    dragBackward,
+    dragForward,
+    killForm,
     raise as raiseForm,
     slurpBackward,
     slurpForward,
+    spliceForm,
     wrap,
     type PareditEdit,
 } from './phelParedit';
@@ -45,6 +49,10 @@ export function registerPareditCommands(context: vscode.ExtensionContext): void 
         vscode.commands.registerCommand('phel.paredit.slurpBackward', () => runOp(slurpBackward)),
         vscode.commands.registerCommand('phel.paredit.barfBackward', () => runOp(barfBackward)),
         vscode.commands.registerCommand('phel.paredit.raise', () => runOp(raiseForm)),
+        vscode.commands.registerCommand('phel.paredit.dragForward', () => runOp(dragForward)),
+        vscode.commands.registerCommand('phel.paredit.dragBackward', () => runOp(dragBackward)),
+        vscode.commands.registerCommand('phel.paredit.splice', () => runOp(spliceForm)),
+        vscode.commands.registerCommand('phel.paredit.kill', () => runOp(killForm)),
         vscode.commands.registerCommand('phel.paredit.wrapRound', () =>
             runOp((src, off) => wrap(src, off, '('))
         ),
