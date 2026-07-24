@@ -54,10 +54,7 @@ export class PhelRenameProvider implements vscode.RenameProvider {
             for (const occ of localOccurrences(src, local)) {
                 edit.replace(
                     document.uri,
-                    new vscode.Range(
-                        document.positionAt(occ.start),
-                        document.positionAt(occ.end)
-                    ),
+                    new vscode.Range(document.positionAt(occ.start), document.positionAt(occ.end)),
                     newName
                 );
             }
