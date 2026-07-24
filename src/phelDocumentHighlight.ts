@@ -4,6 +4,7 @@
 
 import * as vscode from 'vscode';
 import { findOccurrences } from './phelReferences';
+import { resolveLocalAt, localOccurrences } from './phelScope';
 
 const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
 
@@ -16,8 +17,27 @@ export class PhelDocumentHighlightProvider implements vscode.DocumentHighlightPr
         if (!range) {
             return null;
         }
-        const word = document.getText(range);
         const text = document.getText();
+
+        // For a local, highlight only its scoped occurrences and flag the
+        // binding site as a write.
+        const local = resolveLocalAt(text, document.offsetAt(range.start));
+        if (local) {
+            return localOccurrences(text, local).map(
+                (occ) =>
+                    new vscode.DocumentHighlight(
+                        new vscode.Range(
+                            document.positionAt(occ.start),
+                            document.positionAt(occ.end)
+                        ),
+                        occ.start === local.declStart
+                            ? vscode.DocumentHighlightKind.Write
+                            : vscode.DocumentHighlightKind.Read
+                    )
+            );
+        }
+
+        const word = document.getText(range);
         return findOccurrences(text, word).map(
             (occ) =>
                 new vscode.DocumentHighlight(

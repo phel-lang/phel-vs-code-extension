@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { findReferenceLocations } from './phelReferenceProvider';
 import { isValidSymbolName } from './phelReferences';
+import { resolveLocalAt, localOccurrences } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
 const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
@@ -43,8 +44,27 @@ export class PhelRenameProvider implements vscode.RenameProvider {
             return undefined;
         }
 
-        const locations = await findReferenceLocations(oldName, document, this.indexer);
         const edit = new vscode.WorkspaceEdit();
+
+        // A local binding renames only within its lexical scope in this file,
+        // leaving same-named globals and other-scope locals untouched.
+        const src = document.getText();
+        const local = resolveLocalAt(src, document.offsetAt(range.start));
+        if (local) {
+            for (const occ of localOccurrences(src, local)) {
+                edit.replace(
+                    document.uri,
+                    new vscode.Range(
+                        document.positionAt(occ.start),
+                        document.positionAt(occ.end)
+                    ),
+                    newName
+                );
+            }
+            return edit;
+        }
+
+        const locations = await findReferenceLocations(oldName, document, this.indexer);
         for (const loc of locations) {
             edit.replace(loc.uri, loc.range, newName);
         }

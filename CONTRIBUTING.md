@@ -146,7 +146,7 @@ That uses the same `vscode-textmate` + `vscode-oniguruma` engine VS Code ships w
 To regenerate after bumping phel-lang:
 
 ```bash
-npm run regen-docs -- /path/to/phel-lang --phel-version v0.45.1
+npm run regen-docs -- /path/to/phel-lang --phel-version v0.49.0
 ```
 
 The script walks `src/phel/**/*.phel`, detects each file's namespace from its `(ns ...)` or `(in-ns ...)` form, runs the parser in `src/phelDocs.ts`, and writes the JSON corpus. `--phel-version` (default `main`) is the git ref used to build `View source` links.

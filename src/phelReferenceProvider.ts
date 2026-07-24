@@ -5,6 +5,7 @@
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { findOccurrences } from './phelReferences';
+import { resolveLocalAt, localOccurrences } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
 const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
@@ -19,6 +20,21 @@ export class PhelReferenceProvider implements vscode.ReferenceProvider {
         const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
         if (!range) {
             return [];
+        }
+        // A local binding's references stay within this document and its scope.
+        const src = document.getText();
+        const local = resolveLocalAt(src, document.offsetAt(range.start));
+        if (local) {
+            return localOccurrences(src, local).map(
+                (occ) =>
+                    new vscode.Location(
+                        document.uri,
+                        new vscode.Range(
+                            document.positionAt(occ.start),
+                            document.positionAt(occ.end)
+                        )
+                    )
+            );
         }
         const word = document.getText(range);
         return findReferenceLocations(word, document, this.indexer);
