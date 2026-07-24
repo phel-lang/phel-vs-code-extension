@@ -12,6 +12,11 @@
 - **Structural refactorings** on the form at the cursor (lightbulb / `Ctrl+.`): **Thread first** (`->`) and **Thread last** (`->>`), each fully unwinding the threaded-argument spine (`(map f (filter p xs))` → `(->> xs (filter p) (map f))`); **Unwind thread**, the inverse; and **Cycle collection**, rotating a collection's delimiters `(` → `[` → `{` → `(`.
 - **Add missing `:require`** quick-fix: when the bare symbol under the cursor is a known core/workspace name that the file has not imported, offers to insert the matching `(:require [ns :refer [name]])` entry into the `(ns …)` form. Bundled-only; stands down under `phel lsp`.
 
+### Structural editing
+
+- **More paredit.** New commands joining slurp/barf/raise/wrap: **drag form forward/backward** — swap a form with its adjacent sibling (`ctrl+shift+.` / `ctrl+shift+,`); **splice** — drop the enclosing brackets, lifting children into the parent (`alt+shift+s`); **kill form** — delete the form at the cursor (`alt+shift+k`).
+- **Form-aware folding & selection.** A `FoldingRangeProvider` folds every multi-line form and runs of `;` line comments (in place of indentation folding), and a `SelectionRangeProvider` makes VS Code's native expand/shrink selection (`Shift+Alt+→` / `←`) grow through the enclosing forms.
+
 ## [0.10.0] - 2026-07-24
 
 ### Language support

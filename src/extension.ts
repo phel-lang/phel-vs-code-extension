@@ -24,6 +24,8 @@ import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelS
 import { PhelSemanticTokensProvider, SEMANTIC_LEGEND } from './phelSemanticTokens';
 import { PhelUnusedLocals } from './phelUnusedLocals';
 import { PhelCodeActionProvider } from './phelCodeActionsProvider';
+import { PhelFoldingRangeProvider } from './phelFoldingProvider';
+import { PhelSelectionRangeProvider } from './phelSelectionRangeProvider';
 import { registerPareditCommands } from './phelPareditProvider';
 import { registerReplCommands } from './phelReplProvider';
 import { registerNreplCommands } from './phelNreplProvider';
@@ -365,6 +367,14 @@ function registerLanguageProviders(context: vscode.ExtensionContext): void {
             new PhelCodeActionProvider(workspaceIndexer),
             { providedCodeActionKinds: PhelCodeActionProvider.kinds }
         )
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerFoldingRangeProvider('phel', new PhelFoldingRangeProvider())
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerSelectionRangeProvider('phel', new PhelSelectionRangeProvider())
     );
 
     workspaceIndexer.onDidChange(() => {

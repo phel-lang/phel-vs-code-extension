@@ -42,8 +42,16 @@ Structural editing for Phel forms. All commands are scoped to `editorLangId == p
 | Raise form | `ctrl+shift+r` (`cmd+shift+r`) |
 | Wrap with `( )` | `alt+w` |
 | Wrap with `[ ]` / `{ }` | _unbound_ (commands `phel.paredit.wrapSquare`, `phel.paredit.wrapCurly`) |
+| Drag form forward | `ctrl+shift+.` (`cmd+shift+.`) |
+| Drag form backward | `ctrl+shift+,` (`cmd+shift+,`) |
+| Splice form | `alt+shift+s` |
+| Kill form | `alt+shift+k` |
 | Expand selection | `ctrl+shift+space` (`cmd+shift+space`) |
 | Shrink selection | `ctrl+shift+alt+space` (`cmd+shift+alt+space`) |
+
+Native **expand/shrink** (`Shift+Alt+→` / `Shift+Alt+←`) is also form-aware via a
+selection-range provider, and code **folding** follows the actual form structure
+(every multi-line form folds, plus runs of `;` line comments).
 
 ### Examples
 
@@ -53,4 +61,7 @@ Structural editing for Phel forms. All commands are scoped to `editorLangId == p
 a (b c)            ; cursor in (b c), slurp-back  → (a b c)
 (foo (bar baz))    ; cursor on bar, raise         → (foo bar)
 foo                ; cursor on foo, wrap-round    → (foo)
+(a b c)            ; cursor on b, drag-forward    → (a c b)
+(a (b c) d)        ; cursor in (b c), splice      → (a b c d)
+(a b c)            ; cursor on b, kill-form       → (a c)
 ```
