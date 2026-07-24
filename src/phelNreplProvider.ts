@@ -3,6 +3,7 @@
 //
 //   phel.nrepl.connect / phel.nrepl.disconnect
 //   phel.nrepl.eval            — eval the form under the cursor, show the result
+//   phel.nrepl.evalInline      — eval the form under the cursor, show `=> …` inline
 //   phel.nrepl.evalSelection   — eval the selection
 //   phel.nrepl.loadFile        — load the whole file
 //   phel.nrepl.reload          — reload changed namespaces
@@ -20,6 +21,18 @@ import { type OpResult, PhelNreplConnection } from './phelNreplClient';
 import { parseNsForm } from './phelNsAnalyzer';
 import { topLevelFormAt } from './phelRepl';
 import { folderForDocument as folderForDoc } from './phelWorkspace';
+import { PhelInlineEval } from './phelInlineEval';
+import { formatInlineResult } from './phelInlineFormat';
+
+let inlineEval: PhelInlineEval | undefined;
+
+function isErrorResult(result: OpResult): boolean {
+    return (
+        result.status.includes('error') ||
+        result.status.includes('eval-error') ||
+        result.err.trim() !== ''
+    );
+}
 
 const OUTPUT_CHANNEL_NAME = 'Phel nREPL';
 const DEFTEST_HEAD_RE = /^\(deftest\s+(?:\^\S+\s+)*([^\s()[\]{}]+)/;
@@ -146,6 +159,30 @@ async function evalForm(): Promise<void> {
     });
 }
 
+/** Eval the top-level form under the cursor and show the value inline (`=> …`). */
+async function evalFormInline(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'phel') {
+        return;
+    }
+    const doc = editor.document;
+    const offset = doc.offsetAt(editor.selection.active);
+    const form = topLevelFormAt(doc.getText(), offset);
+    if (!form) {
+        vscode.window.showWarningMessage('No Phel form under cursor.');
+        return;
+    }
+    await withConnection(doc, async (conn) => {
+        const result = await conn.eval(form.text, nsFor(doc));
+        reportResult('eval', result);
+        const isError = isErrorResult(result);
+        inlineEval?.show(editor, form.end, {
+            text: formatInlineResult(result.values, result.err, isError),
+            isError,
+        });
+    });
+}
+
 async function evalSelection(): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'phel') {
@@ -267,11 +304,14 @@ function disposeAll(): void {
 }
 
 export function registerNreplCommands(context: vscode.ExtensionContext): void {
+    inlineEval = new PhelInlineEval();
     context.subscriptions.push(
+        inlineEval,
         channel(),
         vscode.commands.registerCommand('phel.nrepl.connect', connect),
         vscode.commands.registerCommand('phel.nrepl.disconnect', disconnect),
         vscode.commands.registerCommand('phel.nrepl.eval', evalForm),
+        vscode.commands.registerCommand('phel.nrepl.evalInline', evalFormInline),
         vscode.commands.registerCommand('phel.nrepl.evalSelection', evalSelection),
         vscode.commands.registerCommand('phel.nrepl.loadFile', loadFile),
         vscode.commands.registerCommand('phel.nrepl.reload', () => reload(false)),

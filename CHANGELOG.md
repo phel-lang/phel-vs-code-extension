@@ -12,6 +12,10 @@
 - **Structural refactorings** on the form at the cursor (lightbulb / `Ctrl+.`): **Thread first** (`->`) and **Thread last** (`->>`), each fully unwinding the threaded-argument spine (`(map f (filter p xs))` → `(->> xs (filter p) (map f))`); **Unwind thread**, the inverse; and **Cycle collection**, rotating a collection's delimiters `(` → `[` → `{` → `(`.
 - **Add missing `:require`** quick-fix: when the bare symbol under the cursor is a known core/workspace name that the file has not imported, offers to insert the matching `(:require [ns :refer [name]])` entry into the `(ns …)` form. Bundled-only; stands down under `phel lsp`.
 
+### REPL
+
+- **Inline evaluation results.** `Phel: nREPL Eval Form Inline` (`ctrl+alt+enter` / `cmd+alt+enter`) evaluates the top-level form under the cursor over the nREPL connection and shows the value as a dimmed `=> …` decoration at the end of the form's line — Calva-style — with errors in the error colour. The decoration clears on the next edit; the full value and any stdout/stack trace still go to the **Phel nREPL** channel.
+
 ### Structural editing
 
 - **More paredit.** New commands joining slurp/barf/raise/wrap: **drag form forward/backward** — swap a form with its adjacent sibling (`ctrl+shift+.` / `ctrl+shift+,`); **splice** — drop the enclosing brackets, lifting children into the parent (`alt+shift+s`); **kill form** — delete the form at the cursor (`alt+shift+k`).
