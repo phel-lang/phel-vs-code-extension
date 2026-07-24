@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-24
+
 ### Language support
 
 - **Semantic highlighting for locals.** A `DocumentSemanticTokensProvider` tags every `fn` / `defn` parameter (as `parameter`) and every `let` / `loop` / `for` / `catch` / … binding (as `variable`), with each declaration site flagged, so colour themes render locals distinctly from globals and core symbols. It reuses the `phelScope` analyzer, so highlighting and go-to-definition always agree on what a local is.
