@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Internal
+
+- `npm run pretest` now also runs `format:check`, so a Prettier violation fails locally (before commit) instead of only in CI.
+
 ## [0.11.0] - 2026-07-24
 
 ### Language support
