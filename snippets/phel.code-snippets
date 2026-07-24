@@ -184,5 +184,34 @@
         "prefix": "comment",
         "body": ["(comment", "  ${0})"],
         "description": "Comment block (form-aware)"
+    },
+    "while": {
+        "prefix": "while",
+        "body": [
+            "(while ${1:test}",
+            "  ${0})"
+        ],
+        "description": "Loop body while test is truthy"
+    },
+    "with-open": {
+        "prefix": "with-open",
+        "body": [
+            "(with-open [${1:res} (${2:acquire})]",
+            "  ${0})"
+        ],
+        "description": "Scoped resource; closes bindings in reverse order"
+    },
+    "dbg": {
+        "prefix": "dbg",
+        "body": ["(dbg ${0:form})"],
+        "description": "Debug-print [file:line] form => value to stderr, return value"
+    },
+    "deftrace": {
+        "prefix": "deftrace",
+        "body": [
+            "(deftrace ${1:name} [${2:args}]",
+            "  ${0})"
+        ],
+        "description": "Define a traced function (phel.trace)"
     }
 }

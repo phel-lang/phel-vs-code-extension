@@ -25,6 +25,8 @@
 - Completion, hover, and signature help for the REPL workflow fns (`reload!`, `reload-all!`, `run-test`, `run-tests`), new core helpers (`clamp-int`, `defs->map`), and `phel.json` / `phel.string` / `phel.transit` / `phel.ai` additions.
 - Add `php/callable` (first-class callable interop) to the `php/*` completion list.
 - Rename `argv` → `*argv*`.
+- Sync the symbol corpus to phel-lang **v0.49.0** (was v0.45.1): +46 public symbols and the new `phel.trace` namespace. Completion / hover / signature help now cover the 0.46–0.49 core additions — `mapv`, `filterv`, `reduce-kv`, `reductions`, `trampoline`, `subvec`, `arity`, `variadic?`, `gcd`, `lcm`, `every-pred`, `distinct?`, `bounded-count`, `splitv-at`, `map-invert`, `random-sample`, the `clojure.set` relational helpers (`select`, `project`, `rename`, `index`), `subseq` / `rsubseq`, the readable-print family (`pr`, `prn`, `pr-str`, `prn-str`, `println-str`), the completed atom API (`compare-and-set!`, `swap-vals!`, `reset-vals!`), the bit ops (`unsigned-bit-shift-right`, `bit-and-not`), `rational?` / `infinite?`, `inspect`, and the `phel.trace` fns (`trace`, `trace-fn`, `reset-trace-state!`).
+- Highlight (and complete) the new `break` special form (stepping debugger), the macros `while`, `with-open`, `dbg`, and the `phel.trace` macros `deftrace` / `dotrace`. Add `while`, `with-open`, `dbg`, and `deftrace` snippets.
 
 ### Fixed
 

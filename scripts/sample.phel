@@ -63,3 +63,20 @@
 ;; Reader conditionals
 (def now #?(:phel (php/time) :clj 0))
 (def items [1 2 #?@(:phel [3 4] :clj [99])])
+
+;; Phel 0.48/0.49 forms
+(while (pos? @a)
+  (swap! a dec))
+
+(with-open [fh (php/fopen "x.txt" "r")]
+  (php/fgets fh))
+
+(dbg (reduce-kv (fn [acc k v] (+ acc v)) 0 {:a 1 :b 2}))
+
+(deftrace slow-add [a b] (+ a b))
+(dotrace [slow-add]
+  (slow-add 1 2))
+
+(defn stepper [x]
+  (break)
+  (inc x))
