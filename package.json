@@ -599,7 +599,7 @@
         "lint:fix": "eslint src --ext ts --fix",
         "format": "prettier --write \"src/**/*.ts\"",
         "format:check": "prettier --check \"src/**/*.ts\"",
-        "pretest": "npm run compile && npm run lint",
+        "pretest": "npm run compile && npm run lint && npm run format:check",
         "test": "mocha out/test/**/*.test.js",
         "check:changelog": "node scripts/check-changelog.cjs",
         "tokenize": "node scripts/tokenize-sample.mjs",
