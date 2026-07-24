@@ -30,6 +30,8 @@ export interface LocalBinding {
     scopeStart: number;
     /** End of the region where the binding is visible (exclusive). */
     scopeEnd: number;
+    /** True when this binding is a function parameter (vs a let/loop/… name). */
+    param?: boolean;
 }
 
 /** `let`-shaped forms: `(head [name init name init …] body…)`. */
@@ -303,6 +305,7 @@ function fnBindings(src: string, form: Form, head: string): LocalBinding[] {
                 declEnd: t.end,
                 scopeStart: paramVec.end,
                 scopeEnd,
+                param: true,
             });
         }
     };
@@ -409,6 +412,58 @@ export function localsInScopeAt(src: string, offset: number): string[] {
                 seen.add(b.name);
                 out.push(b.name);
             }
+        }
+    }
+    return out;
+}
+
+/**
+ * Every local binding declared anywhere in `src`, de-duplicated by declaration
+ * site. Used by whole-document consumers (semantic highlighting, unused-local
+ * analysis) that need every binding rather than the one under a cursor.
+ */
+export function collectAllBindings(src: string): LocalBinding[] {
+    const out: LocalBinding[] = [];
+    const seen = new Set<number>();
+    const walk = (form: Form): void => {
+        if (form.kind === 'list') {
+            for (const b of bindingsOf(src, form)) {
+                if (!seen.has(b.declStart)) {
+                    seen.add(b.declStart);
+                    out.push(b);
+                }
+            }
+        }
+        for (const child of form.children) {
+            walk(child);
+        }
+    };
+    for (const form of parseAll(src)) {
+        walk(form);
+    }
+    return out;
+}
+
+export interface UnusedLocal {
+    name: string;
+    start: number;
+    end: number;
+}
+
+/**
+ * Local bindings that are declared but never read within their scope.
+ * Parameters and `_`-prefixed names are exempt (an unused parameter is often
+ * required by a callback/arity contract; `_` is the conventional ignore).
+ */
+export function findUnusedLocals(src: string): UnusedLocal[] {
+    const out: UnusedLocal[] = [];
+    for (const b of collectAllBindings(src)) {
+        if (b.param || b.name.startsWith('_')) {
+            continue;
+        }
+        // A single occurrence is the declaration itself with no reads.
+        if (localOccurrences(src, b).length <= 1) {
+            out.push({ name: b.name, start: b.declStart, end: b.declEnd });
         }
     }
     return out;
