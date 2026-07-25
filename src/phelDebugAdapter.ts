@@ -566,7 +566,7 @@ export class PhelDebugSession extends LoggingDebugSession {
             /<error[^>]*code="(\d+)"[^>]*><message><!\[CDATA\[(.*?)\]\]><\/message>/s
         );
         if (errorMatch) {
-            throw new Error(Buffer.from(errorMatch[2], 'base64').toString('utf-8'));
+            throw new Error(decodeDbgpCdata(errorMatch[2], errorMatch[0]));
         }
 
         // Parse property

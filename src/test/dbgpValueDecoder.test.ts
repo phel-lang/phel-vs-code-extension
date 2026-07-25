@@ -25,7 +25,29 @@ describe('isBase64Encoded', () => {
     });
 });
 
+// Error responses captured from the same live session — all plain text.
+const REAL_ERRORS = [
+    '<error code="205"><message><![CDATA[no such breakpoint]]></message></error>',
+    '<error code="100"><message><![CDATA[can not open file]]></message></error>',
+    '<error code="3"><message><![CDATA[invalid or missing options]]></message></error>',
+];
+
 describe('decodeDbgpCdata', () => {
+    it('leaves an error message alone, because Xdebug sends those plain', () => {
+        // Base64-decoding these turned "no such breakpoint" into bytes like
+        // "\ufffd\ufffd.r\u0016\ufffdy\ufffd)\ufffd)\ufffd", so every engine error
+        // reached the user as garbage instead of the reason.
+        const messages = REAL_ERRORS.map((xml) => {
+            const cdata = /<!\[CDATA\[(.*?)\]\]>/s.exec(xml)?.[1] ?? '';
+            return decodeDbgpCdata(cdata, xml);
+        });
+        assert.deepEqual(messages, [
+            'no such breakpoint',
+            'can not open file',
+            'invalid or missing options',
+        ]);
+    });
+
     it('decodes a base64 string payload', () => {
         // Y2Fmw6k= is what Xdebug actually sent for "café".
         assert.equal(decodeDbgpCdata('Y2Fmw6k=', REAL.string), 'café');
