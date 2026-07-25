@@ -99,4 +99,65 @@ describe('phelNsAnalyzer.aliasMapFromSource', () => {
         assert.equal(map.get('r'), 'phelgeon.render');
         assert.equal(map.get('i'), 'phelgeon.input');
     });
+
+    it('reads a flat entry, the legacy shape the compiler still accepts', () => {
+        const map = aliasMapFromSource('(ns my.app (:require phel.string :as str))');
+        assert.equal(map.get('str'), 'phel.string');
+    });
+
+    it('reads several flat entries in one clause', () => {
+        const map = aliasMapFromSource(
+            '(ns my.app (:require phel.string :as str phel.html :as h))'
+        );
+        assert.equal(map.get('str'), 'phel.string');
+        assert.equal(map.get('h'), 'phel.html');
+    });
+
+    it('reads flat and vector entries mixed in one clause', () => {
+        const map = aliasMapFromSource(
+            '(ns my.app (:require phel.string :as str [phel.test :as t :refer [is]]))'
+        );
+        assert.equal(map.get('str'), 'phel.string');
+        assert.equal(map.get('t'), 'phel.test');
+    });
+
+    it('normalises the backslash separator Phel sources use', () => {
+        // `phel\string` is what phel's own code writes; the compiler and the
+        // symbol corpus both use the dotted form.
+        assert.equal(
+            aliasMapFromSource('(ns a (:require [phel\\string :as str]))').get('str'),
+            'phel.string'
+        );
+        assert.equal(
+            aliasMapFromSource('(ns a (:require phel\\string :as str))').get('str'),
+            'phel.string'
+        );
+    });
+});
+
+describe('phelNsAnalyzer flat require entries', () => {
+    it('captures :refer names on a flat entry', () => {
+        const ns = parseNsForm('(ns a (:require phel.test :refer [deftest is]))');
+        const entry = ns?.requireClause?.entries[0];
+        assert.equal(entry?.ns, 'phel.test');
+        assert.deepEqual(entry?.refer, ['deftest', 'is']);
+    });
+
+    it('does not merge two flat entries into one', () => {
+        const ns = parseNsForm('(ns a (:require phel.string :as str phel.html :as h))');
+        assert.deepEqual(
+            ns?.requireClause?.entries.map((e) => e.ns),
+            ['phel.string', 'phel.html']
+        );
+    });
+
+    it('treats a backslash-spelled entry as already required', () => {
+        // buildRequireEdit compares against the normalised namespace, so an
+        // auto-import must not add a duplicate entry for the same namespace.
+        const ns = parseNsForm('(ns a (:require [phel\\string :as str]))');
+        const edit = buildRequireEdit(ns, 'phel.string', 'blank?');
+        assert.ok(edit);
+        assert.ok(edit.text.includes(':refer [blank?]'));
+        assert.ok(!edit.text.includes('[phel.string :refer'));
+    });
 });

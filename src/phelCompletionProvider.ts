@@ -4,6 +4,13 @@ import { CORE_FNS, MACROS, SPECIAL_FORMS } from './phelCoreSymbols';
 import { buildCallSnippet, isCalleePosition } from './phelCallSnippet';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
 import { buildRequireEdit, parseNsForm, type NsForm } from './phelNsAnalyzer';
+import {
+    aliasQualifiedCandidates,
+    completionContextAt,
+    requirableNamespaces,
+    NS_CLAUSES,
+    NS_ENTRY_OPTIONS,
+} from './phelCompletionContext';
 import { combineDocs } from './phelWorkspaceIndex';
 import { localsInScopeAt } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
@@ -163,13 +170,43 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
         const merged = this.indexer
             ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
             : [...PHEL_DOCS];
+        const linePrefix = document.lineAt(position.line).text.slice(0, position.character);
+        const context = completionContextAt(src, document.offsetAt(position), linePrefix);
+
+        // `alias/…` and the `(ns …)` form each have a small, exact candidate
+        // list; the flat core list would only be noise there.
+        if (context.kind === 'alias-qualified') {
+            return aliasQualifiedCandidates(context.alias, context.ns, merged).map((cand) => {
+                const item = new vscode.CompletionItem(
+                    cand.label,
+                    cand.kind === 'fn'
+                        ? vscode.CompletionItemKind.Function
+                        : vscode.CompletionItemKind.Keyword
+                );
+                item.detail = cand.detail;
+                const doc = merged.find((d) => d.qualifiedName === `${context.ns}/${cand.name}`);
+                if (doc) {
+                    const md = new vscode.MarkdownString(renderDocMarkdown(doc));
+                    md.isTrusted = false;
+                    md.supportHtml = false;
+                    item.documentation = md;
+                }
+                if (range) {
+                    item.range = range;
+                }
+                return item;
+            });
+        }
+        if (context.kind !== 'normal') {
+            return this.nsFormItems(context.kind, src, merged, range);
+        }
+
         const specs = [
             ...this.baseSpecs,
             ...workspaceSpecs(this.indexer),
             ...privateFileSpecs(this.indexer, document),
         ];
         const nsForm = parseNsForm(src);
-        const linePrefix = document.lineAt(position.line).text.slice(0, position.character);
         const callee = isCalleePosition(linePrefix);
         const items = specs.map((spec) => buildItem(spec, range, merged, document, nsForm, callee));
 
@@ -185,5 +222,53 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
             items.push(item);
         }
         return items;
+    }
+
+    /** Candidates inside a `(ns …)` form: clause heads, entry options, namespaces. */
+    private nsFormItems(
+        kind: 'ns-clause' | 'ns-namespace' | 'ns-entry-option',
+        src: string,
+        docs: readonly import('./phelDocs').PhelDoc[],
+        range: vscode.Range | undefined
+    ): vscode.CompletionItem[] {
+        const withRange = (item: vscode.CompletionItem): vscode.CompletionItem => {
+            if (range) {
+                item.range = range;
+            }
+            return item;
+        };
+
+        if (kind === 'ns-clause') {
+            return NS_CLAUSES.map((clause) => {
+                const item = new vscode.CompletionItem(clause, vscode.CompletionItemKind.Keyword);
+                item.detail = 'ns clause';
+                return withRange(item);
+            });
+        }
+        if (kind === 'ns-entry-option') {
+            return NS_ENTRY_OPTIONS.map((option) => {
+                const item = new vscode.CompletionItem(option, vscode.CompletionItemKind.Keyword);
+                item.detail = 'require option';
+                return withRange(item);
+            });
+        }
+
+        const nsForm = parseNsForm(src);
+        const already = nsForm?.requireClause?.entries.map((e) => e.ns) ?? [];
+        const namespaces = requirableNamespaces(src, docs, nsForm?.name, already).map((ns) => {
+            const item = new vscode.CompletionItem(ns, vscode.CompletionItemKind.Module);
+            item.detail = 'namespace';
+            return withRange(item);
+        });
+        // `[ns :as x]` is the shape the auto-import edit writes, so offer the
+        // options here too: the cursor may sit right after a namespace symbol.
+        return [
+            ...namespaces,
+            ...NS_ENTRY_OPTIONS.map((option) => {
+                const item = new vscode.CompletionItem(option, vscode.CompletionItemKind.Keyword);
+                item.detail = 'require option';
+                return withRange(item);
+            }),
+        ];
     }
 }

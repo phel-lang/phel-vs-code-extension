@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Completion
+
+- **`alias/…` completes.** After `(:require [phel.string :as str])`, typing `str/` now offers every public symbol of that namespace with its docs. Hover, go-to-definition and signature help already resolved alias-qualified symbols; completion offered nothing, because every candidate label is a bare name.
+- **The `(ns …)` form gets its own candidates** instead of all 576 core symbols: `:require` / `:use` / `:require-file` directly inside `(ns …)`, the requirable namespaces inside a `(:require …)` clause, and `:as` / `:refer` inside an entry vector.
+
+### Fixed
+
+- **Flat `:require` entries resolved no alias.** `(:require phel.string :as str)` — the shape the compiler still accepts alongside the vector form — parsed as a namespace with no options, so `str/blank?` silently lost hover, go-to-definition and signature help. Several flat entries in one clause, and flat mixed with vector entries, are now read the way `NsSymbol` reads them.
+- **The backslash namespace separator never matched.** `phel\string`, which Phel's own sources use, was compared verbatim against the corpus's `phel.string`, so every alias-qualified lookup through it failed. Namespaces are now normalised to the dotted form on parse, which also stops auto-import from adding a duplicate `:require` for a namespace already imported with backslashes.
+
 ### Snippets
 
 - **31 new snippets, 29 → 60.** The binding-vector conditionals (`if-let`, `when-let`, `if-some`, `when-some`, `when-first`), `binding`, `letfn`, `dotimes`, `foreach`, `condp`, `if-not`, `when-not`, `declare`; the rest of the threading family (`as->`, `some->`, `some->>`, `cond->`, `cond->>`, `doto`); the protocol surface (`defrecord`, `deftype`, `reify`, `extend-type`, `extend-protocol`, `defmulti`, `defmethod`); the test forms (`testing`, `are`, `with-mocks`); plus `match` and `lazy-seq`. Every body is taken from the form's own `:example` metadata or its phel-lang definition, so the scaffolding matches the real shape.
