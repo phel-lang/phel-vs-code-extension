@@ -5,6 +5,7 @@
 ### Fixed (prime-suffixed symbols)
 
 - **Renaming `a` corrupted `a'`.** The apostrophe was treated as a symbol terminator on both sides, so the leading `a` of `a'` looked like a complete token: find-references reported it, and rename rewrote it, leaving a stray `'`. `a'` and `foo''` are single symbols to the Phel lexer — verified by running one — and are now matched as such. Renaming *to* `a'` is allowed; a leading `'` is still rejected, because there it is the quote reader macro.
+- The grammar had the same split: `a'` highlighted as the symbol `a` followed by a quote reader macro. An apostrophe now stays inside the symbol in any position but the first, and a leading `'` is still the quote macro.
 - Word selection splits the quote macro off what it quotes: the word at `'sym` and `#'sym` is now `sym`, so hover and go-to-definition resolve a quoted symbol instead of looking up `'sym` and finding nothing.
 
 ### Internal

@@ -163,9 +163,9 @@
 			"match": ":[^\\s\\#\\(\\)\\{\\}\\[\\]\\'\\\"\\,\\`]+"
 		},
 		"symbol": {
-			"comment": "Mirrors the lexer's atom rule: a trailing `#` is part of the symbol (gensym syntax, e.g. `x#`), so it must not fall through to the bare-`#` comment rule.",
+			"comment": "Mirrors the lexer's atom rule: a trailing `#` is part of the symbol (gensym syntax, e.g. `x#`), so it must not fall through to the bare-`#` comment rule. An apostrophe is likewise part of the symbol in any position but the first (`a'`, `foo''`), while a leading one is the quote reader macro (`'sym`) and is left to #readermac.",
 			"name": "meta.symbol.phel",
-			"match": "(?<![\\-])[^\\s\\#\\(\\)\\{\\}\\[\\]\\'\\\"\\,\\`]+\\#?"
+			"match": "(?<![\\-])[^\\s\\#\\(\\)\\{\\}\\[\\]\\'\\\"\\,\\`][^\\s\\#\\(\\)\\{\\}\\[\\]\\\"\\,\\`]*\\#?"
 		},
 		"char": {
 			"comment": "Character literals: \\a, \\A, \\1, \\(, \\space, \\newline, \\uNNNN, \\oNNN. The lookahead lets `\\Phel\\Lang\\Symbol` stay a symbol, matching the lexer.",

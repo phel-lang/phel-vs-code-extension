@@ -14,6 +14,7 @@
 (def radixes [2r1010 16rFF 36rZZ])
 (def bigs [123N 1_000N 1.5M -2.5e3M])
 (def symbolic [##Inf ##-Inf ##NaN])
+(def primes [a' foo''])   ;; trailing apostrophe is part of the symbol
 (def chars [\A \1 \( \space \newline \tab \u00e9 \o101])
 
 (defn greet

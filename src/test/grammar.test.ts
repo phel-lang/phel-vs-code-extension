@@ -135,6 +135,21 @@ describe('phel.tmLanguage reader syntax', () => {
         assertScoped('# legacy comment', '# legacy comment'.slice(1), 'comment.line.phel');
     });
 
+    it('keeps a mid or trailing apostrophe inside the symbol', () => {
+        // `a'` and `foo''` are single atoms to the lexer; the apostrophe must
+        // not scope as the quote reader macro.
+        assertScoped("(def a' 41)", "a'", 'meta.symbol.phel');
+        assertScoped("(def foo'' 1)", "foo''", 'meta.symbol.phel');
+    });
+
+    it('still scopes a leading apostrophe as the quote reader macro', () => {
+        const tokens = tokenize("('quoted)");
+        const quote = tokens.find((t) => t.text === "'");
+        assert.ok(quote, 'expected a standalone quote token');
+        assert.ok(quote.scopes.includes('punctuation.other.phel'));
+        assertScoped("('quoted)", 'quoted', 'meta.symbol.phel');
+    });
+
     it('scopes phel.router/compiled-router as a keyword', () => {
         assertScoped('(compiled-router routes)', 'compiled-router', 'keyword.control.phel');
     });
