@@ -17,6 +17,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import { SourceMapManager } from './sourceMapManager';
 import { XdebugBreakpointRegistry } from './xdebugBreakpointRegistry';
+import { XdebugPendingCommands } from './xdebugPendingCommands';
 
 interface PhelLaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
     program?: string;
@@ -81,7 +82,7 @@ export class PhelDebugSession extends LoggingDebugSession {
 
     // DBGp protocol state
     private transactionId = 1;
-    private pendingCommands: Map<number, (response: string) => void> = new Map();
+    private readonly pendingCommands = new XdebugPendingCommands();
     private receiveBuffer = '';
 
     constructor() {
@@ -681,7 +682,11 @@ export class PhelDebugSession extends LoggingDebugSession {
             this.xdebugSocket = null;
             this.receiveBuffer = '';
             this.transactionId = 1;
-            this.pendingCommands.clear();
+            // Settle anything still in flight. Clearing the map without
+            // settling left the caller awaiting a promise that could never
+            // resolve: the 30s timeout only fires for ids still present, so it
+            // saw the entry gone and did nothing.
+            this.pendingCommands.settleAll();
             // Breakpoint ids belong to the engine session that just ended. The
             // next connection re-applies every breakpoint and gets fresh ids,
             // so holding the old ones would grow the map on every request and
@@ -885,11 +890,7 @@ export class PhelDebugSession extends LoggingDebugSession {
         const tidMatch = xml.match(/transaction_id="(\d+)"/);
         if (tidMatch) {
             const tid = parseInt(tidMatch[1], 10);
-            const callback = this.pendingCommands.get(tid);
-            if (callback) {
-                this.pendingCommands.delete(tid);
-                callback(xml);
-            }
+            this.pendingCommands.settle(tid, xml);
         }
 
         // Check status
@@ -1014,12 +1015,11 @@ export class PhelDebugSession extends LoggingDebugSession {
 
             cmd += '\0';
 
-            this.pendingCommands.set(tid, resolve);
+            this.pendingCommands.add(tid, resolve);
             this.xdebugSocket.write(cmd);
 
             setTimeout(() => {
-                if (this.pendingCommands.has(tid)) {
-                    this.pendingCommands.delete(tid);
+                if (this.pendingCommands.abandon(tid)) {
                     reject(new Error('Command timeout'));
                 }
             }, 30000);
@@ -1372,6 +1372,8 @@ export class PhelDebugSession extends LoggingDebugSession {
         }
 
         this.xdebugBreakpointIds.clear();
+        // Disconnect can arrive while commands are in flight; unblock them.
+        this.pendingCommands.settleAll();
 
         if (this.server) {
             this.server.close();
