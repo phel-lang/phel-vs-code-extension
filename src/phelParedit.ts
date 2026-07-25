@@ -110,10 +110,11 @@ function isReaderPrefix(src: string, i: number, end: number): number {
         if (n === '?') {
             return 2;
         }
-        // Tagged literal `#tag` (but not `#(`, `#{`, `#_`, `#|`).
+        // Tagged literal `#tag`, including EDN-style namespaced tags such as
+        // `#my.app/Person` (but not `#(`, `#{`, `#_`, `#|`, `#"`).
         if (n && /[A-Za-z]/.test(n)) {
             let j = i + 1;
-            while (j < end && /[A-Za-z0-9_\-.]/.test(src[j])) {
+            while (j < end && /[A-Za-z0-9_\-./]/.test(src[j])) {
                 j++;
             }
             return j - i;
@@ -259,8 +260,11 @@ export function readForm(src: string, start: number, end: number): Form | null {
         };
     }
 
-    if (c === '"') {
-        const stringEnd = readString(src, bodyStart, end);
+    // `"..."` and the regex literal `#"..."`, which is one form, not a `#`
+    // atom followed by a string.
+    if (c === '"' || (c === '#' && src[bodyStart + 1] === '"')) {
+        const quoteStart = c === '"' ? bodyStart : bodyStart + 1;
+        const stringEnd = readString(src, quoteStart, end);
         return {
             start: formStart,
             end: stringEnd,

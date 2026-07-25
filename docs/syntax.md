@@ -20,11 +20,30 @@ Other: `comment`, `time`, `lazy-seq`, `lazy-cat`, `match`, `instance?`, `pop`, `
 
 ## Literals
 
-- Keywords: `:keyword`, `::auto-resolved`
-- Numbers: `42`, `3.14`, `2e-3`, `0xff`, `0b1010`, `1_000`
+Every numeric form the reader accepts (see phel-lang's `AtomParser`) has its own scope:
+
+| Form | Example | Scope |
+| --- | --- | --- |
+| Decimal | `42`, `+7`, `-3`, `1_000` | `constant.numeric.decimal.phel` |
+| Float | `3.14`, `.5`, `2e-3` | `constant.numeric.decimal.phel` |
+| Hex / binary / octal | `0xff`, `0b1010`, `017` | `constant.numeric.{hex,binary,octal}.phel` |
+| Radix (2-36) | `2r1010`, `16rFF`, `36rZZ` | `constant.numeric.radix.phel` |
+| BigInt | `123N` | `constant.numeric.bigint.phel` |
+| BigDecimal | `1.5M`, `-2.5e3M` | `constant.numeric.bigdecimal.phel` |
+| Ratio | `3/4`, `-1/2` | `constant.numeric.ratio.phel` |
+| Symbolic | `##Inf`, `##-Inf`, `##NaN` | `constant.language.symbolic-number.phel` |
+
+Octal is the leading-zero spelling `017`; `0o17` is not valid Phel.
+
+The rest:
+
+- Keywords: `:keyword`, `::auto-resolved`, `:my.ns/name`
 - Booleans / nil: `true`, `false`, `nil`
 - Strings: `"hello"` with `\\` escapes
-- Collections: `[1 2]`, `{:a 1}`, `#{1 2}`, `'(a b)`
+- Characters: `\A`, `\1`, `\(`, `\space`, `\newline`, `\tab`, `\formfeed`, `\backspace`, `\return`, `\u00e9`, `\o101` → `constant.character.phel`. A PHP fully-qualified name (`\Throwable`, `\Foo\Bar`) still scopes as a symbol, matching the lexer's lookahead.
+- Regex literals: `#"^\d+$"` → `string.regexp.phel` (distinct from the `#regex "…"` tagged literal)
+- Collections: `[1 2]`, `{:a 1}`, `#{1 2}`, `'(a b)`, PHP arrays `@[1 2]` / `@{:a 1}`
+- Gensyms: a trailing `#` belongs to the symbol (`x#`), so `` `(let [x# ~x] …) `` highlights as code rather than opening a comment
 
 ## Anonymous functions
 
@@ -70,10 +89,11 @@ Type and metadata tags (`^int`, `^"?int"`, `^:memoize`, `^:async`, any `^:keywor
 #inst "2026-01-01T00:00:00Z"
 #regex "\\d+"
 #php/Foo\Bar
+#my.app/Person {:name "Ada"}  ;; EDN-style namespaced tag
 #money "10.00 EUR"            ;; custom tag via register-tag
 ```
 
-`#` highlights as `punctuation.definition.tag.phel`; the tag name as `storage.type.tagged.phel`.
+`#` highlights as `punctuation.definition.tag.phel`; the tag name as `storage.type.tagged.phel`. Dotted and namespaced tag names (`#my.app/Person`) are one tag, and paredit treats the tag plus its value as a single form.
 
 ## Reader conditionals
 
@@ -101,3 +121,5 @@ npm run tokenize
 ```
 
 That tokenises `scripts/sample.phel` against `syntaxes/phel.tmLanguage.json` via `vscode-textmate` + `vscode-oniguruma` and prints every token with its scope. Edit the sample to add new edge cases.
+
+`npm test` runs the same engine over pinned assertions in `src/test/grammar.test.ts`, so a dropped or broken literal rule fails CI rather than needing a manual read of the tokenizer output.

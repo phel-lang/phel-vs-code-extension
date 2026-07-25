@@ -226,4 +226,39 @@ describe('phelParedit.readForm', () => {
         assert.equal(f?.start, 0);
         assert.equal(f?.kind, 'string');
     });
+
+    it('reads a namespaced tagged literal as one form', () => {
+        const src = '#my.app/Person {:name "Ada"}';
+        const f = readForm(src, 0, src.length);
+        assert.ok(f);
+        assert.equal(f?.start, 0);
+        assert.equal(f?.end, src.length);
+        assert.equal(f?.kind, 'map');
+    });
+
+    it('reads a regex literal as a single string form', () => {
+        const src = '#"^\\d+$"';
+        const f = readForm(src, 0, src.length);
+        assert.ok(f);
+        assert.equal(f?.start, 0);
+        assert.equal(f?.end, src.length);
+        assert.equal(f?.kind, 'string');
+    });
+
+    it('does not let a regex literal swallow the rest of a list', () => {
+        const forms = parseAll('(def re #"a\\"b") (def x 1)');
+        assert.equal(forms.length, 2);
+        assert.equal(forms[0].children.length, 3);
+        assert.equal(forms[0].children[2].kind, 'string');
+    });
+
+    it('reads a char literal that is an open paren', () => {
+        const forms = parseAll('[\\( \\space \\A]');
+        assert.equal(forms.length, 1);
+        assert.equal(forms[0].children.length, 3);
+        assert.deepEqual(
+            forms[0].children.map((c) => c.kind),
+            ['char', 'char', 'char']
+        );
+    });
 });
