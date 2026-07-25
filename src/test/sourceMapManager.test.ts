@@ -237,3 +237,79 @@ describe('SourceMapManager cache-file resolution', function () {
         assert.strictEqual(m.findCompiledFile(path.join(dir, 'lib', 'other.phel')), null);
     });
 });
+
+describe('SourceMapManager workspace cache discovery', function () {
+    // Phel caches compiled PHP under `<cache-dir>/compiled`, and `cache-dir`
+    // defaults to `.phel/cache` relative to the project root. Registering a
+    // workspace root has to pick that up, or breakpoints only bind for users
+    // who set `phel.cacheDirectory` by hand.
+    let root: string;
+
+    function writeCompiled(cacheDir: string, name: string, sourcePath: string): void {
+        fs.mkdirSync(cacheDir, { recursive: true });
+        fs.writeFileSync(
+            path.join(cacheDir, name),
+            `<?php\n// ${sourcePath}\n// ;;AAAA\nnamespace demo\\core;\n`
+        );
+    }
+
+    beforeEach(function () {
+        root = fs.mkdtempSync(path.join(os.tmpdir(), 'phel-ws-'));
+    });
+
+    afterEach(function () {
+        fs.rmSync(root, { recursive: true, force: true });
+        delete process.env.PHEL_CACHE_DIR;
+    });
+
+    it('finds the project cache from the workspace root alone', function () {
+        const source = path.join(root, 'lib', 'core.phel');
+        writeCompiled(path.join(root, '.phel', 'cache', 'compiled'), 'demo.core__a.php', source);
+
+        const m = new SourceMapManager();
+        m.addWorkspaceRoot(root);
+        assert.strictEqual(path.basename(m.findCompiledFile(source) ?? ''), 'demo.core__a.php');
+    });
+
+    it('discovers the project from the file alone, as the debug adapter does', function () {
+        // The debug adapter runs in its own process and constructs its own
+        // manager, so it never calls addWorkspaceRoot. Resolution has to work
+        // from the `.phel` file by itself, with no launch configuration.
+        const source = path.join(root, 'lib', 'core.phel');
+        fs.mkdirSync(path.dirname(source), { recursive: true });
+        fs.writeFileSync(path.join(root, 'phel-config.php'), '<?php');
+        writeCompiled(path.join(root, '.phel', 'cache', 'compiled'), 'demo.core__d.php', source);
+
+        const m = new SourceMapManager();
+        assert.strictEqual(path.basename(m.findCompiledFile(source) ?? ''), 'demo.core__d.php');
+    });
+
+    it('gives up at the filesystem root for a file in no project', function () {
+        const source = path.join(root, 'stray', 'core.phel');
+        fs.mkdirSync(path.dirname(source), { recursive: true });
+        const m = new SourceMapManager();
+        assert.strictEqual(m.findCompiledFile(source), null);
+    });
+
+    it('honours a relative PHEL_CACHE_DIR override', function () {
+        const source = path.join(root, 'lib', 'core.phel');
+        writeCompiled(path.join(root, 'build', 'compiled'), 'demo.core__b.php', source);
+
+        process.env.PHEL_CACHE_DIR = 'build';
+        const m = new SourceMapManager();
+        m.addWorkspaceRoot(root);
+        assert.strictEqual(path.basename(m.findCompiledFile(source) ?? ''), 'demo.core__b.php');
+    });
+
+    it('honours an absolute PHEL_CACHE_DIR override', function () {
+        const source = path.join(root, 'lib', 'core.phel');
+        const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'phel-cache-'));
+        writeCompiled(path.join(elsewhere, 'compiled'), 'demo.core__c.php', source);
+
+        process.env.PHEL_CACHE_DIR = elsewhere;
+        const m = new SourceMapManager();
+        m.addWorkspaceRoot(root);
+        assert.strictEqual(path.basename(m.findCompiledFile(source) ?? ''), 'demo.core__c.php');
+        fs.rmSync(elsewhere, { recursive: true, force: true });
+    });
+});

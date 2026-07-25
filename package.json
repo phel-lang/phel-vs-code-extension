@@ -496,7 +496,7 @@
                 "phel.cacheDirectory": {
                     "type": "string",
                     "default": "",
-                    "description": "Path to Phel cache directory. If empty, uses system temp directory."
+                    "description": "Extra directory to search for compiled Phel files. The workspace's own `.phel/cache/compiled` (Phel's default, honouring PHEL_CACHE_DIR) and the system temp directory are always searched, so this is only needed for a custom cache location."
                 },
                 "phel.debug.enabled": {
                     "type": "boolean",
