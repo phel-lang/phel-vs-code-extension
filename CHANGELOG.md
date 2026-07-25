@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-26
+
 ### Language support
 
 - **Protocol-method parameters are locals.** `this` and friends inside a `defrecord` / `deftype` / `extend-type` / `extend-protocol` / `reify` implementation tail, and the parameters of a `defmethod`, now resolve to their own binding — previously renaming `this` in one method rewrote every `this` in the workspace. A `defprotocol` / `definterface` method form stays excluded: it is a signature with no body, so binding its names would report each one as an unused local. `defrecord` / `deftype` field vectors also stay out — those are struct keys, not locals.
