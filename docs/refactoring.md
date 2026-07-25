@@ -30,10 +30,18 @@ These forms introduce locals:
 | `letfn` | each function name (visible across all specs and the body — they are mutually recursive) and each spec's own parameters |
 | `as->` | the threading name |
 | `catch` | the exception var |
+| `defrecord`, `deftype`, `extend-type`, `extend-protocol`, `reify` | the parameters of each `(method [params] body…)` implementation in the tail |
+| `defmethod` | the parameters after the dispatch value |
 
 Vector, `:keys` / `:syms` / `:strs`, and `:as` destructuring is followed in every one of them.
 
-Anything else is treated as a global, deliberately: `with-redefs` rebinds *existing* vars rather than declaring locals, so renaming one there stays a workspace-wide rename. A form whose binding shape is not recognised yields no locals at all and falls back to the workspace-wide behaviour, so the analyzer never makes a rename narrower than it should be.
+Anything else is treated as a global, deliberately:
+
+- `with-redefs` rebinds *existing* vars rather than declaring locals, so renaming one there stays a workspace-wide rename.
+- A `defprotocol` / `definterface` method form is a **signature**, not an implementation. Its parameter names bind nothing — treating them as locals would report every one as unused.
+- The field vector of `defrecord` / `deftype` holds struct keys, reached with `get` or destructuring, so the fields are not locals in the method bodies.
+
+A form whose binding shape is not recognised yields no locals at all and falls back to the workspace-wide behaviour, so the analyzer never makes a rename narrower than it should be.
 
 ## Document Outline & Breadcrumbs
 

@@ -4,6 +4,7 @@
 
 ### Language support
 
+- **Protocol-method parameters are locals.** `this` and friends inside a `defrecord` / `deftype` / `extend-type` / `extend-protocol` / `reify` implementation tail, and the parameters of a `defmethod`, now resolve to their own binding — previously renaming `this` in one method rewrote every `this` in the workspace. A `defprotocol` / `definterface` method form stays excluded: it is a signature with no body, so binding its names would report each one as an unused local. `defrecord` / `deftype` field vectors also stay out — those are struct keys, not locals.
 - **Scope analysis covers the remaining core binding forms.** `dotimes`, `when-first`, `as->`, and `letfn` now introduce locals, so go-to-definition, find-references, rename, document-highlight, semantic tokens, unused-local hints, and in-scope completion work inside them. `letfn` is modelled properly: the function names are visible across every spec and the body (mutual recursion), while each spec's parameters stay confined to that spec.
 - **`for` / `doseq` / `dofor` heads are read in full.** Only the first `binding :verb expr` clause used to bind; a second clause (`(for [x :in xs y :in ys] …)`) and the `:reduce [acc init]` accumulator were treated as globals. All clauses, `:let` pairs, and the accumulator now resolve as locals.
 - A local whose scope has closed is no longer offered by completion — a `letfn` spec's parameters stop at that spec instead of leaking into the body.
