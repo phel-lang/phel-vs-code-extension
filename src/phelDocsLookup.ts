@@ -112,6 +112,31 @@ export function renderDocMarkdown(doc: PhelDoc): string {
     return lines.join('\n').trimEnd();
 }
 
+/**
+ * Render a hover for a *local* binding. Locals have no doc record, and looking
+ * one up by name would surface an unrelated core symbol — most common
+ * parameter names (`name`, `map`, `key`, `count`, `str`, …) are also
+ * `phel.core` functions.
+ *
+ * `declLine` is the source line the binding was declared on, trimmed; it gives
+ * the reader the binding form without needing a doc record.
+ */
+export function renderLocalMarkdown(
+    binding: { name: string; param?: boolean },
+    declLine?: string
+): string {
+    const lines: string[] = [];
+    lines.push(`**\`${binding.name}\`** _${binding.param ? 'parameter' : 'local binding'}_`);
+    const trimmed = declLine?.trim();
+    if (trimmed) {
+        lines.push('');
+        lines.push('```phel');
+        lines.push(trimmed);
+        lines.push('```');
+    }
+    return lines.join('\n').trimEnd();
+}
+
 function describeKind(doc: PhelDoc): string {
     const visibility = doc.private ? 'private ' : '';
     switch (doc.kind) {

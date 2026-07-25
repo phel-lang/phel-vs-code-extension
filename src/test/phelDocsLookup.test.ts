@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import type { PhelDoc } from '../phelDocs';
-import { lookupSymbol, renderDocMarkdown } from '../phelDocsLookup';
+import { lookupSymbol, renderDocMarkdown, renderLocalMarkdown } from '../phelDocsLookup';
 
 const corpus: PhelDoc[] = [
     {
@@ -157,5 +157,24 @@ describe('renderDocMarkdown', function () {
         assert.ok(!md.includes('Example'));
         assert.ok(!md.includes('See also'));
         assert.ok(!md.includes('View source'));
+    });
+});
+
+describe('renderLocalMarkdown', function () {
+    it('labels a parameter and shows its declaring line', function () {
+        const md = renderLocalMarkdown({ name: 'name', param: true }, '(defn greet [name]');
+        assert.ok(md.startsWith('**`name`** _parameter_'));
+        assert.ok(md.includes('```phel\n(defn greet [name]\n```'));
+    });
+
+    it('labels a non-parameter binding as a local', function () {
+        const md = renderLocalMarkdown({ name: 'acc' }, '  (let [acc 0]');
+        assert.ok(md.startsWith('**`acc`** _local binding_'));
+        assert.ok(md.includes('(let [acc 0]'));
+    });
+
+    it('omits the code block when there is no declaring line', function () {
+        assert.strictEqual(renderLocalMarkdown({ name: 'x' }), '**`x`** _local binding_');
+        assert.strictEqual(renderLocalMarkdown({ name: 'x' }, '   '), '**`x`** _local binding_');
     });
 });

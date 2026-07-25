@@ -22,13 +22,14 @@ describe('findCurrentCall', function () {
     it('reports the callee on the first arg before any space', function () {
         const { source, offset } = at('(map |');
         const r = findCurrentCall(source, offset);
-        assert.deepStrictEqual(r, { callee: 'map', activeArg: 0 });
+        assert.deepStrictEqual(r, { callee: 'map', calleeStart: 1, activeArg: 0 });
     });
 
     it('keeps activeArg=0 while typing the first argument', function () {
         const { source, offset } = at('(map inc|');
         assert.deepStrictEqual(findCurrentCall(source, offset), {
             callee: 'map',
+            calleeStart: 1,
             activeArg: 0,
         });
     });
@@ -37,6 +38,7 @@ describe('findCurrentCall', function () {
         const { source, offset } = at('(map inc |');
         assert.deepStrictEqual(findCurrentCall(source, offset), {
             callee: 'map',
+            calleeStart: 1,
             activeArg: 1,
         });
     });
@@ -45,6 +47,7 @@ describe('findCurrentCall', function () {
         const { source, offset } = at('(reduce + 0 [1 2 3] |');
         assert.deepStrictEqual(findCurrentCall(source, offset), {
             callee: 'reduce',
+            calleeStart: 1,
             activeArg: 3,
         });
     });
@@ -53,6 +56,7 @@ describe('findCurrentCall', function () {
         const { source, offset } = at('(map (filter pred |xs) ys)');
         assert.deepStrictEqual(findCurrentCall(source, offset), {
             callee: 'filter',
+            calleeStart: 6,
             activeArg: 1,
         });
     });
@@ -61,6 +65,7 @@ describe('findCurrentCall', function () {
         const { source, offset } = at('(println "hello (world)" |');
         assert.deepStrictEqual(findCurrentCall(source, offset), {
             callee: 'println',
+            calleeStart: 1,
             activeArg: 1,
         });
     });
@@ -69,6 +74,7 @@ describe('findCurrentCall', function () {
         const { source, offset } = at('(reduce + ;; comment\n0 |[1 2])');
         assert.deepStrictEqual(findCurrentCall(source, offset), {
             callee: 'reduce',
+            calleeStart: 1,
             activeArg: 2,
         });
     });
@@ -89,6 +95,7 @@ describe('findCurrentCall', function () {
         const { source, offset } = at('(phel.test/is |x)');
         assert.deepStrictEqual(findCurrentCall(source, offset), {
             callee: 'phel.test/is',
+            calleeStart: 1,
             activeArg: 0,
         });
     });

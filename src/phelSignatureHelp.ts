@@ -18,6 +18,8 @@ import type { PhelDoc } from './phelDocs';
 export interface CurrentCall {
     /** Bare or qualified callee name as it appears in the source. */
     callee: string;
+    /** Offset of the first character of the callee token. */
+    calleeStart: number;
     /** Zero-based index of the parameter under the cursor. */
     activeArg: number;
 }
@@ -25,6 +27,7 @@ export interface CurrentCall {
 interface Frame {
     kind: '(' | '[' | '{' | '"';
     callee?: string;
+    calleeStart?: number;
     /**
      * For `(` frames: -1 while we are still reading the callee token,
      * otherwise the count of completed arg tokens. For `[` / `{` frames the
@@ -122,6 +125,7 @@ export function findCurrentCall(source: string, offset: number): CurrentCall | n
                 end++;
             }
             top.callee = source.slice(i, end);
+            top.calleeStart = i;
             top.argIndex = 0;
             top.inArg = false;
             i = end;
@@ -137,7 +141,11 @@ export function findCurrentCall(source: string, offset: number): CurrentCall | n
     for (let k = stack.length - 1; k >= 0; k--) {
         const f = stack[k];
         if (f.kind === '(' && f.callee) {
-            return { callee: f.callee, activeArg: f.argIndex < 0 ? 0 : f.argIndex };
+            return {
+                callee: f.callee,
+                calleeStart: f.calleeStart ?? 0,
+                activeArg: f.argIndex < 0 ? 0 : f.argIndex,
+            };
         }
     }
     return null;
