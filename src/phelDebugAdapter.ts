@@ -18,6 +18,7 @@ import * as os from 'os';
 import { SourceMapManager } from './sourceMapManager';
 import { XdebugBreakpointRegistry } from './xdebugBreakpointRegistry';
 import { XdebugPendingCommands } from './xdebugPendingCommands';
+import { DbgpMessageReader } from './dbgpMessageReader';
 
 interface PhelLaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
     program?: string;
@@ -83,7 +84,7 @@ export class PhelDebugSession extends LoggingDebugSession {
     // DBGp protocol state
     private transactionId = 1;
     private readonly pendingCommands = new XdebugPendingCommands();
-    private receiveBuffer = '';
+    private readonly receiveBuffer = new DbgpMessageReader();
 
     constructor() {
         super('phel-debug.log');
@@ -675,12 +676,12 @@ export class PhelDebugSession extends LoggingDebugSession {
         this.sendEvent(new OutputEvent('Xdebug connected!\n', 'console'));
 
         socket.on('data', (data) => {
-            this.handleXdebugData(data.toString());
+            this.handleXdebugData(data);
         });
 
         socket.on('close', () => {
             this.xdebugSocket = null;
-            this.receiveBuffer = '';
+            this.receiveBuffer.reset();
             this.transactionId = 1;
             // Settle anything still in flight. Clearing the map without
             // settling left the caller awaiting a promise that could never
@@ -706,30 +707,12 @@ export class PhelDebugSession extends LoggingDebugSession {
     /**
      * Handle data received from Xdebug.
      */
-    private handleXdebugData(data: string): void {
-        this.receiveBuffer += data;
-
-        // DBGp messages are length-prefixed: "length\0xml\0"
-        let nullIndex = this.receiveBuffer.indexOf('\0');
-        while (nullIndex !== -1) {
-            const lengthStr = this.receiveBuffer.substring(0, nullIndex);
-            const length = parseInt(lengthStr, 10);
-
-            if (isNaN(length)) {
-                this.receiveBuffer = '';
-                break;
-            }
-
-            const totalLength = nullIndex + 1 + length + 1;
-            if (this.receiveBuffer.length < totalLength) {
-                break;
-            }
-
-            const xml = this.receiveBuffer.substring(nullIndex + 1, nullIndex + 1 + length);
-            this.receiveBuffer = this.receiveBuffer.substring(totalLength);
-
+    private handleXdebugData(data: Buffer): void {
+        // Framing lives in DbgpMessageReader: the length prefix counts bytes,
+        // and a chunk can split a multi-byte character, so the buffering has to
+        // stay in Buffers and decode only complete payloads.
+        for (const xml of this.receiveBuffer.push(data)) {
             this.handleXdebugMessage(xml);
-            nullIndex = this.receiveBuffer.indexOf('\0');
         }
     }
 
