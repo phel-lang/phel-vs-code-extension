@@ -271,6 +271,26 @@ describe('SourceMapManager workspace cache discovery', function () {
         assert.strictEqual(path.basename(m.findCompiledFile(source) ?? ''), 'demo.core__a.php');
     });
 
+    it('discovers the project from the file alone, as the debug adapter does', function () {
+        // The debug adapter runs in its own process and constructs its own
+        // manager, so it never calls addWorkspaceRoot. Resolution has to work
+        // from the `.phel` file by itself, with no launch configuration.
+        const source = path.join(root, 'lib', 'core.phel');
+        fs.mkdirSync(path.dirname(source), { recursive: true });
+        fs.writeFileSync(path.join(root, 'phel-config.php'), '<?php');
+        writeCompiled(path.join(root, '.phel', 'cache', 'compiled'), 'demo.core__d.php', source);
+
+        const m = new SourceMapManager();
+        assert.strictEqual(path.basename(m.findCompiledFile(source) ?? ''), 'demo.core__d.php');
+    });
+
+    it('gives up at the filesystem root for a file in no project', function () {
+        const source = path.join(root, 'stray', 'core.phel');
+        fs.mkdirSync(path.dirname(source), { recursive: true });
+        const m = new SourceMapManager();
+        assert.strictEqual(m.findCompiledFile(source), null);
+    });
+
     it('honours a relative PHEL_CACHE_DIR override', function () {
         const source = path.join(root, 'lib', 'core.phel');
         writeCompiled(path.join(root, 'build', 'compiled'), 'demo.core__b.php', source);

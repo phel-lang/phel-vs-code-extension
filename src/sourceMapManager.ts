@@ -115,6 +115,31 @@ export class SourceMapManager {
     }
 
     /**
+     * Walk up from a `.phel` file to its project root — the nearest ancestor
+     * holding a `phel-config.php` or a `.phel/` directory — and register that
+     * project's compiled-cache directory.
+     *
+     * Cheap and idempotent: `addCacheDirectory` de-duplicates, and the walk
+     * stops at the filesystem root.
+     */
+    private registerProjectCacheFor(phelFile: string): void {
+        let dir = path.dirname(phelFile);
+        for (;;) {
+            const hasConfig = fs.existsSync(path.join(dir, 'phel-config.php'));
+            const hasCache = fs.existsSync(path.join(dir, '.phel'));
+            if (hasConfig || hasCache) {
+                this.addWorkspaceRoot(dir);
+                return;
+            }
+            const parent = path.dirname(dir);
+            if (parent === dir) {
+                return; // filesystem root
+            }
+            dir = parent;
+        }
+    }
+
+    /**
      * Find the compiled PHP file for a Phel source file.
      */
     findCompiledFile(phelFile: string): string | null {
@@ -124,6 +149,11 @@ export class SourceMapManager {
         if (this.phelToPhpPath.has(normalizedPhelFile)) {
             return this.phelToPhpPath.get(normalizedPhelFile) || null;
         }
+
+        // The debug adapter runs in its own process and builds its own manager,
+        // so it never sees `addWorkspaceRoot`. Locate the project from the file
+        // being debugged instead, which needs no launch configuration at all.
+        this.registerProjectCacheFor(normalizedPhelFile);
 
         // Fast path: guess the compiled filename from the namespace. Only some
         // project layouts yield a namespace, and the guess only matches some
