@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
-import { PHEL_DOCS } from './phelCoreDocs';
 import { lookupSymbol, renderDocMarkdown, renderLocalMarkdown } from './phelDocsLookup';
 import { aliasMapFromSource } from './phelNsAnalyzer';
 import { resolveLocalAt } from './phelScope';
-import { combineDocs } from './phelWorkspaceIndex';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
-
-const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
+import { PHEL_SYMBOL_RE } from './phelSymbolToken';
+import { mergedDocs, plainMarkdown } from './phelProviderSupport';
 
 export class PhelHoverProvider implements vscode.HoverProvider {
     constructor(private readonly indexer?: PhelWorkspaceIndexer) {}
@@ -15,7 +13,7 @@ export class PhelHoverProvider implements vscode.HoverProvider {
         document: vscode.TextDocument,
         position: vscode.Position
     ): vscode.ProviderResult<vscode.Hover> {
-        const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
+        const range = document.getWordRangeAtPosition(position, PHEL_SYMBOL_RE);
         if (!range) {
             return null;
         }
@@ -28,23 +26,17 @@ export class PhelHoverProvider implements vscode.HoverProvider {
         const local = resolveLocalAt(src, document.offsetAt(range.start));
         if (local) {
             const declLine = document.lineAt(document.positionAt(local.declStart).line).text;
-            const md = new vscode.MarkdownString(renderLocalMarkdown(local, declLine));
-            md.isTrusted = false;
-            md.supportHtml = false;
+            const md = plainMarkdown(renderLocalMarkdown(local, declLine));
             return new vscode.Hover(md, range);
         }
 
-        const merged = this.indexer
-            ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
-            : [...PHEL_DOCS];
+        const merged = mergedDocs(this.indexer);
         const aliases = aliasMapFromSource(src);
         const doc = lookupSymbol(word, merged, aliases);
         if (!doc) {
             return null;
         }
-        const md = new vscode.MarkdownString(renderDocMarkdown(doc));
-        md.isTrusted = false;
-        md.supportHtml = false;
+        const md = plainMarkdown(renderDocMarkdown(doc));
         return new vscode.Hover(md, range);
     }
 }

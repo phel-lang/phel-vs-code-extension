@@ -10,11 +10,9 @@ import * as vscode from 'vscode';
 import { threadForm, unthreadForm, cycleCollection, type RefactorEdit } from './phelRefactor';
 import { lookupSymbol } from './phelDocsLookup';
 import { parseNsForm, buildRequireEdit } from './phelNsAnalyzer';
-import { combineDocs } from './phelWorkspaceIndex';
-import { PHEL_DOCS } from './phelCoreDocs';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
-
-const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
+import { PHEL_SYMBOL_RE } from './phelSymbolToken';
+import { mergedDocs } from './phelProviderSupport';
 
 export class PhelCodeActionProvider implements vscode.CodeActionProvider {
     static readonly kinds = [vscode.CodeActionKind.RefactorRewrite, vscode.CodeActionKind.QuickFix];
@@ -61,7 +59,7 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
         range: vscode.Range,
         src: string
     ): vscode.CodeAction | null {
-        const wordRange = document.getWordRangeAtPosition(range.start, SYMBOL_RE);
+        const wordRange = document.getWordRangeAtPosition(range.start, PHEL_SYMBOL_RE);
         if (!wordRange) {
             return null;
         }
@@ -75,7 +73,7 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
         if (!nsForm) {
             return null;
         }
-        const merged = combineDocs(this.indexer.index.allDocs(), PHEL_DOCS);
+        const merged = mergedDocs(this.indexer);
         const doc = lookupSymbol(word, merged);
         if (!doc || !doc.ns) {
             return null;

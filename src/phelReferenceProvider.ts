@@ -7,8 +7,7 @@ import * as vscode from 'vscode';
 import { findOccurrences } from './phelReferences';
 import { resolveLocalAt, localOccurrences } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
-
-const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
+import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 
 export class PhelReferenceProvider implements vscode.ReferenceProvider {
     constructor(private readonly indexer: PhelWorkspaceIndexer) {}
@@ -17,7 +16,7 @@ export class PhelReferenceProvider implements vscode.ReferenceProvider {
         document: vscode.TextDocument,
         position: vscode.Position
     ): Promise<vscode.Location[]> {
-        const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
+        const range = document.getWordRangeAtPosition(position, PHEL_SYMBOL_RE);
         if (!range) {
             return [];
         }

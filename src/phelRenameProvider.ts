@@ -10,8 +10,7 @@ import { findReferenceLocations } from './phelReferenceProvider';
 import { isValidSymbolName } from './phelReferences';
 import { resolveLocalAt, localOccurrences } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
-
-const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
+import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 
 export class PhelRenameProvider implements vscode.RenameProvider {
     constructor(private readonly indexer: PhelWorkspaceIndexer) {}
@@ -20,7 +19,7 @@ export class PhelRenameProvider implements vscode.RenameProvider {
         document: vscode.TextDocument,
         position: vscode.Position
     ): vscode.ProviderResult<vscode.Range | { range: vscode.Range; placeholder: string }> {
-        const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
+        const range = document.getWordRangeAtPosition(position, PHEL_SYMBOL_RE);
         if (!range) {
             throw new Error('No symbol at cursor.');
         }
@@ -35,7 +34,7 @@ export class PhelRenameProvider implements vscode.RenameProvider {
         if (!isValidSymbolName(newName)) {
             throw new Error(`'${newName}' is not a valid Phel symbol name.`);
         }
-        const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
+        const range = document.getWordRangeAtPosition(position, PHEL_SYMBOL_RE);
         if (!range) {
             return undefined;
         }

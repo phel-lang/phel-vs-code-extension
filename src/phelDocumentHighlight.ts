@@ -5,15 +5,14 @@
 import * as vscode from 'vscode';
 import { findOccurrences } from './phelReferences';
 import { resolveLocalAt, localOccurrences } from './phelScope';
-
-const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
+import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 
 export class PhelDocumentHighlightProvider implements vscode.DocumentHighlightProvider {
     provideDocumentHighlights(
         document: vscode.TextDocument,
         position: vscode.Position
     ): vscode.ProviderResult<vscode.DocumentHighlight[]> {
-        const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
+        const range = document.getWordRangeAtPosition(position, PHEL_SYMBOL_RE);
         if (!range) {
             return null;
         }
