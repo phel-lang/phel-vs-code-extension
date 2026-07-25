@@ -2,8 +2,18 @@
 
 ## [Unreleased]
 
+### Language support
+
+- **Every literal the Phel reader accepts now highlights.** The grammar gained rules for character literals (`\A`, `\1`, `\(`, `\space`, `\newline`, `\u00e9`, `\o101`), regex literals (`#"^\d+$"`, distinct from the `#regex "…"` tagged literal), symbolic numbers (`##Inf`, `##-Inf`, `##NaN`), radix numbers (`2r1010`, `16rFF`, `36rZZ`), `BigInt` (`123N`), `BigDecimal` (`1.5M`), and ratios (`3/4`). Signed forms (`+7`, `-3.5`, `-1/2`) and digit separators now scope as numbers across every base. A PHP fully-qualified name (`\Throwable`) still scopes as a symbol, matching the lexer's own lookahead.
+- **Gensyms no longer break a macro body.** A trailing `#` is part of the symbol (`x#`), so `` `(let [x# ~x] …) `` highlights as code; previously the `#` opened a comment that swallowed the rest of the line.
+- **Namespaced tagged literals.** `#my.app/Person {:name "Ada"}` scopes the whole dotted/namespaced name as the tag, and paredit reads the tag plus its value as one form.
+- **Regex literals are one form to paredit.** `#"…"` is read as a single string form rather than a `#` atom followed by a string, so slurp/barf/raise/kill, folding, and expand-selection no longer split it.
+- `phel.router/compiled-router` highlights as a macro, closing the last gap between the grammar keyword list and the v0.49.0 macro corpus.
+
 ### Internal
 
+- Grammar coverage is pinned by `src/test/grammar.test.ts`, which tokenizes with the same `vscode-textmate` engine VS Code ships and asserts scopes, so a grammar regression fails `npm test` instead of needing a manual read of `npm run tokenize`.
+- `scripts/sample.phel` used `0o17`, which is not valid Phel (octal is the leading-zero `017`); fixed and extended with the newly covered literal forms.
 - `npm run pretest` now also runs `format:check`, so a Prettier violation fails locally (before commit) instead of only in CI.
 
 ## [0.11.0] - 2026-07-24
