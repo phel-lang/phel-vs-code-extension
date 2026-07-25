@@ -76,6 +76,74 @@
         ],
         "description": "Multi-branch conditional"
     },
+    "condp": {
+        "prefix": "condp",
+        "body": [
+            "(condp ${1:=} ${2:expr}",
+            "  ${3:value} ${4:result}",
+            "  ${0:default})"
+        ],
+        "description": "Predicate dispatch: (pred value expr) per clause"
+    },
+    "if-not": {
+        "prefix": "if-not",
+        "body": [
+            "(if-not ${1:test}",
+            "  ${2:then}",
+            "  ${0:else})"
+        ],
+        "description": "Conditional on the negated test"
+    },
+    "when-not": {
+        "prefix": "when-not",
+        "body": [
+            "(when-not ${1:test}",
+            "  ${0})"
+        ],
+        "description": "Body when the test is falsy"
+    },
+    "if-let": {
+        "prefix": "if-let",
+        "body": [
+            "(if-let [${1:name} ${2:test}]",
+            "  ${3:then}",
+            "  ${0:else})"
+        ],
+        "description": "Bind and branch when the test is truthy"
+    },
+    "when-let": {
+        "prefix": "when-let",
+        "body": [
+            "(when-let [${1:name} ${2:test}]",
+            "  ${0})"
+        ],
+        "description": "Bind and run the body when the test is truthy"
+    },
+    "if-some": {
+        "prefix": "if-some",
+        "body": [
+            "(if-some [${1:name} ${2:test}]",
+            "  ${3:then}",
+            "  ${0:else})"
+        ],
+        "description": "Bind and branch when the test is non-nil"
+    },
+    "when-some": {
+        "prefix": "when-some",
+        "body": [
+            "(when-some [${1:name} ${2:test}]",
+            "  ${0})"
+        ],
+        "description": "Bind and run the body when the test is non-nil"
+    },
+    "when-first": {
+        "prefix": "when-first",
+        "body": [
+            "(when-first [${1:x} ${2:coll}]",
+            "  ${0})"
+        ],
+        "description": "Bind the first element and run the body when the collection is non-empty"
+    },
     "case": {
         "prefix": "case",
         "body": [
@@ -100,6 +168,38 @@
             "  ${0})"
         ],
         "description": "List comprehension"
+    },
+    "foreach": {
+        "prefix": "foreach",
+        "body": [
+            "(foreach [${1:k} ${2:v} ${3:coll}]",
+            "  ${0})"
+        ],
+        "description": "Iterate key/value pairs (drop the key for values only)"
+    },
+    "dotimes": {
+        "prefix": "dotimes",
+        "body": [
+            "(dotimes [${1:i} ${2:n}]",
+            "  ${0})"
+        ],
+        "description": "Evaluate the body n times with i bound to 0..n-1"
+    },
+    "binding": {
+        "prefix": "binding",
+        "body": [
+            "(binding [${1:*var*} ${2:value}]",
+            "  ${0})"
+        ],
+        "description": "Fiber-local rebinding of ^:dynamic vars"
+    },
+    "letfn": {
+        "prefix": "letfn",
+        "body": [
+            "(letfn [(${1:name} [${2:args}] ${3:body})]",
+            "  ${0})"
+        ],
+        "description": "Mutually recursive local functions"
     },
     "loop-recur": {
         "prefix": "loop",
@@ -157,6 +257,67 @@
         ],
         "description": "Protocol definition"
     },
+    "defrecord": {
+        "prefix": "defrecord",
+        "body": [
+            "(defrecord ${1:Name} [${2:fields}]",
+            "  ${3:Protocol}",
+            "  (${0:method [this args] body}))"
+        ],
+        "description": "Record with an optional protocol implementation tail"
+    },
+    "deftype": {
+        "prefix": "deftype",
+        "body": [
+            "(deftype ${1:Name} [${2:fields}]",
+            "  ${3:Protocol}",
+            "  (${0:method [this args] body}))"
+        ],
+        "description": "Type with an optional protocol implementation tail (no map factory)"
+    },
+    "reify": {
+        "prefix": "reify",
+        "body": [
+            "(reify ${1:Protocol}",
+            "  (${0:method [this args] body}))"
+        ],
+        "description": "Anonymous object implementing one or more protocols"
+    },
+    "extend-type": {
+        "prefix": "extend-type",
+        "body": [
+            "(extend-type ${1::string} ${2:Protocol}",
+            "  (${0:method [this args] body}))"
+        ],
+        "description": "Implement protocols for an existing type"
+    },
+    "extend-protocol": {
+        "prefix": "extend-protocol",
+        "body": [
+            "(extend-protocol ${1:Protocol}",
+            "  ${2::string} (${3:method [this] body})",
+            "  ${0::int} (method [this] body))"
+        ],
+        "description": "Extend one protocol to several types"
+    },
+    "defmulti": {
+        "prefix": "defmulti",
+        "body": ["(defmulti ${1:name} \"${2:doc}\" ${0:dispatch-fn})"],
+        "description": "Multimethod dispatching on the value of dispatch-fn"
+    },
+    "defmethod": {
+        "prefix": "defmethod",
+        "body": [
+            "(defmethod ${1:multi-name} ${2:dispatch-val} [${3:args}]",
+            "  ${0})"
+        ],
+        "description": "Multimethod implementation for one dispatch value"
+    },
+    "declare": {
+        "prefix": "declare",
+        "body": ["(declare ${0:name})"],
+        "description": "Forward declaration for mutual recursion between top-level defs"
+    },
     "defexception": {
         "prefix": "defexception",
         "body": ["(defexception ${1:Name} ${0:\"message\"})"],
@@ -170,6 +331,30 @@
         ],
         "description": "Test case"
     },
+    "testing": {
+        "prefix": "testing",
+        "body": [
+            "(testing \"${1:context}\"",
+            "  (is ${0}))"
+        ],
+        "description": "Label a group of assertions inside a deftest"
+    },
+    "are": {
+        "prefix": "are",
+        "body": [
+            "(are [${1:x} ${2:y}] (= ${1:x} ${2:y})",
+            "  ${0})"
+        ],
+        "description": "Table-driven assertions over an argument template"
+    },
+    "with-mocks": {
+        "prefix": "with-mocks",
+        "body": [
+            "(with-mocks [${1:some-fn} (mock ${2:result})]",
+            "  ${0})"
+        ],
+        "description": "Temporarily replace fns with mocks, reset after the body (phel.mock)"
+    },
     "->": {
         "prefix": "->",
         "body": ["(-> ${1:x}", "    ${0})"],
@@ -179,6 +364,50 @@
         "prefix": "->>",
         "body": ["(->> ${1:x}", "     ${0})"],
         "description": "Thread-last macro"
+    },
+    "as->": {
+        "prefix": "as->",
+        "body": ["(as-> ${1:expr} ${2:x}", "      ${0})"],
+        "description": "Thread through an explicitly named binding"
+    },
+    "some->": {
+        "prefix": "some->",
+        "body": ["(some-> ${1:x}", "        ${0})"],
+        "description": "Thread-first, short-circuiting on nil"
+    },
+    "some->>": {
+        "prefix": "some->>",
+        "body": ["(some->> ${1:x}", "         ${0})"],
+        "description": "Thread-last, short-circuiting on nil"
+    },
+    "cond->": {
+        "prefix": "cond->",
+        "body": ["(cond-> ${1:x}", "        ${2:test} ${0:form})"],
+        "description": "Thread-first through the forms whose test is truthy"
+    },
+    "cond->>": {
+        "prefix": "cond->>",
+        "body": ["(cond->> ${1:x}", "         ${2:test} ${0:form})"],
+        "description": "Thread-last through the forms whose test is truthy"
+    },
+    "doto": {
+        "prefix": "doto",
+        "body": ["(doto ${1:x}", "      ${0})"],
+        "description": "Call each form on x for side effects, returning x"
+    },
+    "lazy-seq": {
+        "prefix": "lazy-seq",
+        "body": ["(lazy-seq ${0})"],
+        "description": "Lazily evaluated sequence body"
+    },
+    "match": {
+        "prefix": "match",
+        "body": [
+            "(match ${1:value}",
+            "  ${2:pattern} ${3:result}",
+            "  ${0:_} nil)"
+        ],
+        "description": "Pattern match (phel.match)"
     },
     "comment": {
         "prefix": "comment",

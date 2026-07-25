@@ -34,21 +34,26 @@ npm run regen-docs -- /path/to/phel-lang --phel-version v0.49.0
 
 ## Snippets
 
-`snippets/phel.code-snippets` ships templates for the everyday forms. Type the prefix, accept the suggestion, and tab through the placeholders.
+`snippets/phel.code-snippets` ships 60 templates covering the everyday forms. Type the prefix, accept the suggestion, and tab through the placeholders.
 
 | Prefix | Expands to |
 |---|---|
 | `ns` | `(ns my-app.core (:require ...))` |
 | `defn`, `defn-` | Public / private function with docstring + args |
-| `def`, `defonce`, `fn`, `let` | Top-level binding, once-only binding, anonymous fn, local bindings |
-| `if`, `when`, `cond`, `case` | Conditionals |
-| `doseq`, `for`, `loop` | Iteration (with `recur` skeleton) |
+| `def`, `defonce`, `declare`, `fn`, `let` | Top-level binding, once-only binding, forward declaration, anonymous fn, local bindings |
+| `if`, `if-not`, `when`, `when-not`, `cond`, `condp`, `case` | Conditionals |
+| `if-let`, `when-let`, `if-some`, `when-some`, `when-first` | Bind-and-branch forms, with the binding vector already in place |
+| `binding`, `letfn` | Dynamic rebinding, mutually recursive local fns |
+| `doseq`, `for`, `foreach`, `dotimes`, `loop` | Iteration (`loop` with a `recur` skeleton) |
 | `try` | `try` + `catch \Throwable e` |
 | `defmacro`, `defstruct`, `defenum`, `definterface`, `defprotocol`, `defexception` | Definitions |
-| `deftest` | Test case with `(is ...)` |
-| `->`, `->>` | Threading skeletons |
+| `defrecord`, `deftype`, `reify`, `extend-type`, `extend-protocol` | Records / types / protocol implementations, with a method skeleton |
+| `defmulti`, `defmethod` | Multimethod and one dispatch implementation |
+| `deftest`, `testing`, `are`, `with-mocks` | Test case, labelled group, table-driven assertions, scoped mocks |
+| `->`, `->>`, `as->`, `some->`, `some->>`, `cond->`, `cond->>`, `doto` | Threading skeletons |
+| `match`, `lazy-seq` | Pattern match (`phel.match`), lazy sequence body |
 | `comment` | Form-aware comment block |
 | `while`, `with-open` | While loop, scoped resource cleanup |
 | `dbg`, `deftrace` | Debug-print a value, traced fn (`phel.trace`) |
 
-Add or refine entries when a form is fiddly enough that scaffolding helps. Keep the `prefix` matching the form name so it composes with completion.
+Add or refine entries when a form is fiddly enough that scaffolding helps. Keep the `prefix` matching the form name so it composes with completion — `src/test/snippets.test.ts` fails the build when a prefix matches no form in the corpus, when two snippets share a prefix, or when a body's brackets do not balance.
