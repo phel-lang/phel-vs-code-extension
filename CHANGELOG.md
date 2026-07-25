@@ -2,60 +2,6 @@
 
 ## [Unreleased]
 
-### Fixed (prime-suffixed symbols)
-
-- **Renaming `a` corrupted `a'`.** The apostrophe was treated as a symbol terminator on both sides, so the leading `a` of `a'` looked like a complete token: find-references reported it, and rename rewrote it, leaving a stray `'`. `a'` and `foo''` are single symbols to the Phel lexer — verified by running one — and are now matched as such. Renaming *to* `a'` is allowed; a leading `'` is still rejected, because there it is the quote reader macro.
-- The grammar had the same split: `a'` highlighted as the symbol `a` followed by a quote reader macro. An apostrophe now stays inside the symbol in any position but the first, and a leading `'` is still the quote macro.
-- Word selection splits the quote macro off what it quotes: the word at `'sym` and `#'sym` is now `sym`, so hover and go-to-definition resolve a quoted symbol instead of looking up `'sym` and finding nothing.
-
-### Performance
-
-- **Semantic tokens and unused-local hints are ~14x faster**, 591 ms → 43 ms on phel's own 56 KB `test.phel`. Both run the scope analyzer on every edit, and `resolveLocalAt` re-parsed the whole document once per candidate occurrence — hundreds of full parses per keystroke. The parse is now memoised on the source string, and the per-name occurrence scan alongside it (410 bindings share 158 distinct names in that file, so each scan was repeated two to three times). Both caches are keyed on the source text, so a stale buffer cannot be served; tests cover switching sources and cold-vs-warm results.
-
-### Docs
-
-- README feature list refreshed. It had drifted well behind the extension: it still described paredit as "slurp / barf / raise / wrap, sexp selection" (0.11 added drag / splice / kill, folding and native expand-selection), listed snippets as "`defn`, `let`, `cond`, `try`, `deftest`, `->`, …" when there are 60, and never mentioned scope-aware navigation, semantic highlighting, unused-local hints, the refactorings, or the outline coverage. Now grounded in the actual contributions in `package.json`.
-
-### Internal
-
-- **De-duplicated the provider boilerplate**, net −28 lines. The Phel symbol-token regex existed as seven byte-identical copies (so the gensym change earlier in this release would have needed seven edits to stay consistent); it now lives in `phelSymbolToken.ts` with tests pinning what it matches. The `combineDocs(indexer, PHEL_DOCS)` merge and the `MarkdownString` + `isTrusted`/`supportHtml` construction each had five copies and are now `mergedDocs()` and `plainMarkdown()` in `phelProviderSupport.ts`. Behaviour is unchanged.
-
-### Diagnostics
-
-- **`phel lint` now backs inline diagnostics.** It reports everything `phel analyze` does plus rule-based findings — unused bindings, shadowed bindings, arity problems, and whatever `phel-lint.phel` configures. On a file with one undefined symbol and one unused binding, `analyze` reported 1 diagnostic where `lint` reports 2.
-- New `phel.diagnostics.engine` setting (`auto` | `lint` | `analyze`, default `auto`). `lint` is newer than `analyze`, so `auto` uses it and falls back the first time a CLI rejects the subcommand, remembering that for the session; changing the executable or the setting retries. Nothing breaks for anyone on an older Phel.
-- New **Phel: Lint Workspace** command runs `phel lint` over the configured source dirs and fills the Problems panel for every file, including ones never opened. On-save diagnostics stay scoped to the saved file.
-
-### Fixed (hover & signature help)
-
-- **Hover on a local showed an unrelated core function.** Go-to-definition, find-references, rename and document-highlight all consult the scope analyzer; hover did not, and looked the name up in the symbol corpus instead. Every one of the 20 most common parameter names — `name`, `map`, `key`, `count`, `str`, `first`, `type`, `next`, `get`, `list`, `keys`, `vals`, `set`, `max`, `min`, `val`, `rest`, `last`, `apply`, `print` — is also a `phel.core` function, so hovering the `name` in `(defn greet [name] …)` documented `phel.core/name`. It now reports the parameter and the line it is bound on.
-- **Signature help described the wrong function for a local callee.** `(f x)` where `f` is a let-bound function showed the signature of whatever global shared that name. It now stands down instead. `findCurrentCall` gained a `calleeStart` offset so the callee can be resolved against the scope analyzer.
-
-### Symbols & navigation
-
-- **Ten more defining forms are indexed.** The parser behind the outline, "Go to Symbol in Workspace", cross-file completion, auto-import and go-to-definition recognised only `defn` / `defn-` / `defmacro` / `defmacro-` / `def` / `def-`. It now also reads `defonce`, `defstruct`, `defrecord`, `deftype`, `defprotocol`, `definterface`, `defenum`, `defexception`, `defmulti` and `deftest` — so a file of records, protocols or tests is no longer nearly invisible (a 14-definition sample produced 2 symbols before, 12 now), and those names resolve across files.
-- Struct-like forms carry their field vector as a signature, because that vector is the positional constructor: `(defrecord Circle [r] Shape (area [this] 1))` shows as `(Circle r)`, with the method tail correctly not read as a second arity.
-- Outline entries now pick an icon per form — Struct for `defrecord`, Interface for `defprotocol`, Enum for `defenum`, Event for `deftest`, and so on — via a new `form` field on `PhelDoc` that records the defining operator. `PhelDocKind` keeps its three values, so the `MACROS` / `CORE_FNS` projections are unchanged.
-- `declare` stays unindexed on purpose: it forward-declares names a real defining form supplies later in the same file, so indexing it would list every declared symbol twice.
-- Note for the next `npm run regen-docs`: the corpus generator shares this parser, so a regen will pick up the `phel.html` / `phel.http` / `phel.router` structs and add `form` to every entry. No `phel.core` symbol changes, so `CORE_FNS` and `MACROS` are unaffected.
-
-### Completion
-
-- **`alias/…` completes.** After `(:require [phel.string :as str])`, typing `str/` now offers every public symbol of that namespace with its docs. Hover, go-to-definition and signature help already resolved alias-qualified symbols; completion offered nothing, because every candidate label is a bare name.
-- **`:use` and `:require-file` no longer offer Phel namespaces.** All three clauses were treated alike, but `:use` imports a **PHP class** (`(:use Symfony.Component.Console.Application)`) and `:require-file` takes a path string. `:use` now offers only `:as`, which is the single option its registrar accepts — `:refer` there is a compile error — and `:require-file` offers nothing rather than a list that could never be right.
-- **`:refer [ … ]` offers the namespace's own names.** Completing inside a refer vector suggested `:as` / `:refer` — the entry options — instead of the symbols being referred. It now lists the public names of the namespace on that entry, for both require shapes and either separator, and without mistaking an `:as` alias for the namespace.
-- **The `(ns …)` form gets its own candidates** instead of all 576 core symbols: `:require` / `:use` / `:require-file` directly inside `(ns …)`, the requirable namespaces inside a `(:require …)` clause, and `:as` / `:refer` inside an entry vector.
-
-### Fixed
-
-- **Flat `:require` entries resolved no alias.** `(:require phel.string :as str)` — the shape the compiler still accepts alongside the vector form — parsed as a namespace with no options, so `str/blank?` silently lost hover, go-to-definition and signature help. Several flat entries in one clause, and flat mixed with vector entries, are now read the way `NsSymbol` reads them.
-- **The backslash namespace separator never matched.** `phel\string`, which Phel's own sources use, was compared verbatim against the corpus's `phel.string`, so every alias-qualified lookup through it failed. Namespaces are now normalised to the dotted form on parse, which also stops auto-import from adding a duplicate `:require` for a namespace already imported with backslashes.
-
-### Snippets
-
-- **31 new snippets, 29 → 60.** The binding-vector conditionals (`if-let`, `when-let`, `if-some`, `when-some`, `when-first`), `binding`, `letfn`, `dotimes`, `foreach`, `condp`, `if-not`, `when-not`, `declare`; the rest of the threading family (`as->`, `some->`, `some->>`, `cond->`, `cond->>`, `doto`); the protocol surface (`defrecord`, `deftype`, `reify`, `extend-type`, `extend-protocol`, `defmulti`, `defmethod`); the test forms (`testing`, `are`, `with-mocks`); plus `match` and `lazy-seq`. Every body is taken from the form's own `:example` metadata or its phel-lang definition, so the scaffolding matches the real shape.
-- `src/test/snippets.test.ts` now fails the build when a snippet prefix matches no form in the symbol corpus, when two snippets share a prefix, or when a body's brackets do not balance.
-
 ### Language support
 
 - **Protocol-method parameters are locals.** `this` and friends inside a `defrecord` / `deftype` / `extend-type` / `extend-protocol` / `reify` implementation tail, and the parameters of a `defmethod`, now resolve to their own binding — previously renaming `this` in one method rewrote every `this` in the workspace. A `defprotocol` / `definterface` method form stays excluded: it is a signature with no body, so binding its names would report each one as an unused local. `defrecord` / `deftype` field vectors also stay out — those are struct keys, not locals.
@@ -70,8 +16,53 @@
 - **Regex literals are one form to paredit.** `#"…"` is read as a single string form rather than a `#` atom followed by a string, so slurp/barf/raise/kill, folding, and expand-selection no longer split it.
 - `phel.router/compiled-router` highlights as a macro, closing the last gap between the grammar keyword list and the v0.49.0 macro corpus.
 
+### Completion
+
+- **`alias/…` completes.** After `(:require [phel.string :as str])`, typing `str/` now offers every public symbol of that namespace with its docs. Hover, go-to-definition and signature help already resolved alias-qualified symbols; completion offered nothing, because every candidate label is a bare name.
+- **`:use` and `:require-file` no longer offer Phel namespaces.** All three clauses were treated alike, but `:use` imports a **PHP class** (`(:use Symfony.Component.Console.Application)`) and `:require-file` takes a path string. `:use` now offers only `:as`, which is the single option its registrar accepts — `:refer` there is a compile error — and `:require-file` offers nothing rather than a list that could never be right.
+- **`:refer [ … ]` offers the namespace's own names.** Completing inside a refer vector suggested `:as` / `:refer` — the entry options — instead of the symbols being referred. It now lists the public names of the namespace on that entry, for both require shapes and either separator, and without mistaking an `:as` alias for the namespace.
+- **The `(ns …)` form gets its own candidates** instead of all 576 core symbols: `:require` / `:use` / `:require-file` directly inside `(ns …)`, the requirable namespaces inside a `(:require …)` clause, and `:as` / `:refer` inside an entry vector.
+
+### Symbols & navigation
+
+- **Ten more defining forms are indexed.** The parser behind the outline, "Go to Symbol in Workspace", cross-file completion, auto-import and go-to-definition recognised only `defn` / `defn-` / `defmacro` / `defmacro-` / `def` / `def-`. It now also reads `defonce`, `defstruct`, `defrecord`, `deftype`, `defprotocol`, `definterface`, `defenum`, `defexception`, `defmulti` and `deftest` — so a file of records, protocols or tests is no longer nearly invisible (a 14-definition sample produced 2 symbols before, 12 now), and those names resolve across files.
+- Struct-like forms carry their field vector as a signature, because that vector is the positional constructor: `(defrecord Circle [r] Shape (area [this] 1))` shows as `(Circle r)`, with the method tail correctly not read as a second arity.
+- Outline entries now pick an icon per form — Struct for `defrecord`, Interface for `defprotocol`, Enum for `defenum`, Event for `deftest`, and so on — via a new `form` field on `PhelDoc` that records the defining operator. `PhelDocKind` keeps its three values, so the `MACROS` / `CORE_FNS` projections are unchanged.
+- `declare` stays unindexed on purpose: it forward-declares names a real defining form supplies later in the same file, so indexing it would list every declared symbol twice.
+- Note for the next `npm run regen-docs`: the corpus generator shares this parser, so a regen will pick up the `phel.html` / `phel.http` / `phel.router` structs and add `form` to every entry. No `phel.core` symbol changes, so `CORE_FNS` and `MACROS` are unaffected.
+
+### Diagnostics
+
+- **`phel lint` now backs inline diagnostics.** It reports everything `phel analyze` does plus rule-based findings — unused bindings, shadowed bindings, arity problems, and whatever `phel-lint.phel` configures. On a file with one undefined symbol and one unused binding, `analyze` reported 1 diagnostic where `lint` reports 2.
+- New `phel.diagnostics.engine` setting (`auto` | `lint` | `analyze`, default `auto`). `lint` is newer than `analyze`, so `auto` uses it and falls back the first time a CLI rejects the subcommand, remembering that for the session; changing the executable or the setting retries. Nothing breaks for anyone on an older Phel.
+- New **Phel: Lint Workspace** command runs `phel lint` over the configured source dirs and fills the Problems panel for every file, including ones never opened. On-save diagnostics stay scoped to the saved file.
+
+### Snippets
+
+- **31 new snippets, 29 → 60.** The binding-vector conditionals (`if-let`, `when-let`, `if-some`, `when-some`, `when-first`), `binding`, `letfn`, `dotimes`, `foreach`, `condp`, `if-not`, `when-not`, `declare`; the rest of the threading family (`as->`, `some->`, `some->>`, `cond->`, `cond->>`, `doto`); the protocol surface (`defrecord`, `deftype`, `reify`, `extend-type`, `extend-protocol`, `defmulti`, `defmethod`); the test forms (`testing`, `are`, `with-mocks`); plus `match` and `lazy-seq`. Every body is taken from the form's own `:example` metadata or its phel-lang definition, so the scaffolding matches the real shape.
+- `src/test/snippets.test.ts` now fails the build when a snippet prefix matches no form in the symbol corpus, when two snippets share a prefix, or when a body's brackets do not balance.
+
+### Fixed
+
+- **Hover on a local showed an unrelated core function.** Go-to-definition, find-references, rename and document-highlight all consult the scope analyzer; hover did not, and looked the name up in the symbol corpus instead. Every one of the 20 most common parameter names — `name`, `map`, `key`, `count`, `str`, `first`, `type`, `next`, `get`, `list`, `keys`, `vals`, `set`, `max`, `min`, `val`, `rest`, `last`, `apply`, `print` — is also a `phel.core` function, so hovering the `name` in `(defn greet [name] …)` documented `phel.core/name`. It now reports the parameter and the line it is bound on.
+- **Signature help described the wrong function for a local callee.** `(f x)` where `f` is a let-bound function showed the signature of whatever global shared that name. It now stands down instead. `findCurrentCall` gained a `calleeStart` offset so the callee can be resolved against the scope analyzer.
+- **Renaming `a` corrupted `a'`.** The apostrophe was treated as a symbol terminator on both sides, so the leading `a` of `a'` looked like a complete token: find-references reported it, and rename rewrote it, leaving a stray `'`. `a'` and `foo''` are single symbols to the Phel lexer — verified by running one — and are now matched as such. Renaming *to* `a'` is allowed; a leading `'` is still rejected, because there it is the quote reader macro.
+- The grammar had the same split: `a'` highlighted as the symbol `a` followed by a quote reader macro. An apostrophe now stays inside the symbol in any position but the first, and a leading `'` is still the quote macro.
+- Word selection splits the quote macro off what it quotes: the word at `'sym` and `#'sym` is now `sym`, so hover and go-to-definition resolve a quoted symbol instead of looking up `'sym` and finding nothing.
+- **Flat `:require` entries resolved no alias.** `(:require phel.string :as str)` — the shape the compiler still accepts alongside the vector form — parsed as a namespace with no options, so `str/blank?` silently lost hover, go-to-definition and signature help. Several flat entries in one clause, and flat mixed with vector entries, are now read the way `NsSymbol` reads them.
+- **The backslash namespace separator never matched.** `phel\string`, which Phel's own sources use, was compared verbatim against the corpus's `phel.string`, so every alias-qualified lookup through it failed. Namespaces are now normalised to the dotted form on parse, which also stops auto-import from adding a duplicate `:require` for a namespace already imported with backslashes.
+
+### Performance
+
+- **Semantic tokens and unused-local hints are ~14x faster**, 591 ms → 43 ms on phel's own 56 KB `test.phel`. Both run the scope analyzer on every edit, and `resolveLocalAt` re-parsed the whole document once per candidate occurrence — hundreds of full parses per keystroke. The parse is now memoised on the source string, and the per-name occurrence scan alongside it (410 bindings share 158 distinct names in that file, so each scan was repeated two to three times). Both caches are keyed on the source text, so a stale buffer cannot be served; tests cover switching sources and cold-vs-warm results.
+
+### Docs
+
+- README feature list refreshed. It had drifted well behind the extension: it still described paredit as "slurp / barf / raise / wrap, sexp selection" (0.11 added drag / splice / kill, folding and native expand-selection), listed snippets as "`defn`, `let`, `cond`, `try`, `deftest`, `->`, …" when there are 60, and never mentioned scope-aware navigation, semantic highlighting, unused-local hints, the refactorings, or the outline coverage. Now grounded in the actual contributions in `package.json`.
+
 ### Internal
 
+- **De-duplicated the provider boilerplate**, net −28 lines. The Phel symbol-token regex existed as seven byte-identical copies (so the gensym change earlier in this release would have needed seven edits to stay consistent); it now lives in `phelSymbolToken.ts` with tests pinning what it matches. The `combineDocs(indexer, PHEL_DOCS)` merge and the `MarkdownString` + `isTrusted`/`supportHtml` construction each had five copies and are now `mergedDocs()` and `plainMarkdown()` in `phelProviderSupport.ts`. Behaviour is unchanged.
 - Grammar coverage is pinned by `src/test/grammar.test.ts`, which tokenizes with the same `vscode-textmate` engine VS Code ships and asserts scopes, so a grammar regression fails `npm test` instead of needing a manual read of `npm run tokenize`.
 - `scripts/sample.phel` used `0o17`, which is not valid Phel (octal is the leading-zero `017`); fixed and extended with the newly covered literal forms.
 - `npm run pretest` now also runs `format:check`, so a Prettier violation fails locally (before commit) instead of only in CI.
