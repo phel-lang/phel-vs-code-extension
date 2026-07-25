@@ -20,6 +20,7 @@ import { XdebugBreakpointRegistry } from './xdebugBreakpointRegistry';
 import { XdebugPendingCommands } from './xdebugPendingCommands';
 import { DbgpMessageReader } from './dbgpMessageReader';
 import { decodeDbgpCdata } from './dbgpValueDecoder';
+import { parseBreakpointSetResponse } from './xdebugResponse';
 
 interface PhelLaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
     program?: string;
@@ -1066,19 +1067,14 @@ export class PhelDebugSession extends LoggingDebugSession {
             n: line.toString(),
         });
 
-        const idMatch = response.match(/id="(\d+)"/);
-        const resolvedMatch = response.match(/resolved="(\d+)"/);
-        const stateMatch = response.match(/state="([^"]+)"/);
+        const result = parseBreakpointSetResponse(response);
 
-        const resolved = resolvedMatch ? resolvedMatch[1] === '1' : false;
-        const state = stateMatch ? stateMatch[1] : 'unknown';
-
-        if (idMatch && sourcePath) {
+        if (result.id && sourcePath) {
             // Remember it so the next `setBreakpoints` for this file can clear it.
-            this.xdebugBreakpointIds.record(sourcePath, idMatch[1]);
+            this.xdebugBreakpointIds.record(sourcePath, result.id);
         }
 
-        return idMatch !== null && (resolved || state === 'enabled');
+        return result.ok;
     }
 
     /**
