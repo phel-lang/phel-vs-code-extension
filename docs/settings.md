@@ -9,7 +9,7 @@ The extension shells out to the Phel CLI for diagnostics, formatting, the test r
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `phel.executablePath` | string | `vendor/bin/phel` | Workspace-wide CLI path. Used by all subsystems unless overridden. Relative paths resolve against the workspace folder; absolute paths are used as-is. |
-| `phel.diagnostics.command` | string | `""` | Override `phel.executablePath` for `phel analyze`. Empty string → fall back to `phel.executablePath`. |
+| `phel.diagnostics.command` | string | `""` | Override `phel.executablePath` for `phel lint` / `phel analyze`. Empty string → fall back to `phel.executablePath`. |
 | `phel.format.command` | string | `""` | Override `phel.executablePath` for `phel format`. Empty string → fall back to `phel.executablePath`. |
 | `phel.test.command` | string | `""` | Override `phel.executablePath` for the test CodeLens / Test Explorer. Empty string → fall back to `phel.executablePath`. |
 | `phel.repl.command` | string | `""` | Override `phel.executablePath` for the REPL terminal. Empty string → fall back to `phel.executablePath`. |
@@ -53,7 +53,8 @@ The default CLI for everything is `bin/phel`, but the test runner uses a wrapper
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `phel.diagnostics.enabled` | boolean | `true` | Run `phel analyze` on save and surface inline diagnostics. |
+| `phel.diagnostics.enabled` | boolean | `true` | Run the diagnostics engine on open/save and surface inline diagnostics. |
+| `phel.diagnostics.engine` | `auto` \| `lint` \| `analyze` | `auto` | Which CLI subcommand backs diagnostics. See [Diagnostics engine](#diagnostics-engine). |
 | `phel.format.enabled` | boolean | `true` | Use `phel format` as the document formatter. |
 | `phel.tests.codeLensEnabled` | boolean | `true` | Show inline `▶ Run test` CodeLens above each `deftest`. |
 | `phel.paredit.enabled` | boolean | `true` | Register paredit commands (slurp / barf / raise / wrap). |
@@ -97,3 +98,21 @@ Reader conditionals carry a `meta.reader-conditional.phel` scope so themes can d
 ```
 
 The full scope vocabulary used by the grammar lives in [docs/syntax.md](syntax.md).
+
+## Diagnostics engine
+
+`phel lint` reports everything `phel analyze` does **plus** rule-based findings — unused bindings, shadowed bindings, arity problems, and whatever `phel-lint.phel` configures. On a file with one undefined symbol and one unused binding, `analyze` reports 1 diagnostic and `lint` reports 2.
+
+`lint` arrived after `analyze`, so the default is `auto`: use `lint`, and if the CLI rejects the subcommand (an older Phel), fall back to `analyze` and remember that for the session. Changing the executable or this setting retries `lint`.
+
+| Value | Behaviour |
+|---|---|
+| `auto` (default) | `phel lint`, falling back to `phel analyze` on an older CLI |
+| `lint` | Always `phel lint --format=json` |
+| `analyze` | Always `phel analyze` — semantic errors for the single file only |
+
+A non-zero exit is expected from both: they exit 1 when they found errors and still print the diagnostics.
+
+### Phel: Lint Workspace
+
+`phel lint` also walks the configured source dirs, so the **Phel: Lint Workspace** command runs it over the whole project and populates the Problems panel for every file — including ones never opened in the editor. On-save diagnostics stay scoped to the file you saved.

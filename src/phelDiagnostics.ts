@@ -68,6 +68,44 @@ export function parsePhelAnalyzeOutput(stdout: string): PhelDiagnostic[] {
     return out;
 }
 
+/**
+ * Group diagnostics by the file they belong to. `phel lint` accepts whole
+ * directories and reports on every file it walked, so a run has to be split
+ * before it can be handed to a `DiagnosticCollection` per URI.
+ *
+ * Entries without a `uri` fall under `fallbackUri`, which the caller sets to
+ * the file it asked about.
+ */
+export function groupDiagnosticsByUri(
+    diagnostics: readonly PhelDiagnostic[],
+    fallbackUri?: string
+): Map<string, PhelDiagnostic[]> {
+    const out = new Map<string, PhelDiagnostic[]>();
+    for (const diag of diagnostics) {
+        const uri = diag.uri || fallbackUri;
+        if (!uri) {
+            continue;
+        }
+        const bucket = out.get(uri);
+        if (bucket) {
+            bucket.push(diag);
+        } else {
+            out.set(uri, [diag]);
+        }
+    }
+    return out;
+}
+
+/**
+ * True when the CLI rejected the subcommand itself rather than the file —
+ * a Phel older than the one that introduced `phel lint`. Symfony Console
+ * writes `Command "lint" is not defined.` to stderr, exits non-zero, and
+ * produces no stdout.
+ */
+export function isUnknownCommandError(stderr: string): boolean {
+    return /Command ".*" is not defined/i.test(stderr);
+}
+
 function normaliseEntry(raw: unknown): PhelDiagnostic | null {
     if (!raw || typeof raw !== 'object') {
         return null;
