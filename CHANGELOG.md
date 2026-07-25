@@ -69,6 +69,8 @@
 
 ### Docs
 
+- `docs/debugging.md` explains why a debug session connects **twice**: Phel re-executes its own PHP process on startup for the opcache file cache, so the launcher connects first and exits, and the replacement process is the one that runs your code and hits breakpoints. "Request completed. Waiting for next connection..." mid-run is normal rather than a failure. Traced against a live Xdebug session, which also confirmed the adapter's reconnect handling is what makes breakpoints work at all — and that the in-flight-command fix earlier in this release applies to every run, since the first connection always closes with `run` outstanding.
+
 - README feature list refreshed. It had drifted well behind the extension: it still described paredit as "slurp / barf / raise / wrap, sexp selection" (0.11 added drag / splice / kill, folding and native expand-selection), listed snippets as "`defn`, `let`, `cond`, `try`, `deftest`, `->`, …" when there are 60, and never mentioned scope-aware navigation, semantic highlighting, unused-local hints, the refactorings, or the outline coverage. Now grounded in the actual contributions in `package.json`.
 
 ### Internal
