@@ -13,7 +13,28 @@ import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
 const NAMESPACE_RE = /\((?:ns|in-ns)\s+([A-Za-z][\w.-]*)/;
 
-function symbolKindFor(kind: PhelDocKind): vscode.SymbolKind {
+/** Icons for the forms whose `kind` is too coarse to distinguish them. */
+const SYMBOL_KIND_BY_FORM: Record<string, vscode.SymbolKind> = {
+    defstruct: vscode.SymbolKind.Struct,
+    defrecord: vscode.SymbolKind.Struct,
+    deftype: vscode.SymbolKind.Struct,
+    defprotocol: vscode.SymbolKind.Interface,
+    definterface: vscode.SymbolKind.Interface,
+    defenum: vscode.SymbolKind.Enum,
+    defexception: vscode.SymbolKind.Class,
+    deftest: vscode.SymbolKind.Event,
+    defonce: vscode.SymbolKind.Constant,
+};
+
+function symbolKindFor(doc: Pick<PhelDoc, 'kind' | 'form'>): vscode.SymbolKind {
+    const byForm = doc.form ? SYMBOL_KIND_BY_FORM[doc.form] : undefined;
+    if (byForm !== undefined) {
+        return byForm;
+    }
+    return symbolKindForKind(doc.kind);
+}
+
+function symbolKindForKind(kind: PhelDocKind): vscode.SymbolKind {
     switch (kind) {
         case 'fn':
             return vscode.SymbolKind.Function;
@@ -60,7 +81,7 @@ function buildDocumentSymbol(doc: PhelDoc, document: vscode.TextDocument): vscod
     return new vscode.DocumentSymbol(
         doc.name,
         detailFor(doc),
-        symbolKindFor(doc.kind),
+        symbolKindFor(doc),
         range,
         new vscode.Range(start, start.translate(0, doc.name.length))
     );
@@ -82,7 +103,7 @@ export class PhelWorkspaceSymbolProvider implements vscode.WorkspaceSymbolProvid
             out.push(
                 new vscode.SymbolInformation(
                     doc.name,
-                    symbolKindFor(doc.kind),
+                    symbolKindFor(doc),
                     doc.ns,
                     new vscode.Location(vscode.Uri.file(doc.sourceFile), pos)
                 )

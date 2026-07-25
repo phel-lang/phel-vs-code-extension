@@ -45,7 +45,25 @@ A form whose binding shape is not recognised yields no locals at all and falls b
 
 ## Document Outline & Breadcrumbs
 
-Every public form (`defn`, `defmacro`, `def`) shows up in the editor outline (`cmd+shift+O`) with its first arity signature as the detail.
+Every top-level defining form shows up in the editor outline (`cmd+shift+O`) with its first arity signature as the detail, and each gets an icon matching what it defines:
+
+| Form | Icon |
+|---|---|
+| `defn`, `defn-`, `defmulti` | Function |
+| `defmacro`, `defmacro-` | Method |
+| `def`, `def-` | Variable |
+| `defonce` | Constant |
+| `defstruct`, `defrecord`, `deftype` | Struct |
+| `defprotocol`, `definterface` | Interface |
+| `defenum` | Enum |
+| `defexception` | Class |
+| `deftest` | Event |
+
+The struct-like forms carry their field vector as a signature, because that vector *is* the positional constructor — `(defrecord Circle [r] …)` shows as `(Circle r)`.
+
+`declare` is not listed: it forward-declares names that a real defining form supplies later in the same file, so indexing it would show every such symbol twice.
+
+The same set drives "Go to Symbol in Workspace", cross-file completion, and go-to-definition — so a record or protocol defined in one file is now reachable from another.
 
 ## Go to Symbol in Workspace (`cmd+T`)
 

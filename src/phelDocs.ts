@@ -26,6 +26,13 @@ export interface PhelDoc {
     qualifiedName: string;
     /** What kind of form introduced this binding. */
     kind: PhelDocKind;
+    /**
+     * The operator that introduced it, e.g. `defn`, `defrecord`, `deftest`.
+     * Finer-grained than `kind`, which the symbol corpus keeps to three values;
+     * used for outline icons. Absent on corpus entries generated before this
+     * field existed.
+     */
+    form?: string;
     /** Whether the form is private (`defn-`, `defmacro-`, `def-`). */
     private: boolean;
     /** First arity signature, e.g. `(assoc m k v)`; undefined for plain `def`. */
@@ -100,6 +107,21 @@ export function parsePhelFile(source: string, ns: string): PhelDoc[] {
     return docs;
 }
 
+/**
+ * Every top-level form that introduces a name.
+ *
+ * `kind` stays the three-way split the symbol corpus records; `form` keeps the
+ * operator that introduced the name so the outline can pick a precise icon
+ * without widening `PhelDocKind` (which `MACROS` / `CORE_FNS` filter on).
+ *
+ * The struct-like forms are `fn` rather than `def` because each one defines a
+ * positional constructor, and their field vector is that constructor's
+ * signature — exactly what the signature scan already extracts.
+ *
+ * `declare` is deliberately absent: it forward-declares names that a real
+ * defining form supplies later in the same file, so indexing it would double
+ * every declared symbol in the outline and the workspace picker.
+ */
 const DEFINING_OPS: Record<string, { kind: PhelDocKind; private: boolean }> = {
     defn: { kind: 'fn', private: false },
     'defn-': { kind: 'fn', private: true },
@@ -107,6 +129,16 @@ const DEFINING_OPS: Record<string, { kind: PhelDocKind; private: boolean }> = {
     'defmacro-': { kind: 'macro', private: true },
     def: { kind: 'def', private: false },
     'def-': { kind: 'def', private: true },
+    defonce: { kind: 'def', private: false },
+    defstruct: { kind: 'fn', private: false },
+    defrecord: { kind: 'fn', private: false },
+    deftype: { kind: 'fn', private: false },
+    defmulti: { kind: 'fn', private: false },
+    deftest: { kind: 'fn', private: false },
+    defprotocol: { kind: 'def', private: false },
+    definterface: { kind: 'def', private: false },
+    defenum: { kind: 'def', private: false },
+    defexception: { kind: 'def', private: false },
 };
 
 /**
@@ -149,6 +181,7 @@ function parseDefiningForm(
         ns,
         qualifiedName: `${ns}/${nameSlice.value}`,
         kind: meta.kind,
+        form: op.value,
         private: meta.private,
     };
 

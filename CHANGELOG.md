@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Symbols & navigation
+
+- **Ten more defining forms are indexed.** The parser behind the outline, "Go to Symbol in Workspace", cross-file completion, auto-import and go-to-definition recognised only `defn` / `defn-` / `defmacro` / `defmacro-` / `def` / `def-`. It now also reads `defonce`, `defstruct`, `defrecord`, `deftype`, `defprotocol`, `definterface`, `defenum`, `defexception`, `defmulti` and `deftest` — so a file of records, protocols or tests is no longer nearly invisible (a 14-definition sample produced 2 symbols before, 12 now), and those names resolve across files.
+- Struct-like forms carry their field vector as a signature, because that vector is the positional constructor: `(defrecord Circle [r] Shape (area [this] 1))` shows as `(Circle r)`, with the method tail correctly not read as a second arity.
+- Outline entries now pick an icon per form — Struct for `defrecord`, Interface for `defprotocol`, Enum for `defenum`, Event for `deftest`, and so on — via a new `form` field on `PhelDoc` that records the defining operator. `PhelDocKind` keeps its three values, so the `MACROS` / `CORE_FNS` projections are unchanged.
+- `declare` stays unindexed on purpose: it forward-declares names a real defining form supplies later in the same file, so indexing it would list every declared symbol twice.
+- Note for the next `npm run regen-docs`: the corpus generator shares this parser, so a regen will pick up the `phel.html` / `phel.http` / `phel.router` structs and add `form` to every entry. No `phel.core` symbol changes, so `CORE_FNS` and `MACROS` are unaffected.
+
 ### Completion
 
 - **`alias/…` completes.** After `(:require [phel.string :as str])`, typing `str/` now offers every public symbol of that namespace with its docs. Hover, go-to-definition and signature help already resolved alias-qualified symbols; completion offered nothing, because every candidate label is a bare name.
