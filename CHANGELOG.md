@@ -8,6 +8,10 @@
 - The grammar had the same split: `a'` highlighted as the symbol `a` followed by a quote reader macro. An apostrophe now stays inside the symbol in any position but the first, and a leading `'` is still the quote macro.
 - Word selection splits the quote macro off what it quotes: the word at `'sym` and `#'sym` is now `sym`, so hover and go-to-definition resolve a quoted symbol instead of looking up `'sym` and finding nothing.
 
+### Performance
+
+- **Semantic tokens and unused-local hints are ~14x faster**, 591 ms → 43 ms on phel's own 56 KB `test.phel`. Both run the scope analyzer on every edit, and `resolveLocalAt` re-parsed the whole document once per candidate occurrence — hundreds of full parses per keystroke. The parse is now memoised on the source string, and the per-name occurrence scan alongside it (410 bindings share 158 distinct names in that file, so each scan was repeated two to three times). Both caches are keyed on the source text, so a stale buffer cannot be served; tests cover switching sources and cold-vs-warm results.
+
 ### Docs
 
 - README feature list refreshed. It had drifted well behind the extension: it still described paredit as "slurp / barf / raise / wrap, sexp selection" (0.11 added drag / splice / kill, folding and native expand-selection), listed snippets as "`defn`, `let`, `cond`, `try`, `deftest`, `->`, …" when there are 60, and never mentioned scope-aware navigation, semantic highlighting, unused-local hints, the refactorings, or the outline coverage. Now grounded in the actual contributions in `package.json`.

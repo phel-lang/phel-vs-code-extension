@@ -321,3 +321,34 @@ describe('phelScope.findUnusedLocals', () => {
         assert.deepEqual(findUnusedLocals(src), []);
     });
 });
+
+describe('phelScope caching', () => {
+    // The analyzer memoises the parse and the per-name occurrence scan so a
+    // semantic-tokens pass does not re-parse the document once per occurrence.
+    // Both caches are keyed on the source string, so switching sources must
+    // never serve a stale answer.
+    it('does not serve results from a previous source', () => {
+        const first = '(defn f [alpha] (+ alpha 1))';
+        const second = '(defn g [beta] (+ beta 2))';
+
+        const a1 = resolveLocalAt(first, idx(first, 'alpha', 1));
+        assert.equal(a1?.name, 'alpha');
+
+        const b = resolveLocalAt(second, idx(second, 'beta', 1));
+        assert.equal(b?.name, 'beta');
+
+        // Back to the first source: still correct, not a leftover from the second.
+        const a2 = resolveLocalAt(first, idx(first, 'alpha', 1));
+        assert.deepEqual(a2, a1);
+    });
+
+    it('returns the same occurrences whether or not the cache is warm', () => {
+        const src = '(let [x 1] (+ x x))';
+        const binding = resolveLocalAt(src, idx(src, 'x', 0));
+        assert.ok(binding);
+        const cold = localOccurrences(src, binding).map((o) => o.start);
+        const warm = localOccurrences(src, binding).map((o) => o.start);
+        assert.deepEqual(warm, cold);
+        assert.equal(cold.length, 3);
+    });
+});
