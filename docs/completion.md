@@ -10,6 +10,26 @@ The extension ships a static `CompletionItemProvider` for the `phel` language. I
 
 The provider respects the word range so `defn|` completes correctly without duplicating the prefix.
 
+### Context-aware candidate lists
+
+Two positions get their own, much smaller list instead of the flat core one:
+
+**`alias/…`** — after `(:require [phel.string :as str])`, typing `str/` offers every public symbol of `phel.string`, labelled `str/blank?`, with its docstring. Both `:require` shapes are understood, and both namespace separators:
+
+```phel
+(:require [phel.string :as str])   ;; vector entry
+(:require phel.string :as str)     ;; flat entry
+(:require phel\string :as str)     ;; backslash separator, normalised to phel.string
+```
+
+**Inside `(ns …)`** — core symbols are noise there, so the provider offers:
+
+| Position | Candidates |
+|---|---|
+| Directly inside `(ns …)` | `:require`, `:use`, `:require-file` |
+| Inside `(:require …)` | Every namespace in the corpus or workspace, minus this file's own and the ones already required |
+| Inside a `[some.ns …]` entry | `:as`, `:refer` |
+
 ### Bundled providers vs. the language server
 
 These bundled providers are the zero-config default: they work offline, with no extra process or warmup, and cover ~80% of the daily friction.

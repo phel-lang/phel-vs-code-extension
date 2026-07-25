@@ -94,6 +94,15 @@ function atomText(src: string, atom: Form): string {
     return src.slice(atom.start, atom.end);
 }
 
+/**
+ * Namespaces are written with either separator — `phel\string` is what Phel's
+ * own sources use, `phel.string` is what the compiler normalises them to and
+ * what the symbol corpus records. Compare and look up on the dotted form.
+ */
+export function normalizeNs(text: string): string {
+    return text.replace(/\\/g, '.');
+}
+
 function findRequireClause(src: string, ns: Form): RequireClause | null {
     for (const child of ns.children) {
         if (child.kind !== 'list' || child.children.length === 0) {
@@ -109,10 +118,78 @@ function findRequireClause(src: string, ns: Form): RequireClause | null {
         return {
             start: child.start,
             end: child.end,
-            entries: child.children.slice(1).map((entry) => parseRequireEntry(src, entry)),
+            entries: parseRequireEntries(src, child.children.slice(1)),
         };
     }
     return null;
+}
+
+/**
+ * Walk a `(:require …)` body the way the compiler's `NsSymbol` does: a vector
+ * is a self-contained entry, while a bare symbol opens a *flat* entry whose
+ * `:as` / `:refer` options follow as siblings until the next symbol or vector.
+ * Both shapes are legal, and several flat entries may share one clause.
+ */
+function parseRequireEntries(src: string, children: Form[]): RequireEntry[] {
+    const out: RequireEntry[] = [];
+    let i = 0;
+    while (i < children.length) {
+        const child = children[i];
+        if (child.kind === 'vector') {
+            out.push(parseRequireEntry(src, child));
+            i++;
+            continue;
+        }
+        if (child.kind !== 'atom' || atomText(src, child).startsWith(':')) {
+            i++; // stray option with no entry to attach to
+            continue;
+        }
+        out.push(parseFlatRequireEntry(src, children, i));
+        i++;
+        while (i < children.length) {
+            const option = children[i];
+            if (option.kind !== 'atom' || !atomText(src, option).startsWith(':')) {
+                break;
+            }
+            i += 2; // the option keyword plus its argument
+        }
+    }
+    return out;
+}
+
+/** `some.ns :as alias :refer [a b]` written flat inside the clause. */
+function parseFlatRequireEntry(src: string, children: Form[], start: number): RequireEntry {
+    const nsAtom = children[start];
+    const entry: RequireEntry = {
+        start: nsAtom.start,
+        end: nsAtom.end,
+        ns: normalizeNs(atomText(src, nsAtom)),
+        refer: [],
+    };
+    for (let i = start + 1; i < children.length; i++) {
+        const option = children[i];
+        if (option.kind !== 'atom') {
+            break;
+        }
+        const text = atomText(src, option);
+        if (!text.startsWith(':')) {
+            break;
+        }
+        const next = children[i + 1];
+        if (text === ':as' && next?.kind === 'atom') {
+            entry.as = atomText(src, next);
+        } else if (text === ':refer' && next?.kind === 'vector') {
+            entry.refer = next.children
+                .filter((c) => c.kind === 'atom')
+                .map((c) => atomText(src, c));
+            entry.referVector = { start: next.start, end: next.end };
+        }
+        if (next) {
+            entry.end = next.end;
+            i++;
+        }
+    }
+    return entry;
 }
 
 function parseRequireEntry(src: string, entry: Form): RequireEntry {
@@ -120,7 +197,7 @@ function parseRequireEntry(src: string, entry: Form): RequireEntry {
         return {
             start: entry.start,
             end: entry.end,
-            ns: atomText(src, entry),
+            ns: normalizeNs(atomText(src, entry)),
             refer: [],
         };
     }
@@ -133,7 +210,7 @@ function parseRequireEntry(src: string, entry: Form): RequireEntry {
         };
     }
     const nsAtom = entry.children[0];
-    const ns = nsAtom.kind === 'atom' ? atomText(src, nsAtom) : '';
+    const ns = nsAtom.kind === 'atom' ? normalizeNs(atomText(src, nsAtom)) : '';
     let refer: string[] = [];
     let referVector: { start: number; end: number } | undefined;
     let as: string | undefined;
