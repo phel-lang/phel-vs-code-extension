@@ -211,6 +211,50 @@ describe('phelScope binding forms', () => {
         assert.deepEqual(occStarts(src, idx(src, 'a', 3)), [idx(src, 'a', 3), idx(src, 'a', 4)]);
     });
 
+    it('binds protocol-method parameters in a defrecord tail', () => {
+        const src = '(defrecord P [w] G (draw [obj c] (paint obj c)))';
+        assert.deepEqual(occStarts(src, idx(src, 'obj', 1)), [
+            idx(src, 'obj', 0),
+            idx(src, 'obj', 1),
+        ]);
+    });
+
+    it('leaves defrecord fields as struct keys, not locals', () => {
+        // `w` is reached with `get` / destructuring, never as a local.
+        const src = '(defrecord P [w] G (draw [obj] obj))';
+        assert.equal(resolveLocalAt(src, idx(src, 'w', 0)), null);
+    });
+
+    it('binds reify and extend-type method parameters', () => {
+        const reified = '(reify G (draw [obj] (paint obj)))';
+        assert.deepEqual(occStarts(reified, idx(reified, 'obj', 1)), [
+            idx(reified, 'obj', 0),
+            idx(reified, 'obj', 1),
+        ]);
+        const extended = '(extend-type :string G (to-str [v] (up v)))';
+        assert.deepEqual(occStarts(extended, idx(extended, 'v', 1)), [
+            idx(extended, 'v', 0),
+            idx(extended, 'v', 1),
+        ]);
+    });
+
+    it('binds defmethod parameters after the dispatch value', () => {
+        const src = '(defmethod area :circle [z] (* z z))';
+        assert.deepEqual(occStarts(src, idx(src, 'z', 1)), [
+            idx(src, 'z', 0),
+            idx(src, 'z', 1),
+            idx(src, 'z', 2),
+        ]);
+    });
+
+    it('does not bind defprotocol signature parameters', () => {
+        // A signature has no body, so its names are declarations, not locals —
+        // binding them would report every one as an unused local.
+        const src = '(defprotocol G (draw [obj c]))';
+        assert.equal(resolveLocalAt(src, idx(src, 'obj', 0)), null);
+        assert.deepEqual(findUnusedLocals(src), []);
+    });
+
     it('leaves with-redefs targets as globals', () => {
         // `foo` is an existing var being temporarily rebound, not a new local:
         // renaming it must stay a workspace-wide rename.

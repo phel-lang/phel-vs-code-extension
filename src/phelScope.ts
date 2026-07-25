@@ -51,6 +51,20 @@ const SEQ_VERBS = new Set([':range', ':in', ':keys', ':pairs']);
 const FN_HEADS = new Set(['fn', 'defn', 'defn-', 'defmacro', 'defmacro-']);
 /** Sequential-iteration forms: `(head [var … coll] body…)`. */
 const SEQ_HEADS = new Set(['for', 'doseq', 'dofor']);
+/**
+ * Forms carrying a tail of protocol-method *implementations*,
+ * `(method-name [params] body…)`. `defprotocol` / `definterface` are absent on
+ * purpose: their method forms are signatures with no body, so their parameter
+ * names are not locals and must not be reported as unused.
+ */
+const METHOD_IMPL_HEADS = new Set([
+    'defrecord',
+    'deftype',
+    'extend-type',
+    'extend-protocol',
+    'reify',
+    'reify*',
+]);
 
 function atomText(src: string, form: Form): string {
     return src.slice(form.bodyStart, form.bodyEnd);
@@ -264,6 +278,16 @@ function bindingsOf(src: string, form: Form): LocalBinding[] {
         return letfnBindings(src, form, bodyEnd);
     }
 
+    if (METHOD_IMPL_HEADS.has(name)) {
+        return methodImplBindings(src, form);
+    }
+
+    if (name === 'defmethod') {
+        // (defmethod multi-name dispatch-val [params] body…) — the fn tail
+        // starts after the dispatch value.
+        return fnTailBindings(src, form, 3, form.innerEnd);
+    }
+
     if (FN_HEADS.has(name)) {
         return fnBindings(src, form, name);
     }
@@ -412,30 +436,68 @@ function fnBindings(src: string, form: Form, head: string): LocalBinding[] {
         i++; // skip the def name
     }
 
-    const addArity = (paramVec: Form, scopeEnd: number): void => {
+    out.push(...fnTailBindings(src, form, i, form.innerEnd));
+    return out;
+}
+
+/**
+ * Parameter bindings for an `fn` tail — everything from `children[start]` on,
+ * which is either `[params] body…` or a run of `([params] body…)` arities.
+ */
+function fnTailBindings(src: string, form: Form, start: number, scopeEnd: number): LocalBinding[] {
+    const out: LocalBinding[] = [];
+    const rest = form.children.slice(start);
+
+    const addArity = (paramVec: Form, end: number): void => {
         for (const t of collectTargets(src, paramVec)) {
             out.push({
                 name: t.name,
                 declStart: t.start,
                 declEnd: t.end,
                 scopeStart: paramVec.end,
-                scopeEnd,
+                scopeEnd: end,
                 param: true,
             });
         }
     };
 
-    // Single-arity: the first vector child is the parameter list.
-    const directVec = kids.slice(i).find((c) => c.kind === 'vector');
+    // Single-arity: the first vector is the parameter list.
+    const directVec = rest.find((c) => c.kind === 'vector');
     if (directVec) {
-        addArity(directVec, form.innerEnd);
+        addArity(directVec, scopeEnd);
         return out;
     }
     // Multi-arity: each `([params] body…)` list is its own scope.
-    for (const arity of kids.slice(i)) {
+    for (const arity of rest) {
         if (arity.kind === 'list' && arity.children[0]?.kind === 'vector') {
             addArity(arity.children[0], arity.innerEnd);
         }
+    }
+    return out;
+}
+
+/**
+ * Parameters of the protocol-method implementations in a `defrecord` /
+ * `deftype` / `extend-type` / `extend-protocol` / `reify` tail. Each
+ * `(method-name [params] body…)` list is its own scope.
+ *
+ * A method form with no body is a *signature*, not an implementation, so its
+ * parameters bind nothing — that keeps `defprotocol`-style declarations out of
+ * the unused-local hints even when they appear in one of these tails.
+ *
+ * The field vector of `defrecord` / `deftype` is not a binding: those fields
+ * are struct keys, reached with `get` or destructuring, not locals in scope.
+ */
+function methodImplBindings(src: string, form: Form): LocalBinding[] {
+    const out: LocalBinding[] = [];
+    for (const spec of form.children.slice(1)) {
+        if (spec.kind !== 'list' || spec.children.length < 3) {
+            continue;
+        }
+        if (!isAtom(spec.children[0]) || spec.children[1].kind !== 'vector') {
+            continue;
+        }
+        out.push(...fnTailBindings(src, spec, 1, spec.innerEnd));
     }
     return out;
 }
