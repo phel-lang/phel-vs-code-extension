@@ -8,6 +8,10 @@
 - The grammar had the same split: `a'` highlighted as the symbol `a` followed by a quote reader macro. An apostrophe now stays inside the symbol in any position but the first, and a leading `'` is still the quote macro.
 - Word selection splits the quote macro off what it quotes: the word at `'sym` and `#'sym` is now `sym`, so hover and go-to-definition resolve a quoted symbol instead of looking up `'sym` and finding nothing.
 
+### Docs
+
+- README feature list refreshed. It had drifted well behind the extension: it still described paredit as "slurp / barf / raise / wrap, sexp selection" (0.11 added drag / splice / kill, folding and native expand-selection), listed snippets as "`defn`, `let`, `cond`, `try`, `deftest`, `->`, …" when there are 60, and never mentioned scope-aware navigation, semantic highlighting, unused-local hints, the refactorings, or the outline coverage. Now grounded in the actual contributions in `package.json`.
+
 ### Internal
 
 - **De-duplicated the provider boilerplate**, net −28 lines. The Phel symbol-token regex existed as seven byte-identical copies (so the gensym change earlier in this release would have needed seven edits to stay consistent); it now lives in `phelSymbolToken.ts` with tests pinning what it matches. The `combineDocs(indexer, PHEL_DOCS)` merge and the `MarkdownString` + `isTrusted`/`supportHtml` construction each had five copies and are now `mergedDocs()` and `plainMarkdown()` in `phelProviderSupport.ts`. Behaviour is unchanged.

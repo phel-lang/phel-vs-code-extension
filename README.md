@@ -14,17 +14,21 @@ VS Code support for [Phel](https://phel-lang.org/), a functional Lisp that compi
 
 ## Features
 
-- **Highlighting** for forms, macros, reader macros, tagged literals, and reader conditionals.
-- **Language server** (`phel lsp`, opt-in via `phel.lsp.enabled`): completion, hover, signature help, go-to-definition, find references, rename, symbols, formatting, and diagnostics straight from the Phel compiler — including PHP-interop intelligence for `php/->`, `php/::`, and `php/new`. Off by default; enable it once your Phel ships a stable server (older `phel lsp` builds exit on idle, in which case the extension falls back to its bundled providers).
-- **Go to / Find / Rename** (`F12`, `shift+F12`, `F2`, `cmd+T`).
-- **Diagnostics** and **format** on save.
+- **Highlighting** for every literal the Phel reader accepts — characters (`\A`, `\space`, `\u00e9`), regex literals (`#"…"`), radix / BigInt / BigDecimal / ratio numbers (`16rFF`, `123N`, `1.5M`, `3/4`), symbolic numbers (`##Inf`, `##NaN`), gensyms (`x#`), prime-suffixed names (`a'`), tagged literals including namespaced ones (`#my.app/Person`), reader conditionals, and metadata tags.
+- **Scope-aware navigation.** Go-to-definition, find-references, rename, document-highlight, hover and signature help resolve a *local* to its own binding, so renaming a parameter never touches a same-named global. Covers `fn` / `let` / `loop` / `binding` / `for` / `doseq` / `foreach` / `letfn` / `as->` / `catch`, destructuring, and protocol-method parameters.
+- **Semantic highlighting** of parameters and locals, plus faded **unused-local** hints.
+- **Completion** over special forms, macros, core functions, and workspace symbols, with docs and call snippets. Understands `alias/…` after a `:require`, and the `(ns …)` form itself — clause heads, requirable namespaces, `:as` / `:refer`, and the names inside a `:refer` vector. Accepting a workspace symbol can auto-add its `:require`.
+- **Outline & workspace symbols** for every defining form — `defn`, `def`, `defmacro`, `defstruct`, `defrecord`, `deftype`, `defprotocol`, `definterface`, `defenum`, `defexception`, `defmulti`, `defonce`, `deftest` — each with a matching icon.
+- **Refactorings** (`Ctrl+.`): thread first / last, unwind thread, cycle collection delimiters, and add a missing `:require`.
+- **Diagnostics** backed by `phel lint` (falling back to `phel analyze` on older CLIs), plus a **Lint Workspace** command that fills the Problems panel for the whole project. **Format** on save via `phel format`.
+- **Language server** (`phel lsp`, opt-in via `phel.lsp.enabled`): the same features straight from the Phel compiler, including PHP-interop intelligence for `php/->`, `php/::`, and `php/new`. Off by default; enable it once your Phel ships a stable server (older `phel lsp` builds exit on idle, in which case the extension falls back to its bundled providers).
 - **REPL** in an integrated terminal with `(in-ns)` follow and history.
-- **nREPL client** (`phel nrepl`): structured eval results, reload changed namespaces, and run a namespace's tests or the test under the cursor against the live runtime.
+- **nREPL client** (`phel nrepl`): structured eval results, inline `=> …` results at the end of the form, reload changed namespaces, and run a namespace's tests or the test under the cursor against the live runtime.
 - **Test Explorer + CodeLens** for `deftest`, with per-test results and a **Run with Coverage** profile (`phel test --coverage=clover`, VS Code 1.88+).
-- **Paredit**: slurp / barf / raise / wrap, sexp selection.
+- **Paredit**: slurp / barf / raise / wrap, drag / splice / kill form, form-aware folding, and native expand-selection (`Shift+Alt+→`).
 - **Native debug adapter** with breakpoints in `.phel` files.
 - **CLI commands**: Doctor (`phel doctor`), Show Effective Configuration (`phel config`), Watch Tests, Build, and Init Project (with a template picker).
-- **Snippets** for `defn`, `let`, `cond`, `try`, `deftest`, `->`, …
+- **60 snippets** covering the binding, conditional, threading, protocol, and test forms.
 
 ## Install
 
