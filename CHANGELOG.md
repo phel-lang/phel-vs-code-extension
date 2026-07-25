@@ -2,9 +2,14 @@
 
 ## [Unreleased]
 
+### Fixed (prime-suffixed symbols)
+
+- **Renaming `a` corrupted `a'`.** The apostrophe was treated as a symbol terminator on both sides, so the leading `a` of `a'` looked like a complete token: find-references reported it, and rename rewrote it, leaving a stray `'`. `a'` and `foo''` are single symbols to the Phel lexer — verified by running one — and are now matched as such. Renaming *to* `a'` is allowed; a leading `'` is still rejected, because there it is the quote reader macro.
+- Word selection splits the quote macro off what it quotes: the word at `'sym` and `#'sym` is now `sym`, so hover and go-to-definition resolve a quoted symbol instead of looking up `'sym` and finding nothing.
+
 ### Internal
 
-- **De-duplicated the provider boilerplate**, net −28 lines. The Phel symbol-token regex existed as seven byte-identical copies (so the gensym change earlier in this release would have needed seven edits to stay consistent); it now lives in `phelSymbolToken.ts` with tests pinning what it matches, including the two long-standing apostrophe edges — a leading `'` is part of the token, a trailing one is not. The `combineDocs(indexer, PHEL_DOCS)` merge and the `MarkdownString` + `isTrusted`/`supportHtml` construction each had five copies and are now `mergedDocs()` and `plainMarkdown()` in `phelProviderSupport.ts`. Behaviour is unchanged.
+- **De-duplicated the provider boilerplate**, net −28 lines. The Phel symbol-token regex existed as seven byte-identical copies (so the gensym change earlier in this release would have needed seven edits to stay consistent); it now lives in `phelSymbolToken.ts` with tests pinning what it matches. The `combineDocs(indexer, PHEL_DOCS)` merge and the `MarkdownString` + `isTrusted`/`supportHtml` construction each had five copies and are now `mergedDocs()` and `plainMarkdown()` in `phelProviderSupport.ts`. Behaviour is unchanged.
 
 ### Diagnostics
 

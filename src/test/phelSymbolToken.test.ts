@@ -28,7 +28,7 @@ describe('PHEL_SYMBOL_RE', () => {
     };
 
     it('matches plain and punctuation-suffixed names', () => {
-        for (const token of ['map', 'blank?', 'swap!', 'my-fn', 'a1', 'x#']) {
+        for (const token of ['map', 'blank?', 'swap!', 'my-fn', 'a1', 'x#', "a'", "foo''"]) {
             assert.ok(whole(token), token);
         }
     });
@@ -57,11 +57,16 @@ describe('PHEL_SYMBOL_RE', () => {
         assert.equal(wordAt('a,b', 0), 'a');
     });
 
-    it('documents the two apostrophe edges', () => {
-        // Long-standing behaviour of the shared pattern, pinned so that
-        // changing it has to be deliberate rather than incidental.
-        assert.equal(wordAt("'sym", 1), "'sym", 'a leading quote is part of the token');
-        assert.equal(wordAt("(a' 1)", 1), 'a', 'a trailing quote is not');
+    it('splits the quote reader macro off the symbol it quotes', () => {
+        // `'sym` is a quote followed by `sym`, so the word is `sym`.
+        assert.equal(wordAt("'sym", 1), 'sym');
+        assert.equal(wordAt("#'sym", 2), 'sym');
+    });
+
+    it('keeps a mid or trailing apostrophe inside the symbol', () => {
+        // `a'` and `foo''` are single atoms to the lexer.
+        assert.equal(wordAt("(a' 1)", 1), "a'");
+        assert.equal(wordAt("(foo'' 1)", 1), "foo''");
     });
 
     it('keeps a gensym suffix in the token', () => {

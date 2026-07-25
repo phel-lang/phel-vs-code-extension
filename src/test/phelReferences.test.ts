@@ -68,3 +68,32 @@ describe('phelReferences.isValidSymbolName', () => {
         assert.equal(isValidSymbolName('"foo"'), false);
     });
 });
+
+describe('phelReferences apostrophe handling', () => {
+    it('does not match a bare name inside a prime-suffixed symbol', () => {
+        // Regression: `'` used to terminate a symbol on both sides, so the
+        // leading `a` of `a'` looked like a whole token and renaming `a`
+        // rewrote part of `a'`.
+        const src = "(def a' 41)\n(def a 1)\n(+ a' a)";
+        assert.deepEqual(offsets(findOccurrences(src, 'a')), [
+            src.indexOf('(def a 1)') + 5,
+            src.lastIndexOf('a'),
+        ]);
+    });
+
+    it('finds every occurrence of a prime-suffixed symbol', () => {
+        const src = "(def a' 41)\n(def a 1)\n(+ a' a)";
+        assert.deepEqual(offsets(findOccurrences(src, "a'")), [5, src.indexOf("a'", 12)]);
+    });
+
+    it('still finds a symbol that a quote reader macro precedes', () => {
+        const src = "(def sym 1)\n'sym";
+        assert.deepEqual(offsets(findOccurrences(src, 'sym')), [5, src.lastIndexOf('sym')]);
+    });
+
+    it('accepts a trailing apostrophe as a rename target but not a leading one', () => {
+        assert.equal(isValidSymbolName("a'"), true);
+        assert.equal(isValidSymbolName("foo''"), true);
+        assert.equal(isValidSymbolName("'sym"), false);
+    });
+});
