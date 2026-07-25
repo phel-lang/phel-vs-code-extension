@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as os from 'os';
+import * as fs from 'fs';
 import { SourceMapManager } from '../sourceMapManager';
 
 describe('SourceMapManager', function () {
@@ -175,5 +176,64 @@ describe('SourceMapManager namespace to filename', function () {
         // non-matching path that won't find anything in any cache
         const result = freshManager.findCompiledFile('/nonexistent-project/src/some/file.phel');
         assert.strictEqual(result, null);
+    });
+});
+
+describe('SourceMapManager cache-file resolution', function () {
+    // A compiled Phel file records the source it came from on its second line:
+    //   <?php
+    //   // /abs/path/to/source.phel
+    //   // ;;<mappings>
+    // Matching on that is the reliable lookup. It used to sit behind a
+    // heuristic that required the source to live in a directory called `src/`,
+    // so breakpoints never resolved in a project laid out any other way —
+    // `withSrcDirs` accepts any directory name.
+    let dir: string;
+
+    function writeCompiled(name: string, sourcePath: string): void {
+        fs.writeFileSync(
+            path.join(dir, name),
+            `<?php\n// ${sourcePath}\n// ;;AAAA\nnamespace demo\\core;\n`
+        );
+    }
+
+    beforeEach(function () {
+        dir = fs.mkdtempSync(path.join(os.tmpdir(), 'phel-smm-'));
+    });
+
+    afterEach(function () {
+        fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    it('resolves a source that lives outside a src/ directory', function () {
+        const source = path.join(dir, 'lib', 'core.phel');
+        writeCompiled('demo.core__abc123.php', source);
+
+        const m = new SourceMapManager();
+        m.addCacheDirectory(dir);
+        assert.strictEqual(
+            path.basename(m.findCompiledFile(source) ?? ''),
+            'demo.core__abc123.php'
+        );
+    });
+
+    it('still resolves the conventional src/ layout', function () {
+        const source = path.join(dir, 'proj', 'src', 'core.phel');
+        writeCompiled('demo.core__def456.php', source);
+
+        const m = new SourceMapManager();
+        m.addCacheDirectory(dir);
+        assert.strictEqual(
+            path.basename(m.findCompiledFile(source) ?? ''),
+            'demo.core__def456.php'
+        );
+    });
+
+    it('returns null when no compiled file references the source', function () {
+        writeCompiled('demo.core__abc123.php', path.join(dir, 'lib', 'core.phel'));
+
+        const m = new SourceMapManager();
+        m.addCacheDirectory(dir);
+        assert.strictEqual(m.findCompiledFile(path.join(dir, 'lib', 'other.phel')), null);
     });
 });
