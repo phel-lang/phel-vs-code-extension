@@ -51,6 +51,19 @@ export class SourceMapManager {
         if (!this.workspaceRoots.includes(root)) {
             this.workspaceRoots.push(root);
         }
+
+        // Phel caches compiled PHP under `<cache-dir>/compiled`, and its
+        // `cache-dir` defaults to `.phel/cache` *relative to the project root*
+        // (`PhelConfig::DEFAULT_CACHE_DIR`), overridable with `PHEL_CACHE_DIR`.
+        // Registering it here is what makes breakpoints bind without the user
+        // having to point `phel.cacheDirectory` at it by hand.
+        const envCacheDir = process.env.PHEL_CACHE_DIR;
+        const cacheRoot = envCacheDir
+            ? path.isAbsolute(envCacheDir)
+                ? envCacheDir
+                : path.join(root, envCacheDir)
+            : path.join(root, '.phel', 'cache');
+        this.addCacheDirectory(path.join(cacheRoot, 'compiled'));
     }
 
     /**
