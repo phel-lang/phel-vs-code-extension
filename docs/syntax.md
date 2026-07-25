@@ -44,6 +44,7 @@ The rest:
 - Regex literals: `#"^\d+$"` → `string.regexp.phel` (distinct from the `#regex "…"` tagged literal)
 - Collections: `[1 2]`, `{:a 1}`, `#{1 2}`, `'(a b)`, PHP arrays `@[1 2]` / `@{:a 1}`
 - Gensyms: a trailing `#` belongs to the symbol (`x#`), so `` `(let [x# ~x] …) `` highlights as code rather than opening a comment
+- Prime-suffixed names: an apostrophe belongs to the symbol in any position but the first (`a'`, `foo''`), while a leading `'` stays the quote reader macro (`'sym`)
 
 ## Anonymous functions
 
