@@ -6,6 +6,7 @@ import { buildRequireEdit, parseNsForm, type NsForm } from './phelNsAnalyzer';
 import {
     aliasQualifiedCandidates,
     completionContextAt,
+    referableNames,
     requirableNamespaces,
     NS_CLAUSES,
     NS_ENTRY_OPTIONS,
@@ -183,6 +184,17 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
                     const md = plainMarkdown(renderDocMarkdown(doc));
                     item.documentation = md;
                 }
+                if (range) {
+                    item.range = range;
+                }
+                return item;
+            });
+        }
+        // `:refer [ … ]` lists names from the entry's own namespace.
+        if (context.kind === 'ns-refer') {
+            return referableNames(context.ns, merged).map((name) => {
+                const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Function);
+                item.detail = `${context.ns}/${name}`;
                 if (range) {
                     item.range = range;
                 }

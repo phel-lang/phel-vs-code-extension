@@ -34,6 +34,7 @@
 ### Completion
 
 - **`alias/…` completes.** After `(:require [phel.string :as str])`, typing `str/` now offers every public symbol of that namespace with its docs. Hover, go-to-definition and signature help already resolved alias-qualified symbols; completion offered nothing, because every candidate label is a bare name.
+- **`:refer [ … ]` offers the namespace's own names.** Completing inside a refer vector suggested `:as` / `:refer` — the entry options — instead of the symbols being referred. It now lists the public names of the namespace on that entry, for both require shapes and either separator, and without mistaking an `:as` alias for the namespace.
 - **The `(ns …)` form gets its own candidates** instead of all 576 core symbols: `:require` / `:use` / `:require-file` directly inside `(ns …)`, the requirable namespaces inside a `(:require …)` clause, and `:as` / `:refer` inside an entry vector.
 
 ### Fixed
