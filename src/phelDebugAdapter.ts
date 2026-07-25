@@ -16,6 +16,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { SourceMapManager } from './sourceMapManager';
+import { XdebugBreakpointRegistry } from './xdebugBreakpointRegistry';
 
 interface PhelLaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
     program?: string;
@@ -55,6 +56,8 @@ export class PhelDebugSession extends LoggingDebugSession {
 
     private sourceMapManager: SourceMapManager;
     private breakpoints: Map<string, PhelBreakpoint[]> = new Map();
+    /** Xdebug breakpoint ids per source, so a later request can remove them. */
+    private readonly xdebugBreakpointIds = new XdebugBreakpointRegistry();
     private breakpointId = 1;
 
     // Path mappings for Docker/remote debugging
@@ -218,8 +221,11 @@ export class PhelDebugSession extends LoggingDebugSession {
             return;
         }
 
-        // Clear existing breakpoints for this file
+        // DAP sends the complete breakpoint list for a source on every call,
+        // so drop whatever the previous call installed before setting the new
+        // set — otherwise a removed breakpoint keeps stopping execution.
         this.breakpoints.delete(sourcePath);
+        await this.clearXdebugBreakpointsFor(sourcePath);
 
         const breakpoints: DebugProtocol.Breakpoint[] = [];
         const phelBreakpoints: PhelBreakpoint[] = [];
@@ -266,12 +272,16 @@ export class PhelDebugSession extends LoggingDebugSession {
 
                         if (this.xdebugSocket) {
                             // Set breakpoint on the primary line
-                            await this.setXdebugBreakpoint(phpFile, phpLine);
+                            await this.setXdebugBreakpoint(phpFile, phpLine, sourcePath);
 
                             // Also set breakpoints on other candidates for multi-expression lines
                             for (const candidateLine of candidates.lines) {
                                 if (candidateLine !== phpLine) {
-                                    await this.setXdebugBreakpoint(phpFile, candidateLine);
+                                    await this.setXdebugBreakpoint(
+                                        phpFile,
+                                        candidateLine,
+                                        sourcePath
+                                    );
                                 }
                             }
                         }
@@ -287,7 +297,7 @@ export class PhelDebugSession extends LoggingDebugSession {
                             verified = true;
 
                             if (this.xdebugSocket) {
-                                await this.setXdebugBreakpoint(phpFile, phpLine);
+                                await this.setXdebugBreakpoint(phpFile, phpLine, sourcePath);
                             }
                         }
                     }
@@ -805,7 +815,8 @@ export class PhelDebugSession extends LoggingDebugSession {
                         try {
                             success = await this.setXdebugBreakpoint(
                                 candidates.file,
-                                candidateLine
+                                candidateLine,
+                                bp.phelFile
                             );
                             if (success) {
                                 bp.phpLine = candidateLine;
@@ -827,7 +838,8 @@ export class PhelDebugSession extends LoggingDebugSession {
                         try {
                             success = await this.setXdebugBreakpoint(
                                 translation.file,
-                                translation.line
+                                translation.line,
+                                bp.phelFile
                             );
                         } catch {
                             // Ignore
@@ -1051,7 +1063,11 @@ export class PhelDebugSession extends LoggingDebugSession {
     /**
      * Set a breakpoint in Xdebug.
      */
-    private async setXdebugBreakpoint(file: string, line: number): Promise<boolean> {
+    private async setXdebugBreakpoint(
+        file: string,
+        line: number,
+        sourcePath?: string
+    ): Promise<boolean> {
         const remoteFile = this.mapLocalToRemote(file);
         const fileUri = this.toFileUri(remoteFile);
 
@@ -1068,7 +1084,34 @@ export class PhelDebugSession extends LoggingDebugSession {
         const resolved = resolvedMatch ? resolvedMatch[1] === '1' : false;
         const state = stateMatch ? stateMatch[1] : 'unknown';
 
+        if (idMatch && sourcePath) {
+            // Remember it so the next `setBreakpoints` for this file can clear it.
+            this.xdebugBreakpointIds.record(sourcePath, idMatch[1]);
+        }
+
         return idMatch !== null && (resolved || state === 'enabled');
+    }
+
+    /**
+     * Remove every Xdebug breakpoint previously installed for a source file.
+     *
+     * Without this, a breakpoint deleted or moved in the editor stayed live in
+     * the engine and kept stopping execution on a line showing no breakpoint —
+     * and each toggle installed another one, on every candidate line.
+     */
+    private async clearXdebugBreakpointsFor(sourcePath: string): Promise<void> {
+        const ids = this.xdebugBreakpointIds.take(sourcePath);
+        if (ids.length === 0 || !this.xdebugSocket) {
+            return;
+        }
+        for (const id of ids) {
+            try {
+                await this.sendXdebugCommand('breakpoint_remove', { d: id });
+            } catch {
+                // The engine may already have dropped it (script ended, or the
+                // breakpoint was never resolved); nothing to recover here.
+            }
+        }
     }
 
     /**
