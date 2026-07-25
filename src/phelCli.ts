@@ -4,6 +4,7 @@
 // common "run it, wait, read stdout/stderr/exit-code" case.
 
 import { spawn } from 'node:child_process';
+import { StringDecoder } from 'node:string_decoder';
 import * as vscode from 'vscode';
 
 export interface PhelCliResult {
@@ -33,15 +34,26 @@ export function runPhelCli(
         const proc = spawn(command, [...args], { cwd });
         let stdout = '';
         let stderr = '';
-        proc.stdout?.on('data', (d) => {
-            const text = d.toString();
-            stdout += text;
-            options.onStdout?.(text);
+        // Decode across chunk boundaries: `chunk.toString()` on a chunk that
+        // ends mid-character yields U+FFFD, and the CLI emits well over one
+        // 64 KiB chunk on a large `phel lint` run.
+        const outDecoder = new StringDecoder('utf8');
+        const errDecoder = new StringDecoder('utf8');
+        proc.stdout?.on('data', (d: Buffer) => {
+            const text = outDecoder.write(d);
+            if (text) {
+                stdout += text;
+                options.onStdout?.(text);
+            }
         });
-        proc.stderr?.on('data', (d) => {
-            stderr += d.toString();
+        proc.stderr?.on('data', (d: Buffer) => {
+            stderr += errDecoder.write(d);
         });
-        proc.on('close', (code) => resolve({ code: code ?? 1, stdout, stderr }));
+        proc.on('close', (code) => {
+            stdout += outDecoder.end();
+            stderr += errDecoder.end();
+            resolve({ code: code ?? 1, stdout, stderr });
+        });
         proc.on('error', (err) => resolve({ code: 1, stdout, stderr: err.message }));
         options.token?.onCancellationRequested(() => proc.kill());
     });
