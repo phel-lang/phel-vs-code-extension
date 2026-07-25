@@ -4,6 +4,11 @@
 
 ### Language support
 
+- **Scope analysis covers the remaining core binding forms.** `dotimes`, `when-first`, `as->`, and `letfn` now introduce locals, so go-to-definition, find-references, rename, document-highlight, semantic tokens, unused-local hints, and in-scope completion work inside them. `letfn` is modelled properly: the function names are visible across every spec and the body (mutual recursion), while each spec's parameters stay confined to that spec.
+- **`for` / `doseq` / `dofor` heads are read in full.** Only the first `binding :verb expr` clause used to bind; a second clause (`(for [x :in xs y :in ys] …)`) and the `:reduce [acc init]` accumulator were treated as globals. All clauses, `:let` pairs, and the accumulator now resolve as locals.
+- A local whose scope has closed is no longer offered by completion — a `letfn` spec's parameters stop at that spec instead of leaking into the body.
+- Find-references on a `letfn` name now includes a mutually recursive call that appears *before* the name's own spec; references were previously cut off at the declaration offset.
+- `with-redefs` targets stay globals (they rebind existing vars), so renaming one remains a workspace-wide rename — pinned by a test.
 - **Every literal the Phel reader accepts now highlights.** The grammar gained rules for character literals (`\A`, `\1`, `\(`, `\space`, `\newline`, `\u00e9`, `\o101`), regex literals (`#"^\d+$"`, distinct from the `#regex "…"` tagged literal), symbolic numbers (`##Inf`, `##-Inf`, `##NaN`), radix numbers (`2r1010`, `16rFF`, `36rZZ`), `BigInt` (`123N`), `BigDecimal` (`1.5M`), and ratios (`3/4`). Signed forms (`+7`, `-3.5`, `-1/2`) and digit separators now scope as numbers across every base. A PHP fully-qualified name (`\Throwable`) still scopes as a symbol, matching the lexer's own lookahead.
 - **Gensyms no longer break a macro body.** A trailing `#` is part of the symbol (`x#`), so `` `(let [x# ~x] …) `` highlights as code; previously the `#` opened a comment that swallowed the rest of the line.
 - **Namespaced tagged literals.** `#my.app/Person {:name "Ada"}` scopes the whole dotted/namespaced name as the tag, and paredit reads the tag plus its value as one form.

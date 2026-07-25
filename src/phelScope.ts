@@ -36,8 +36,17 @@ export interface LocalBinding {
 
 /** `let`-shaped forms: `(head [name init name init …] body…)`. */
 const PAIR_BINDING_HEADS = new Set(['let', 'loop', 'binding', 'with-open']);
-/** Single-pair conditional binding forms: `(head [name test] …)`. */
-const ONE_PAIR_HEADS = new Set(['if-let', 'when-let', 'if-some', 'when-some']);
+/** Single-pair binding forms: `(head [name test] …)`. */
+const ONE_PAIR_HEADS = new Set([
+    'if-let',
+    'when-let',
+    'if-some',
+    'when-some',
+    'when-first',
+    'dotimes',
+]);
+/** `for`-clause verbs: `binding :verb expr`. */
+const SEQ_VERBS = new Set([':range', ':in', ':keys', ':pairs']);
 /** `fn`-shaped forms whose parameter vector(s) introduce locals. */
 const FN_HEADS = new Set(['fn', 'defn', 'defn-', 'defmacro', 'defmacro-']);
 /** Sequential-iteration forms: `(head [var … coll] body…)`. */
@@ -226,47 +235,33 @@ function bindingsOf(src: string, form: Form): LocalBinding[] {
     }
 
     if (SEQ_HEADS.has(name)) {
-        // (for [x :in coll … :let [y (f x)] …] body): the leading element is the
-        // primary loop var; `:let [pairs]` sub-vectors add more. Visible through
-        // the remaining binding clauses and the body.
-        const vec = bindingVec(form);
-        if (!vec || vec.children.length === 0) {
+        return seqBindings(src, form, bodyEnd);
+    }
+
+    if (name === 'as->') {
+        // (as-> expr name form…): `name` is rebound to each form's result and is
+        // visible from after its own atom through the rest of the form.
+        const binding = form.children[2];
+        if (!isAtom(binding)) {
             return [];
         }
-        const out: LocalBinding[] = [];
-        const first = vec.children[0];
-        for (const t of collectTargets(src, first)) {
-            out.push({
-                name: t.name,
-                declStart: t.start,
-                declEnd: t.end,
-                scopeStart: first.end,
+        const bname = atomText(src, binding);
+        if (!isBindableName(bname)) {
+            return [];
+        }
+        return [
+            {
+                name: bname,
+                declStart: binding.bodyStart,
+                declEnd: binding.bodyEnd,
+                scopeStart: binding.bodyEnd,
                 scopeEnd: bodyEnd,
-            });
-        }
-        const kids = vec.children;
-        for (let i = 0; i + 1 < kids.length; i++) {
-            const k = kids[i];
-            if (k.kind === 'atom' && atomText(src, k) === ':let') {
-                const letVec = kids[i + 1];
-                if (letVec.kind === 'vector') {
-                    for (let j = 0; j + 1 < letVec.children.length; j += 2) {
-                        const target = letVec.children[j];
-                        const init = letVec.children[j + 1];
-                        for (const t of collectTargets(src, target)) {
-                            out.push({
-                                name: t.name,
-                                declStart: t.start,
-                                declEnd: t.end,
-                                scopeStart: init.end,
-                                scopeEnd: bodyEnd,
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        return out;
+            },
+        ];
+    }
+
+    if (name === 'letfn') {
+        return letfnBindings(src, form, bodyEnd);
     }
 
     if (FN_HEADS.has(name)) {
@@ -274,6 +269,126 @@ function bindingsOf(src: string, form: Form): LocalBinding[] {
     }
 
     return [];
+}
+
+/**
+ * Bindings introduced by the head vector of `for` / `doseq` / `dofor`:
+ *
+ *   (for [x :in xs y :in ys :let [z (f x)] :when (p z) :reduce [acc 0]] body…)
+ *
+ * The head is a flat sequence of `binding :verb expr` clauses, interleaved with
+ * the `:while` / `:when` / `:let` modifiers and the `:reduce` option. Every
+ * loop binding, every `:let` pair, and the `:reduce` accumulator is a local.
+ */
+function seqBindings(src: string, form: Form, bodyEnd: number): LocalBinding[] {
+    const vec = bindingVec(form);
+    if (!vec || vec.children.length === 0) {
+        return [];
+    }
+    const kids = vec.children;
+    const out: LocalBinding[] = [];
+
+    const push = (target: Form, scopeStart: number): void => {
+        for (const t of collectTargets(src, target)) {
+            out.push({
+                name: t.name,
+                declStart: t.start,
+                declEnd: t.end,
+                scopeStart,
+                scopeEnd: bodyEnd,
+            });
+        }
+    };
+
+    let i = 0;
+    while (i < kids.length) {
+        const kid = kids[i];
+        const text = kid.kind === 'atom' ? atomText(src, kid) : '';
+
+        if (text === ':let' || text === ':reduce') {
+            const vecArg = kids[i + 1];
+            if (vecArg?.kind === 'vector') {
+                if (text === ':let') {
+                    // `:let [a 1 b 2]` — the same sequential pairs as `let`.
+                    for (let j = 0; j + 1 < vecArg.children.length; j += 2) {
+                        push(vecArg.children[j], vecArg.children[j + 1].end);
+                    }
+                } else {
+                    // `:reduce [acc init]` — the accumulator is visible in the body.
+                    push(vecArg.children[0], vecArg.end);
+                }
+            }
+            i += 2;
+            continue;
+        }
+
+        if (text === ':when' || text === ':while') {
+            i += 2;
+            continue;
+        }
+
+        // `binding :verb expr` — anything else followed by a loop verb.
+        const verb = kids[i + 1];
+        if (verb?.kind === 'atom' && SEQ_VERBS.has(atomText(src, verb))) {
+            const expr = kids[i + 2];
+            push(kid, expr ? expr.end : verb.end);
+            i += 3;
+            continue;
+        }
+
+        // `(doseq [x coll] …)` shorthand, or an unrecognised clause: treat a
+        // leading target followed by a single expression as one binding, then
+        // stop rather than guess at the rest.
+        if (i === 0 && kids.length >= 2) {
+            push(kid, kids[1].end);
+        }
+        break;
+    }
+
+    return out;
+}
+
+/**
+ * `(letfn [(f [a] …) (g [b] …)] body…)`. The function names are visible across
+ * every spec and the body (they are mutually recursive); each spec's parameters
+ * are visible only inside that spec.
+ */
+function letfnBindings(src: string, form: Form, bodyEnd: number): LocalBinding[] {
+    const vec = bindingVec(form);
+    if (!vec) {
+        return [];
+    }
+    const out: LocalBinding[] = [];
+    for (const spec of vec.children) {
+        if (spec.kind !== 'list' || spec.children.length === 0) {
+            continue;
+        }
+        const fnName = spec.children[0];
+        if (isAtom(fnName) && isBindableName(atomText(src, fnName))) {
+            out.push({
+                name: atomText(src, fnName),
+                declStart: fnName.bodyStart,
+                declEnd: fnName.bodyEnd,
+                scopeStart: vec.innerStart,
+                scopeEnd: bodyEnd,
+            });
+        }
+        const params = spec.children[1];
+        if (params?.kind === 'vector') {
+            for (const param of params.children) {
+                for (const t of collectTargets(src, param)) {
+                    out.push({
+                        name: t.name,
+                        declStart: t.start,
+                        declEnd: t.end,
+                        scopeStart: params.end,
+                        scopeEnd: spec.innerEnd,
+                    });
+                }
+            }
+        }
+    }
+    return out;
 }
 
 /** Parameter (and self-name) bindings for `fn` / `defn` shaped forms. */
@@ -384,7 +499,12 @@ export function localOccurrences(src: string, b: LocalBinding): Occurrence[] {
             out.push(occ);
             continue;
         }
-        if (occ.start < b.declStart || occ.start >= b.scopeEnd) {
+        // A reference is in range from wherever the binding first becomes
+        // visible. That is the declaration for every sequential form, but a
+        // `letfn` name is visible from the start of the binding vector, so a
+        // mutually recursive call *precedes* its own declaration.
+        const refStart = Math.min(b.declStart, b.scopeStart);
+        if (occ.start < refStart || occ.start >= b.scopeEnd) {
             continue;
         }
         const resolved = resolveLocalAt(src, occ.start);
@@ -405,9 +525,12 @@ export function localsInScopeAt(src: string, offset: number): string[] {
     const seen = new Set<string>();
     const out: string[] = [];
     for (const b of bindingsOnPath(src, path)) {
-        // A local is offerable once its scope has opened at the cursor, or when
-        // the cursor sits inside the binding form at all (params being typed).
-        if (offset >= b.scopeStart || (offset >= b.declStart && offset < b.scopeEnd)) {
+        // A local is offerable once its scope has opened at the cursor and has
+        // not closed again (a `letfn` spec's parameters are visible only inside
+        // that spec), or when the cursor sits on the binding itself (params
+        // being typed).
+        const inScope = offset >= b.scopeStart && offset < b.scopeEnd;
+        if (inScope || (offset >= b.declStart && offset < b.scopeEnd)) {
             if (!seen.has(b.name)) {
                 seen.add(b.name);
                 out.push(b.name);

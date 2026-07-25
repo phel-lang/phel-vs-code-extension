@@ -162,6 +162,61 @@ describe('phelScope binding forms', () => {
         // `m` is the collection, not a binding.
         assert.equal(resolveLocalAt(src, idx(src, 'm', 0)), null);
     });
+
+    it('binds a dotimes counter', () => {
+        const src = '(dotimes [q 5] (use q))';
+        assert.deepEqual(occStarts(src, idx(src, 'q', 1)), [idx(src, 'q', 0), idx(src, 'q', 1)]);
+    });
+
+    it('binds a when-first target', () => {
+        const src = '(when-first [x coll] (print x))';
+        assert.deepEqual(occStarts(src, idx(src, 'x', 1)), [idx(src, 'x', 0), idx(src, 'x', 1)]);
+    });
+
+    it('binds the as-> threading name', () => {
+        const src = '(as-> 1 v (+ v 2) (* v 3))';
+        assert.deepEqual(occStarts(src, idx(src, 'v', 1)), [
+            idx(src, 'v', 0),
+            idx(src, 'v', 1),
+            idx(src, 'v', 2),
+        ]);
+    });
+
+    it('binds every for clause, not just the first', () => {
+        const src = '(for [x :in coll y :in other] (+ x y))';
+        assert.deepEqual(occStarts(src, idx(src, 'y', 1)), [idx(src, 'y', 0), idx(src, 'y', 1)]);
+        assert.deepEqual(occStarts(src, idx(src, 'x', 1)), [idx(src, 'x', 0), idx(src, 'x', 1)]);
+    });
+
+    it('binds the for :reduce accumulator', () => {
+        const src = '(for [x :in coll :reduce [acc 0]] (+ acc x))';
+        assert.deepEqual(occStarts(src, idx(src, 'acc', 1)), [
+            idx(src, 'acc', 0),
+            idx(src, 'acc', 1),
+        ]);
+    });
+
+    it('binds letfn names across every spec and the body', () => {
+        const src = '(letfn [(p [a] (q a)) (q [b] b)] (p 1))';
+        // `q` is called from inside `p`'s body, before its own spec: letfn
+        // names are mutually recursive, so a use may precede the declaration.
+        assert.deepEqual(occStarts(src, idx(src, 'q', 0)), [idx(src, 'q', 0), idx(src, 'q', 1)]);
+        assert.deepEqual(occStarts(src, idx(src, 'p', 0)), [idx(src, 'p', 0), idx(src, 'p', 1)]);
+    });
+
+    it('scopes letfn parameters to their own spec', () => {
+        const src = '(letfn [(p [a] (php/abs a)) (q [a] a)] 1)';
+        // The two `a` parameters are distinct bindings, not one shared local.
+        assert.deepEqual(occStarts(src, idx(src, 'a', 0)), [idx(src, 'a', 0), idx(src, 'a', 2)]);
+        assert.deepEqual(occStarts(src, idx(src, 'a', 3)), [idx(src, 'a', 3), idx(src, 'a', 4)]);
+    });
+
+    it('leaves with-redefs targets as globals', () => {
+        // `foo` is an existing var being temporarily rebound, not a new local:
+        // renaming it must stay a workspace-wide rename.
+        const src = '(with-redefs [foo (fn [] 1)] (foo))';
+        assert.equal(resolveLocalAt(src, idx(src, 'foo', 1)), null);
+    });
 });
 
 describe('phelScope.localsInScopeAt', () => {
@@ -179,6 +234,12 @@ describe('phelScope.localsInScopeAt', () => {
         const inG = localsInScopeAt(src, idx(src, 'b', 1));
         assert.ok(inG.includes('b'));
         assert.ok(!inG.includes('a'));
+    });
+
+    it('does not offer a letfn spec parameter outside that spec', () => {
+        const src = '(letfn [(f [n] n) (g [m] m)] (f 1))';
+        const inBody = localsInScopeAt(src, idx(src, '(f 1)') + 1);
+        assert.deepEqual(inBody.sort(), ['f', 'g']);
     });
 });
 
