@@ -82,11 +82,41 @@ In the container, set `xdebug.client_host=host.docker.internal` (macOS / Windows
 - **Phel: Show Compiled PHP Location** - jump from the current `.phel` line to its compiled PHP equivalent.
 - **Phel: Clear Source Map Cache** - drop cached source maps after a Phel rebuild.
 
+## Why the session connects twice
+
+Phel re-executes its own PHP process on startup to enable the opcache file cache
+(`Phel\Shared\Performance\OpcacheReexec`). Under a debugger that means **two
+Xdebug connections per run**, and the output channel says so:
+
+```
+Xdebug connected!
+Request completed. Waiting for next connection...
+Xdebug connected!
+```
+
+The first connection belongs to the launcher, which exits before running any of
+your code. The second is the process that actually executes it, and that is
+where breakpoints are hit. The adapter handles this: after a connection closes
+it returns to listening and re-applies every breakpoint to the new one.
+
+So "Request completed. Waiting for next connection..." partway through a run is
+normal, not a failure. Traced against a live session, a breakpoint on
+`lib/util.phel:3` is set on connection 1, discarded with it, re-applied on
+connection 2, and hit there:
+
+```
+--- connection #1 ---
+  init, breakpoint_set, closed
+--- connection #2 ---
+  init, breakpoint_set, run -> break at demo.util__a5b0ac5e.php:29
+```
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
 | Breakpoints show as hollow circles | Phel hasn't been compiled yet, or the cache directory is wrong |
+| The session appears to disconnect mid-run | Expected: Phel re-execs for the opcache, so there are two connections. See [above](#why-the-session-connects-twice) |
 | Adapter reports "no source map for `X.php`" | The `.phel` file was not compiled with source maps enabled |
 | Steps land in unexpected files | `skipPhelInternals` is false, or `skipFiles` is empty - add globs |
 | Container debugging hangs | Missing `pathMappings`, or `xdebug.client_host` not set inside the container |
