@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed (hover & signature help)
+
+- **Hover on a local showed an unrelated core function.** Go-to-definition, find-references, rename and document-highlight all consult the scope analyzer; hover did not, and looked the name up in the symbol corpus instead. Every one of the 20 most common parameter names — `name`, `map`, `key`, `count`, `str`, `first`, `type`, `next`, `get`, `list`, `keys`, `vals`, `set`, `max`, `min`, `val`, `rest`, `last`, `apply`, `print` — is also a `phel.core` function, so hovering the `name` in `(defn greet [name] …)` documented `phel.core/name`. It now reports the parameter and the line it is bound on.
+- **Signature help described the wrong function for a local callee.** `(f x)` where `f` is a let-bound function showed the signature of whatever global shared that name. It now stands down instead. `findCurrentCall` gained a `calleeStart` offset so the callee can be resolved against the scope analyzer.
+
 ### Symbols & navigation
 
 - **Ten more defining forms are indexed.** The parser behind the outline, "Go to Symbol in Workspace", cross-file completion, auto-import and go-to-definition recognised only `defn` / `defn-` / `defmacro` / `defmacro-` / `def` / `def-`. It now also reads `defonce`, `defstruct`, `defrecord`, `deftype`, `defprotocol`, `definterface`, `defenum`, `defexception`, `defmulti` and `deftest` — so a file of records, protocols or tests is no longer nearly invisible (a 14-definition sample produced 2 symbols before, 12 now), and those names resolve across files.

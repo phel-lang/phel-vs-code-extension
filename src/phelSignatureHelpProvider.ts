@@ -9,6 +9,7 @@ import {
     parseSignatureParams,
     pickActiveSignature,
 } from './phelSignatureHelp';
+import { resolveLocalAt } from './phelScope';
 import { combineDocs } from './phelWorkspaceIndex';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
@@ -20,15 +21,23 @@ export class PhelSignatureHelpProvider implements vscode.SignatureHelpProvider {
         position: vscode.Position
     ): vscode.ProviderResult<vscode.SignatureHelp> {
         const offset = document.offsetAt(position);
-        const call = findCurrentCall(document.getText(), offset);
+        const src = document.getText();
+        const call = findCurrentCall(src, offset);
         if (!call) {
+            return null;
+        }
+
+        // A local in callee position — `(f x)` where `f` is a let-bound fn —
+        // has no signature of its own, and most short names collide with a
+        // `phel.core` function whose signature would be simply wrong here.
+        if (resolveLocalAt(src, call.calleeStart)) {
             return null;
         }
 
         const merged = this.indexer
             ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
             : [...PHEL_DOCS];
-        const aliases = aliasMapFromSource(document.getText());
+        const aliases = aliasMapFromSource(src);
         const doc = lookupSymbol(call.callee, merged, aliases);
         if (!doc) {
             return null;

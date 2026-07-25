@@ -16,7 +16,9 @@ Same skipping rules as Find References - you can rename `foo` without touching t
 
 ## Locals vs globals
 
-Go to Definition, Find References, Rename, and document-highlight are **scope-aware**: when the symbol under the cursor is a local, they resolve to its binding site and stay inside its own scope, so a same-named global or a binding shadowed elsewhere is never touched.
+Go to Definition, Find References, Rename, document-highlight, hover, and signature help are **scope-aware**: when the symbol under the cursor is a local, they resolve to its binding site and stay inside its own scope, so a same-named global or a binding shadowed elsewhere is never touched.
+
+This matters more than it sounds: most short parameter names are also `phel.core` functions — `name`, `map`, `key`, `count`, `str`, `first`, `type`, `next`, `get`, `list`, `keys`, `vals`, `set`, `max`, `min`, `val`, `rest`, `last`, `apply`, `print`. Hovering the `name` in `(defn greet [name] …)` reports the parameter and its binding form, not `phel.core/name`. Signature help likewise stays silent for a local in callee position rather than describing an unrelated core function.
 
 These forms introduce locals:
 
