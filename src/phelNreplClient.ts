@@ -16,6 +16,7 @@ import * as net from 'node:net';
 import * as vscode from 'vscode';
 import { asString, asStringList, type BencodeValue, decode, encode } from './bencode';
 import { resolvePhelExecutable } from './phelExecutable';
+import { StringDecoder } from 'node:string_decoder';
 
 const BANNER_RE = /nREPL server started on (\d{1,3}(?:\.\d{1,3}){3}):(\d+)/;
 const STARTUP_TIMEOUT_MS = 15000;
@@ -100,8 +101,16 @@ export class PhelNreplConnection {
             }, STARTUP_TIMEOUT_MS);
             timer.unref(); // a pending timeout must not keep the host process alive
 
+            // Decode across chunk boundaries so a multi-byte character split
+            // between two reads does not reach the output channel as U+FFFD.
+            const outDecoder = new StringDecoder('utf8');
+            const errDecoder = new StringDecoder('utf8');
+
             const onData = (chunk: Buffer): void => {
-                const text = chunk.toString();
+                const text = outDecoder.write(chunk);
+                if (!text) {
+                    return;
+                }
                 this.output.append(text);
                 const match = BANNER_RE.exec(text);
                 if (match && !settled) {
@@ -113,8 +122,11 @@ export class PhelNreplConnection {
 
             proc.stdout.on('data', onData);
             proc.stderr.on('data', (chunk: Buffer) => {
-                stderr += chunk.toString();
-                this.output.append(chunk.toString());
+                const text = errDecoder.write(chunk);
+                if (text) {
+                    stderr += text;
+                    this.output.append(text);
+                }
             });
             proc.on('error', (err) => {
                 if (!settled) {
