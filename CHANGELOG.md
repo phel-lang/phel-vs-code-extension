@@ -77,6 +77,10 @@
 
 ### Internal
 
+- Made the CLI stream-decoding test deterministic. It asserted that a *spawned* process's output is corrupted without a `StringDecoder`, which depends on where the runtime happens to chunk the stream — true on macOS under both Node 20 and 22, false on CI's Linux Node 20, so it failed there. The corruption is now demonstrated by splitting the buffer in the test itself; the spawn-based case remains but asserts only what must always hold, that the decoded text equals the payload.
+
+- New `npm run sweep`: runs every pure analyzer — paredit, scope, folding, references, ns, docs — over a real Phel corpus (defaults to `../phel-lang/src/phel`), probes the offset-driven entry points across each file, and exits non-zero if anything throws. It also prints per-analyzer counts, which is the more useful half: the two unused-local bugs fixed in this release were found by noticing that phel's own stdlib came back with 98 unused bindings. Documented in `CONTRIBUTING.md` next to `npm run tokenize`.
+
 - **De-duplicated the provider boilerplate**, net −28 lines. The Phel symbol-token regex existed as seven byte-identical copies (so the gensym change earlier in this release would have needed seven edits to stay consistent); it now lives in `phelSymbolToken.ts` with tests pinning what it matches. The `combineDocs(indexer, PHEL_DOCS)` merge and the `MarkdownString` + `isTrusted`/`supportHtml` construction each had five copies and are now `mergedDocs()` and `plainMarkdown()` in `phelProviderSupport.ts`. Behaviour is unchanged.
 - Grammar coverage is pinned by `src/test/grammar.test.ts`, which tokenizes with the same `vscode-textmate` engine VS Code ships and asserts scopes, so a grammar regression fails `npm test` instead of needing a manual read of `npm run tokenize`.
 - `scripts/sample.phel` used `0o17`, which is not valid Phel (octal is the leading-zero `017`); fixed and extended with the newly covered literal forms.

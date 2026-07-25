@@ -16,6 +16,7 @@ adapter, and REPL/paredit helpers for `.phel` files.
 - `npm run pretest` runs compile + lint; always green before committing.
 - `npm run bundle` / `bundle:prod` — esbuild → `dist/` (shipped bundle).
 - `npm run tokenize` — tokenize `scripts/sample.phel` against the tmLanguage grammar with the same engine VS Code ships. Run after any `syntaxes/` edit.
+- `npm run sweep` — run every pure analyzer over a real Phel corpus (defaults to `../phel-lang/src/phel`); exits non-zero if one throws. Read the printed counts too — an implausible number is the signal.
 - Never hand-edit `out/` or `dist/`; they are generated.
 
 ## Symbol corpus

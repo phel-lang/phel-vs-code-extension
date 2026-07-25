@@ -45,20 +45,19 @@ describe('CLI stream decoding', function () {
     // Spawning a process and pushing 64 KiB through it is slower than a unit test.
     this.timeout(20000);
 
-    it('loses a multi-byte character split across chunks with a naive toString', async () => {
-        // Places the two bytes of `é` either side of the 64 KiB boundary Node
-        // reads at, which is what a large `phel lint` run crosses.
+    it('decodes a large payload with a multi-byte character intact', async () => {
+        // Big enough to arrive in more than one chunk on any runtime. Where
+        // exactly it splits is up to Node and the OS, so this asserts only what
+        // must always hold: the decoded text equals the payload.
         const payload = Buffer.concat([
             Buffer.alloc(65535, 0x78),
             Buffer.from('é', 'utf8'),
             Buffer.alloc(10, 0x79),
         ]);
-        const { naive, decoded, chunks } = await collect(payload);
+        const { decoded } = await collect(payload);
 
-        assert.ok(chunks.length > 1, `expected more than one chunk, got ${chunks.join(',')}`);
-        assert.ok(naive.includes('�'), 'the naive path should corrupt the split character');
-        assert.ok(!decoded.includes('�'), 'StringDecoder must not corrupt it');
         assert.equal(decoded, payload.toString('utf8'));
+        assert.ok(!decoded.includes('\ufffd'), 'StringDecoder must not corrupt the character');
     });
 
     it('agrees with a naive decode when nothing is split', async () => {
@@ -66,6 +65,25 @@ describe('CLI stream decoding', function () {
         const { naive, decoded } = await collect(payload);
         assert.equal(decoded, naive);
         assert.equal(decoded, payload.toString('utf8'));
+    });
+
+    it('corrupts a split character without the decoder, and not with it', () => {
+        // Deterministic counterpart to the spawn test above: the split is made
+        // here rather than left to however the runtime happens to chunk a
+        // stream. How a payload divides depends on the platform as much as the
+        // Node version — an earlier version of this test asserted the naive
+        // path corrupts a spawned stream, which held on macOS (Node 20 and 22
+        // alike) and not on CI's Linux Node 20.
+        const payload = Buffer.from('café', 'utf8');
+        const cut = payload.indexOf(Buffer.from('é', 'utf8')) + 1;
+        const [head, tail] = [payload.subarray(0, cut), payload.subarray(cut)];
+
+        const naive = head.toString() + tail.toString();
+        assert.ok(naive.includes('\ufffd'), 'per-chunk toString should corrupt it');
+
+        const decoder = new StringDecoder('utf8');
+        const decoded = decoder.write(head) + decoder.write(tail) + decoder.end();
+        assert.equal(decoded, 'café');
     });
 
     it('emits nothing for a chunk that is only a partial character', () => {

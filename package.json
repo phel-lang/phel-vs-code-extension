@@ -622,6 +622,7 @@
         "test": "mocha out/test/**/*.test.js",
         "check:changelog": "node scripts/check-changelog.cjs",
         "tokenize": "node scripts/tokenize-sample.mjs",
+        "sweep": "npm run compile && node scripts/sweep-analyzers.mjs",
         "regen-docs": "npm run compile && node scripts/regen-core-docs.cjs",
         "package": "vsce package",
         "publish": "vsce publish",
