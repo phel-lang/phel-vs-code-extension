@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { PHEL_DOCS } from './phelCoreDocs';
 import { CORE_FNS, MACROS, SPECIAL_FORMS } from './phelCoreSymbols';
 import { buildCallSnippet, isCalleePosition } from './phelCallSnippet';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
@@ -11,11 +10,10 @@ import {
     NS_CLAUSES,
     NS_ENTRY_OPTIONS,
 } from './phelCompletionContext';
-import { combineDocs } from './phelWorkspaceIndex';
 import { localsInScopeAt } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
-
-const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
+import { PHEL_SYMBOL_RE } from './phelSymbolToken';
+import { mergedDocs, plainMarkdown } from './phelProviderSupport';
 
 interface ItemSpec {
     label: string;
@@ -118,9 +116,7 @@ function buildItem(
     item.detail = spec.detail;
     const doc = lookupSymbol(spec.label, docs);
     if (doc) {
-        const md = new vscode.MarkdownString(renderDocMarkdown(doc));
-        md.isTrusted = false;
-        md.supportHtml = false;
+        const md = plainMarkdown(renderDocMarkdown(doc));
         item.documentation = md;
         if (callee) {
             const snippet = buildCallSnippet(spec.label, doc.signature);
@@ -165,11 +161,9 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
         document: vscode.TextDocument,
         position: vscode.Position
     ): vscode.ProviderResult<vscode.CompletionItem[]> {
-        const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
+        const range = document.getWordRangeAtPosition(position, PHEL_SYMBOL_RE);
         const src = document.getText();
-        const merged = this.indexer
-            ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
-            : [...PHEL_DOCS];
+        const merged = mergedDocs(this.indexer);
         const linePrefix = document.lineAt(position.line).text.slice(0, position.character);
         const context = completionContextAt(src, document.offsetAt(position), linePrefix);
 
@@ -186,9 +180,7 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
                 item.detail = cand.detail;
                 const doc = merged.find((d) => d.qualifiedName === `${context.ns}/${cand.name}`);
                 if (doc) {
-                    const md = new vscode.MarkdownString(renderDocMarkdown(doc));
-                    md.isTrusted = false;
-                    md.supportHtml = false;
+                    const md = plainMarkdown(renderDocMarkdown(doc));
                     item.documentation = md;
                 }
                 if (range) {

@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { PHEL_DOCS } from './phelCoreDocs';
 import { lookupSymbol } from './phelDocsLookup';
 import { aliasMapFromSource } from './phelNsAnalyzer';
 import {
@@ -10,8 +9,8 @@ import {
     pickActiveSignature,
 } from './phelSignatureHelp';
 import { resolveLocalAt } from './phelScope';
-import { combineDocs } from './phelWorkspaceIndex';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
+import { mergedDocs, plainMarkdown } from './phelProviderSupport';
 
 export class PhelSignatureHelpProvider implements vscode.SignatureHelpProvider {
     constructor(private readonly indexer?: PhelWorkspaceIndexer) {}
@@ -34,9 +33,7 @@ export class PhelSignatureHelpProvider implements vscode.SignatureHelpProvider {
             return null;
         }
 
-        const merged = this.indexer
-            ? combineDocs(this.indexer.index.allDocs(), PHEL_DOCS)
-            : [...PHEL_DOCS];
+        const merged = mergedDocs(this.indexer);
         const aliases = aliasMapFromSource(src);
         const doc = lookupSymbol(call.callee, merged, aliases);
         if (!doc) {
@@ -64,9 +61,7 @@ function buildSignature(signature: string, docstring?: string): vscode.Signature
         (label) => new vscode.ParameterInformation(label)
     );
     if (docstring) {
-        const md = new vscode.MarkdownString(docstring);
-        md.isTrusted = false;
-        md.supportHtml = false;
+        const md = plainMarkdown(docstring);
         info.documentation = md;
     }
     return info;

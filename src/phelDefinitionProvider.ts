@@ -2,11 +2,9 @@ import * as vscode from 'vscode';
 import { lookupSymbol } from './phelDocsLookup';
 import { aliasMapFromSource } from './phelNsAnalyzer';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
-import { combineDocs } from './phelWorkspaceIndex';
-import { PHEL_DOCS } from './phelCoreDocs';
 import { resolveLocalAt } from './phelScope';
-
-const SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.':$&%][^\s(){}[\]"',`]*/;
+import { PHEL_SYMBOL_RE } from './phelSymbolToken';
+import { mergedDocs } from './phelProviderSupport';
 
 export class PhelDefinitionProvider implements vscode.DefinitionProvider {
     constructor(private readonly indexer: PhelWorkspaceIndexer) {}
@@ -15,7 +13,7 @@ export class PhelDefinitionProvider implements vscode.DefinitionProvider {
         document: vscode.TextDocument,
         position: vscode.Position
     ): vscode.ProviderResult<vscode.Definition | vscode.LocationLink[]> {
-        const range = document.getWordRangeAtPosition(position, SYMBOL_RE);
+        const range = document.getWordRangeAtPosition(position, PHEL_SYMBOL_RE);
         if (!range) {
             return null;
         }
@@ -35,7 +33,7 @@ export class PhelDefinitionProvider implements vscode.DefinitionProvider {
             );
         }
 
-        const merged = combineDocs(this.indexer.index.allDocs(), PHEL_DOCS);
+        const merged = mergedDocs(this.indexer);
         const aliases = aliasMapFromSource(document.getText());
         const doc = lookupSymbol(word, merged, aliases);
         if (!doc) {

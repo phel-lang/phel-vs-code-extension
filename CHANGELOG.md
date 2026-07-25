@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Internal
+
+- **De-duplicated the provider boilerplate**, net −28 lines. The Phel symbol-token regex existed as seven byte-identical copies (so the gensym change earlier in this release would have needed seven edits to stay consistent); it now lives in `phelSymbolToken.ts` with tests pinning what it matches, including the two long-standing apostrophe edges — a leading `'` is part of the token, a trailing one is not. The `combineDocs(indexer, PHEL_DOCS)` merge and the `MarkdownString` + `isTrusted`/`supportHtml` construction each had five copies and are now `mergedDocs()` and `plainMarkdown()` in `phelProviderSupport.ts`. Behaviour is unchanged.
+
 ### Diagnostics
 
 - **`phel lint` now backs inline diagnostics.** It reports everything `phel analyze` does plus rule-based findings — unused bindings, shadowed bindings, arity problems, and whatever `phel-lint.phel` configures. On a file with one undefined symbol and one unused binding, `analyze` reported 1 diagnostic where `lint` reports 2.
