@@ -67,7 +67,7 @@ export function findOccurrences(src: string, name: string): Occurrence[] {
             const end = i + name.length;
             const before = i === 0 ? '' : src[i - 1];
             const after = end >= len ? '' : src[end];
-            if (isBoundary(before) && isBoundary(after)) {
+            if (isBoundaryBefore(before) && isBoundaryAfter(after)) {
                 out.push({ start: i, end });
                 i = end;
                 continue;
@@ -122,9 +122,28 @@ function matchesAt(src: string, i: number, name: string): boolean {
     return true;
 }
 
-function isBoundary(c: string): boolean {
+/**
+ * `'` is the one terminator that only works on the *left*. The lexer treats a
+ * leading apostrophe as the quote reader macro but keeps a mid or trailing one
+ * inside the atom, so `a'` and `foo''` are single symbols while `'sym` is a
+ * quote followed by `sym`.
+ *
+ * Using the symmetric test for both sides made the `a` in `a'` look like a
+ * whole token, so renaming `a` rewrote part of `a'`.
+ */
+function isBoundaryBefore(c: string): boolean {
     if (c === '') {
         return true;
+    }
+    return SYMBOL_TERMINATOR.has(c);
+}
+
+function isBoundaryAfter(c: string): boolean {
+    if (c === '') {
+        return true;
+    }
+    if (c === "'") {
+        return false; // part of the symbol being scanned
     }
     return SYMBOL_TERMINATOR.has(c);
 }
@@ -132,12 +151,21 @@ function isBoundary(c: string): boolean {
 /**
  * Validate that `name` is a legal Phel symbol token (no whitespace, no
  * delimiter chars). Used by the rename provider before applying edits.
+ *
+ * A trailing `'` is legal — `a'` is a single symbol — but a leading one is the
+ * quote reader macro, so it is rejected.
  */
 export function isValidSymbolName(name: string): boolean {
     if (!name) {
         return false;
     }
+    if (name.startsWith("'")) {
+        return false;
+    }
     for (const c of name) {
+        if (c === "'") {
+            continue;
+        }
         if (SYMBOL_TERMINATOR.has(c)) {
             return false;
         }
