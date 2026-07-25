@@ -14,6 +14,27 @@ Rewrites every occurrence of the symbol in the workspace via a single `Workspace
 
 Same skipping rules as Find References - you can rename `foo` without touching the literal `"foo"` inside a string.
 
+## Locals vs globals
+
+Go to Definition, Find References, Rename, and document-highlight are **scope-aware**: when the symbol under the cursor is a local, they resolve to its binding site and stay inside its own scope, so a same-named global or a binding shadowed elsewhere is never touched.
+
+These forms introduce locals:
+
+| Form | Binds |
+| --- | --- |
+| `fn`, `defn`, `defn-`, `defmacro`, `defmacro-` | parameters, plus a named `fn`'s self-name |
+| `let`, `loop`, `binding`, `with-open` | every `name init` pair, sequentially |
+| `if-let`, `when-let`, `if-some`, `when-some`, `when-first`, `dotimes` | the single binding pair |
+| `for`, `doseq`, `dofor` | every `binding :verb expr` clause, each `:let` pair, and the `:reduce` accumulator |
+| `foreach` | every element of the head except the trailing collection |
+| `letfn` | each function name (visible across all specs and the body — they are mutually recursive) and each spec's own parameters |
+| `as->` | the threading name |
+| `catch` | the exception var |
+
+Vector, `:keys` / `:syms` / `:strs`, and `:as` destructuring is followed in every one of them.
+
+Anything else is treated as a global, deliberately: `with-redefs` rebinds *existing* vars rather than declaring locals, so renaming one there stays a workspace-wide rename. A form whose binding shape is not recognised yields no locals at all and falls back to the workspace-wide behaviour, so the analyzer never makes a rename narrower than it should be.
+
 ## Document Outline & Breadcrumbs
 
 Every public form (`defn`, `defmacro`, `def`) shows up in the editor outline (`cmd+shift+O`) with its first arity signature as the detail.
