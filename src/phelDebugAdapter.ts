@@ -19,6 +19,7 @@ import { SourceMapManager } from './sourceMapManager';
 import { XdebugBreakpointRegistry } from './xdebugBreakpointRegistry';
 import { XdebugPendingCommands } from './xdebugPendingCommands';
 import { DbgpMessageReader } from './dbgpMessageReader';
+import { decodeDbgpCdata } from './dbgpValueDecoder';
 
 interface PhelLaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
     program?: string;
@@ -565,7 +566,7 @@ export class PhelDebugSession extends LoggingDebugSession {
             /<error[^>]*code="(\d+)"[^>]*><message><!\[CDATA\[(.*?)\]\]><\/message>/s
         );
         if (errorMatch) {
-            throw new Error(Buffer.from(errorMatch[2], 'base64').toString('utf-8'));
+            throw new Error(decodeDbgpCdata(errorMatch[2], errorMatch[0]));
         }
 
         // Parse property
@@ -580,7 +581,7 @@ export class PhelDebugSession extends LoggingDebugSession {
         const classname = classnameMatch ? classnameMatch[1] : '';
         const hasChildren = childrenMatch ? childrenMatch[1] === '1' : false;
         const numChildren = numchildrenMatch ? parseInt(numchildrenMatch[1], 10) : 0;
-        const value = cdataMatch ? Buffer.from(cdataMatch[1], 'base64').toString('utf-8') : '';
+        const value = cdataMatch ? decodeDbgpCdata(cdataMatch[1], xml) : '';
         const fullname = fullnameMatch ? fullnameMatch[1] : '';
 
         // Create variable reference for expandable items
@@ -961,7 +962,7 @@ export class PhelDebugSession extends LoggingDebugSession {
 
         const cdataMatch = xml.match(/<!\[CDATA\[(.*?)\]\]>/s);
         if (cdataMatch) {
-            const content = Buffer.from(cdataMatch[1], 'base64').toString('utf-8');
+            const content = decodeDbgpCdata(cdataMatch[1], xml);
             this.sendEvent(new OutputEvent(content, type));
         }
     }
@@ -1208,7 +1209,7 @@ export class PhelDebugSession extends LoggingDebugSession {
             let value = '';
             const cdataMatch = content.match(/<!\[CDATA\[(.*?)\]\]>/s);
             if (cdataMatch) {
-                value = Buffer.from(cdataMatch[1], 'base64').toString('utf-8');
+                value = decodeDbgpCdata(cdataMatch[1], content);
             }
 
             // Format the display value
