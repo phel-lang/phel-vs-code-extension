@@ -19,6 +19,48 @@
 import { parseAll, pathAt, type Form } from './phelParedit';
 import { findOccurrences, type Occurrence } from './phelReferences';
 
+/**
+ * One-entry parse cache.
+ *
+ * A semantic-tokens or unused-locals pass calls `resolveLocalAt` once per
+ * candidate occurrence, and each call used to re-parse the whole document.
+ * Every call in a pass sees the identical source, so caching the last result
+ * collapses hundreds of parses into one. Keyed by the source string itself, so
+ * a stale buffer can never be served.
+ */
+let cachedSrc: string | null = null;
+let cachedForms: Form[] | null = null;
+
+function parseCached(src: string): Form[] {
+    if (cachedSrc === src && cachedForms) {
+        return cachedForms;
+    }
+    const forms = parseAll(src);
+    cachedSrc = src;
+    cachedForms = forms;
+    occurrenceCache.clear();
+    return forms;
+}
+
+/**
+ * Occurrences by name, for the source currently in `cachedSrc`. A pass scans
+ * once per binding, and bindings share names heavily — 410 bindings over 158
+ * distinct names in phel's own `test.phel` — so the same full-text scan was
+ * repeated two to three times on average.
+ */
+const occurrenceCache = new Map<string, readonly Occurrence[]>();
+
+function occurrencesCached(src: string, name: string): readonly Occurrence[] {
+    parseCached(src); // keeps the two caches keyed to the same source
+    const hit = occurrenceCache.get(name);
+    if (hit) {
+        return hit;
+    }
+    const found = findOccurrences(src, name);
+    occurrenceCache.set(name, found);
+    return found;
+}
+
 export interface LocalBinding {
     /** The bound symbol name. */
     name: string;
@@ -519,7 +561,7 @@ function bindingsOnPath(src: string, path: readonly Form[]): LocalBinding[] {
  * global / core symbol).
  */
 export function resolveLocalAt(src: string, offset: number): LocalBinding | null {
-    const forms = parseAll(src);
+    const forms = parseCached(src);
     const path = pathAt(forms, offset);
     const last = path[path.length - 1];
     if (!last || last.kind !== 'atom') {
@@ -556,7 +598,7 @@ export function resolveLocalAt(src: string, offset: number): LocalBinding | null
  */
 export function localOccurrences(src: string, b: LocalBinding): Occurrence[] {
     const out: Occurrence[] = [];
-    for (const occ of findOccurrences(src, b.name)) {
+    for (const occ of occurrencesCached(src, b.name)) {
         if (occ.start === b.declStart) {
             out.push(occ);
             continue;
@@ -582,7 +624,7 @@ export function localOccurrences(src: string, b: LocalBinding): Occurrence[] {
  * de-duplicated. Used to surface in-scope locals in completion.
  */
 export function localsInScopeAt(src: string, offset: number): string[] {
-    const forms = parseAll(src);
+    const forms = parseCached(src);
     const path = pathAt(forms, offset);
     const seen = new Set<string>();
     const out: string[] = [];
@@ -623,7 +665,7 @@ export function collectAllBindings(src: string): LocalBinding[] {
             walk(child);
         }
     };
-    for (const form of parseAll(src)) {
+    for (const form of parseCached(src)) {
         walk(form);
     }
     return out;
