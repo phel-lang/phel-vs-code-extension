@@ -352,3 +352,60 @@ describe('phelScope caching', () => {
         assert.equal(cold.length, 3);
     });
 });
+
+describe('phelScope macro templates', () => {
+    it('does not treat an unquoted name in a template as a new binding', () => {
+        // `` `(let [~v ~x] …) `` splices the *value* of an outer binding; it
+        // does not declare one. Treating it as a declaration invented a
+        // shadowing binding that swallowed the outer one's uses.
+        const src =
+            '(defmacro m [x]\n  (let [v (gensym)]\n    `(let [~v ~x]\n       (if ~v ~v nil))))';
+        assert.deepEqual(
+            collectAllBindings(src)
+                .map((b) => b.name)
+                .sort(),
+            ['v', 'x']
+        );
+    });
+
+    it('counts unquoted uses of a macro-local, so it is not reported unused', () => {
+        const src =
+            '(defmacro m [x]\n  (let [v (gensym)]\n    `(let [~v ~x]\n       (if ~v ~v nil))))';
+        assert.deepEqual(findUnusedLocals(src), []);
+    });
+
+    it('finds every unquoted use for rename', () => {
+        // Renaming used to rewrite the declaration alone, silently corrupting
+        // the macro.
+        const src =
+            '(defmacro m [x]\n  (let [v (gensym)]\n    `(let [~v ~x]\n       (if ~v ~v nil))))';
+        const binding = collectAllBindings(src).find((b) => b.name === 'v');
+        assert.ok(binding);
+        assert.equal(localOccurrences(src, binding).length, 4);
+    });
+});
+
+describe('phelScope sequential rebinding', () => {
+    const src = '(let [b 1\n      b (inc b)\n      b (inc b)]\n  (println b))';
+
+    it('resolves a use to the most recent rebinding', () => {
+        const use = src.lastIndexOf('b');
+        const bindings = collectAllBindings(src).filter((x) => x.name === 'b');
+        const latest = bindings[bindings.length - 1];
+        assert.equal(resolveLocalAt(src, use)?.declStart, latest.declStart);
+    });
+
+    it('does not report the earlier rebindings as unused', () => {
+        // `[body (base) body (f body) body (g body)]` is a common idiom; every
+        // use used to resolve to the first pair, so the rest looked dead.
+        assert.deepEqual(findUnusedLocals(src), []);
+    });
+
+    it('pairs each rebinding with its own use', () => {
+        const bindings = collectAllBindings(src).filter((x) => x.name === 'b');
+        assert.equal(bindings.length, 3);
+        for (const b of bindings) {
+            assert.ok(localOccurrences(src, b).length >= 1, `no occurrences for b@${b.declStart}`);
+        }
+    });
+});

@@ -142,6 +142,14 @@ function isBindableName(name: string): boolean {
 function collectTargets(src: string, target: Form): { name: string; start: number; end: number }[] {
     const out: { name: string; start: number; end: number }[] = [];
     const visit = (f: Form): void => {
+        if (isUnquoted(src, f)) {
+            // `` `(let [~v ~x] …) `` inside a macro is a *template*: `~v`
+            // splices the value of an outer binding, it does not declare a new
+            // one. Treating it as a declaration invented a shadowing binding
+            // that swallowed the outer one's uses — so the outer binding looked
+            // unused, and renaming it rewrote only its declaration.
+            return;
+        }
         if (f.kind === 'atom') {
             const name = atomText(src, f);
             if (isBindableName(name)) {
@@ -181,6 +189,14 @@ function collectTargets(src: string, target: Form): { name: string; start: numbe
     };
     visit(target);
     return out;
+}
+
+/**
+ * True when a form carries an unquote prefix, `~x` or `~@x`. The reader
+ * prefixes sit between `start` and `bodyStart`.
+ */
+function isUnquoted(src: string, form: Form): boolean {
+    return src.slice(form.start, form.bodyStart).includes('~');
 }
 
 /** The binding vector of a form, i.e. `children[1]` when it is a `[...]`. */
@@ -581,14 +597,23 @@ export function resolveLocalAt(src: string, offset: number): LocalBinding | null
             return b;
         }
     }
-    // Case 2: a *use* — nearest enclosing binding of the same name whose scope
-    // covers the offset wins (inner shadows outer).
+    // Case 2: a *use* — the binding of that name whose scope covers the offset
+    // and opened most recently wins.
+    //
+    // Taking the first match instead broke the common idiom of rebinding a
+    // name through successive `let` pairs — `[body (base) body (f body) body
+    // (g body)]`. Every use resolved to the first `body`, so the later ones
+    // looked unused, and renaming from one of them missed the rest.
+    let best: LocalBinding | null = null;
     for (const b of bindings) {
-        if (b.name === name && b.scopeStart <= pos && pos < b.scopeEnd) {
-            return b;
+        if (b.name !== name || b.scopeStart > pos || pos >= b.scopeEnd) {
+            continue;
+        }
+        if (!best || b.scopeStart > best.scopeStart || b.declStart > best.declStart) {
+            best = b;
         }
     }
-    return null;
+    return best;
 }
 
 /**
