@@ -18,6 +18,11 @@ import type { PhelDoc } from './phelDocs';
 export const NS_CLAUSES: readonly string[] = [':require', ':use', ':require-file'];
 /** Options a single `:require` entry accepts, per the same source. */
 export const NS_ENTRY_OPTIONS: readonly string[] = [':as', ':refer'];
+/**
+ * Options a `:use` entry accepts. `:use` imports a PHP class, not a Phel
+ * namespace, and `UseAliasRegistrar` rejects anything but `:as`.
+ */
+export const NS_USE_OPTIONS: readonly string[] = [':as'];
 
 export type CompletionContext =
     | { kind: 'normal' }
@@ -25,8 +30,12 @@ export type CompletionContext =
     | { kind: 'alias-qualified'; alias: string; ns: string }
     /** Inside `(ns …)`: a clause head like `(:require …)` is expected. */
     | { kind: 'ns-clause' }
-    /** Inside `(:require …)` / `(:use …)`, outside any entry vector. */
-    | { kind: 'ns-namespace' }
+    /**
+     * Inside a clause body, outside any entry vector. `clause` says which one,
+     * because they take different things: `:require` a Phel namespace,
+     * `:use` a PHP class, `:require-file` a path string.
+     */
+    | { kind: 'ns-namespace'; clause: string }
     /** Inside a `[some.ns …]` entry, past the namespace symbol. */
     | { kind: 'ns-entry-option' }
     /** Inside a `:refer [...]` vector; `ns` is the namespace being referred. */
@@ -141,7 +150,7 @@ export function completionContextAt(
         if (form.kind === 'list') {
             const head = headText(src, form);
             if (head && NS_CLAUSES.includes(head)) {
-                return { kind: 'ns-namespace' };
+                return { kind: 'ns-namespace', clause: head };
             }
         }
     }
