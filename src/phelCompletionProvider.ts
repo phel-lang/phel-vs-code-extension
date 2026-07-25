@@ -10,6 +10,7 @@ import {
     requirableNamespaces,
     NS_CLAUSES,
     NS_ENTRY_OPTIONS,
+    NS_USE_OPTIONS,
 } from './phelCompletionContext';
 import { localsInScopeAt } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
@@ -202,7 +203,7 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
             });
         }
         if (context.kind !== 'normal') {
-            return this.nsFormItems(context.kind, src, merged, range);
+            return this.nsFormItems(context, src, merged, range);
         }
 
         const specs = [
@@ -230,7 +231,10 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
 
     /** Candidates inside a `(ns …)` form: clause heads, entry options, namespaces. */
     private nsFormItems(
-        kind: 'ns-clause' | 'ns-namespace' | 'ns-entry-option',
+        context: Extract<
+            ReturnType<typeof completionContextAt>,
+            { kind: 'ns-clause' | 'ns-namespace' | 'ns-entry-option' }
+        >,
         src: string,
         docs: readonly import('./phelDocs').PhelDoc[],
         range: vscode.Range | undefined
@@ -242,19 +246,36 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
             return item;
         };
 
-        if (kind === 'ns-clause') {
+        if (context.kind === 'ns-clause') {
             return NS_CLAUSES.map((clause) => {
                 const item = new vscode.CompletionItem(clause, vscode.CompletionItemKind.Keyword);
                 item.detail = 'ns clause';
                 return withRange(item);
             });
         }
-        if (kind === 'ns-entry-option') {
+        if (context.kind === 'ns-entry-option') {
             return NS_ENTRY_OPTIONS.map((option) => {
                 const item = new vscode.CompletionItem(option, vscode.CompletionItemKind.Keyword);
                 item.detail = 'require option';
                 return withRange(item);
             });
+        }
+
+        const keywordItems = (options: readonly string[], detail: string) =>
+            options.map((option) => {
+                const item = new vscode.CompletionItem(option, vscode.CompletionItemKind.Keyword);
+                item.detail = detail;
+                return withRange(item);
+            });
+
+        // `:use` imports a PHP class and `:require-file` takes a path string;
+        // neither is something this extension can enumerate, so offering the
+        // Phel namespace list there would be plainly wrong.
+        if (context.clause === ':use') {
+            return keywordItems(NS_USE_OPTIONS, 'use option');
+        }
+        if (context.clause === ':require-file') {
+            return [];
         }
 
         const nsForm = parseNsForm(src);
@@ -266,13 +287,6 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
         });
         // `[ns :as x]` is the shape the auto-import edit writes, so offer the
         // options here too: the cursor may sit right after a namespace symbol.
-        return [
-            ...namespaces,
-            ...NS_ENTRY_OPTIONS.map((option) => {
-                const item = new vscode.CompletionItem(option, vscode.CompletionItemKind.Keyword);
-                item.detail = 'require option';
-                return withRange(item);
-            }),
-        ];
+        return [...namespaces, ...keywordItems(NS_ENTRY_OPTIONS, 'require option')];
     }
 }

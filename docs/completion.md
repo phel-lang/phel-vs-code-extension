@@ -28,6 +28,8 @@ Two positions get their own, much smaller list instead of the flat core one:
 |---|---|
 | Directly inside `(ns …)` | `:require`, `:use`, `:require-file` |
 | Inside `(:require …)` | Every namespace in the corpus or workspace, minus this file's own and the ones already required |
+| Inside `(:use …)` | `:as` only — `:use` imports a **PHP class**, which the extension cannot enumerate, and the compiler rejects `:refer` there |
+| Inside `(:require-file …)` | Nothing — it takes a path string |
 | Inside a `[some.ns …]` entry | `:as`, `:refer` |
 | Inside that entry's `:refer [ … ]` | Every public name of the namespace being required |
 

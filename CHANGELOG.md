@@ -34,6 +34,7 @@
 ### Completion
 
 - **`alias/…` completes.** After `(:require [phel.string :as str])`, typing `str/` now offers every public symbol of that namespace with its docs. Hover, go-to-definition and signature help already resolved alias-qualified symbols; completion offered nothing, because every candidate label is a bare name.
+- **`:use` and `:require-file` no longer offer Phel namespaces.** All three clauses were treated alike, but `:use` imports a **PHP class** (`(:use Symfony.Component.Console.Application)`) and `:require-file` takes a path string. `:use` now offers only `:as`, which is the single option its registrar accepts — `:refer` there is a compile error — and `:require-file` offers nothing rather than a list that could never be right.
 - **`:refer [ … ]` offers the namespace's own names.** Completing inside a refer vector suggested `:as` / `:refer` — the entry options — instead of the symbols being referred. It now lists the public names of the namespace on that entry, for both require shapes and either separator, and without mistaking an `:as` alias for the namespace.
 - **The `(ns …)` form gets its own candidates** instead of all 576 core symbols: `:require` / `:use` / `:require-file` directly inside `(ns …)`, the requirable namespaces inside a `(:require …)` clause, and `:as` / `:refer` inside an entry vector.
 

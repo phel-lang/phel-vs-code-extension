@@ -70,6 +70,7 @@ describe('phelCompletionContext.completionContextAt', () => {
         const offset = inClause.indexOf('(:require ') + '(:require '.length;
         assert.deepEqual(completionContextAt(inClause, offset, '  (:require '), {
             kind: 'ns-namespace',
+            clause: ':require',
         });
     });
 
@@ -175,5 +176,27 @@ describe('phelCompletionContext.referableNames', () => {
     it('skips private names and other namespaces', () => {
         assert.ok(!referableNames('phel.string', DOCS).includes('hidden'));
         assert.deepEqual(referableNames('phel.test', DOCS), ['is']);
+    });
+});
+
+describe('phelCompletionContext clause discrimination', () => {
+    const inClause = (src: string, marker: string) =>
+        completionContextAt(src, src.indexOf(marker) + marker.length, '  ' + marker);
+
+    it('reports which clause the cursor is in', () => {
+        // The three clauses take different things — a Phel namespace, a PHP
+        // class, and a path string — so the provider has to tell them apart.
+        assert.deepEqual(inClause('(ns a (:require ))', '(:require '), {
+            kind: 'ns-namespace',
+            clause: ':require',
+        });
+        assert.deepEqual(inClause('(ns a (:use ))', '(:use '), {
+            kind: 'ns-namespace',
+            clause: ':use',
+        });
+        assert.deepEqual(inClause('(ns a (:require-file ))', '(:require-file '), {
+            kind: 'ns-namespace',
+            clause: ':require-file',
+        });
     });
 });
