@@ -112,25 +112,30 @@ export class SourceMapManager {
             return this.phelToPhpPath.get(normalizedPhelFile) || null;
         }
 
-        // Extract namespace and search cache directories
+        // Fast path: guess the compiled filename from the namespace. Only some
+        // project layouts yield a namespace, and the guess only matches some
+        // cache naming schemes, so a miss here is expected rather than fatal —
+        // the content scan below is the reliable answer.
         const namespace = this.extractNamespaceFromPath(normalizedPhelFile);
-        if (!namespace) {
-            return null;
-        }
+        if (namespace) {
+            const expectedFilename = this.namespaceToFilename(namespace);
 
-        const expectedFilename = this.namespaceToFilename(namespace);
-
-        for (const cacheDir of this.cacheDirectories) {
-            const phpFile = path.join(cacheDir, expectedFilename);
-            if (fs.existsSync(phpFile)) {
-                const normalizedPhpFile = this.normalizePath(phpFile);
-                this.phelToPhpPath.set(normalizedPhelFile, normalizedPhpFile);
-                this.phpToPhelPath.set(normalizedPhpFile, normalizedPhelFile);
-                return normalizedPhpFile;
+            for (const cacheDir of this.cacheDirectories) {
+                const phpFile = path.join(cacheDir, expectedFilename);
+                if (fs.existsSync(phpFile)) {
+                    const normalizedPhpFile = this.normalizePath(phpFile);
+                    this.phelToPhpPath.set(normalizedPhelFile, normalizedPhpFile);
+                    this.phpToPhelPath.set(normalizedPhpFile, normalizedPhelFile);
+                    return normalizedPhpFile;
+                }
             }
         }
 
-        // Try alternative: scan cache directories for files that reference this source
+        // Reliable path: every compiled file records the source it came from on
+        // its second line, so match on that. This has to run even when the
+        // namespace heuristic found nothing — `withSrcDirs` accepts any
+        // directory name, and bailing out early left breakpoints unresolved in
+        // every project that does not keep its sources in `src/`.
         for (const cacheDir of this.cacheDirectories) {
             if (!fs.existsSync(cacheDir)) {
                 continue;
