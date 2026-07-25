@@ -375,6 +375,10 @@
                 "command": "phel.selection.shrink",
                 "title": "Phel: Shrink Selection",
                 "category": "Phel"
+            },
+            {
+                "command": "phel.lintWorkspace",
+                "title": "Phel: Lint Workspace"
             }
         ],
         "keybindings": [
@@ -512,7 +516,22 @@
                 "phel.diagnostics.enabled": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Run `phel analyze` on save and surface the result as inline diagnostics."
+                    "description": "Run the diagnostics engine on open/save and surface the result as inline diagnostics."
+                },
+                "phel.diagnostics.engine": {
+                    "type": "string",
+                    "enum": [
+                        "auto",
+                        "lint",
+                        "analyze"
+                    ],
+                    "enumDescriptions": [
+                        "Use `phel lint` when the CLI provides it, otherwise fall back to `phel analyze`.",
+                        "Always use `phel lint --format=json`. Reports rule-based findings (unused bindings, arity, anything configured in `phel-lint.phel`) on top of what `analyze` reports.",
+                        "Always use `phel analyze`. Semantic errors for the single file only."
+                    ],
+                    "default": "auto",
+                    "description": "Which Phel CLI subcommand backs inline diagnostics."
                 },
                 "phel.diagnostics.command": {
                     "type": "string",

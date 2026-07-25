@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Diagnostics
+
+- **`phel lint` now backs inline diagnostics.** It reports everything `phel analyze` does plus rule-based findings — unused bindings, shadowed bindings, arity problems, and whatever `phel-lint.phel` configures. On a file with one undefined symbol and one unused binding, `analyze` reported 1 diagnostic where `lint` reports 2.
+- New `phel.diagnostics.engine` setting (`auto` | `lint` | `analyze`, default `auto`). `lint` is newer than `analyze`, so `auto` uses it and falls back the first time a CLI rejects the subcommand, remembering that for the session; changing the executable or the setting retries. Nothing breaks for anyone on an older Phel.
+- New **Phel: Lint Workspace** command runs `phel lint` over the configured source dirs and fills the Problems panel for every file, including ones never opened. On-save diagnostics stay scoped to the saved file.
+
 ### Fixed (hover & signature help)
 
 - **Hover on a local showed an unrelated core function.** Go-to-definition, find-references, rename and document-highlight all consult the scope analyzer; hover did not, and looked the name up in the symbol corpus instead. Every one of the 20 most common parameter names — `name`, `map`, `key`, `count`, `str`, `first`, `type`, `next`, `get`, `list`, `keys`, `vals`, `set`, `max`, `min`, `val`, `rest`, `last`, `apply`, `print` — is also a `phel.core` function, so hovering the `name` in `(defn greet [name] …)` documented `phel.core/name`. It now reports the parameter and the line it is bound on.

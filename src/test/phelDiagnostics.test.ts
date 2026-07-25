@@ -1,5 +1,11 @@
 import * as assert from 'assert';
-import { parsePhelAnalyzeOutput, toZeroBasedRange, PhelDiagnostic } from '../phelDiagnostics';
+import {
+    groupDiagnosticsByUri,
+    isUnknownCommandError,
+    parsePhelAnalyzeOutput,
+    toZeroBasedRange,
+    PhelDiagnostic,
+} from '../phelDiagnostics';
 
 describe('parsePhelAnalyzeOutput', function () {
     it('returns an empty array for an empty string', function () {
@@ -127,5 +133,55 @@ describe('toZeroBasedRange', function () {
     it('clamps negative phel positions to zero', function () {
         const r = toZeroBasedRange(diag({ startLine: 0, startCol: 0, endLine: 0, endCol: 0 }));
         assert.deepStrictEqual(r, { startLine: 0, startCol: 0, endLine: 0, endCol: 1 });
+    });
+});
+
+describe('groupDiagnosticsByUri', function () {
+    const diag = (uri: string | undefined, message: string): PhelDiagnostic => ({
+        message,
+        severity: 'error',
+        startLine: 1,
+        startCol: 0,
+        endLine: 1,
+        endCol: 1,
+        ...(uri ? { uri } : {}),
+    });
+
+    it('splits a multi-file lint run by file', function () {
+        const grouped = groupDiagnosticsByUri([
+            diag('/a.phel', 'one'),
+            diag('/b.phel', 'two'),
+            diag('/a.phel', 'three'),
+        ]);
+        assert.deepStrictEqual([...grouped.keys()], ['/a.phel', '/b.phel']);
+        assert.deepStrictEqual(
+            grouped.get('/a.phel')?.map((d) => d.message),
+            ['one', 'three']
+        );
+    });
+
+    it('attributes entries without a uri to the fallback', function () {
+        const grouped = groupDiagnosticsByUri([diag(undefined, 'no uri')], '/fallback.phel');
+        assert.deepStrictEqual([...grouped.keys()], ['/fallback.phel']);
+    });
+
+    it('drops entries with no uri and no fallback', function () {
+        assert.strictEqual(groupDiagnosticsByUri([diag(undefined, 'orphan')]).size, 0);
+    });
+
+    it('returns an empty map for an empty run', function () {
+        assert.strictEqual(groupDiagnosticsByUri([]).size, 0);
+    });
+});
+
+describe('isUnknownCommandError', function () {
+    it('recognises the Symfony Console message for a missing subcommand', function () {
+        // What a Phel older than `phel lint` prints on stderr.
+        assert.strictEqual(isUnknownCommandError('  Command "lint" is not defined.  '), true);
+    });
+
+    it('does not treat a normal failure as a missing subcommand', function () {
+        assert.strictEqual(isUnknownCommandError('Cannot parse file: /tmp/x.phel'), false);
+        assert.strictEqual(isUnknownCommandError(''), false);
     });
 });
