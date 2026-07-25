@@ -139,6 +139,19 @@ npm run tokenize
 
 That uses the same `vscode-textmate` + `vscode-oniguruma` engine VS Code ships with to tokenise `scripts/sample.phel` and prints each token with its scope. Add new edge cases to `scripts/sample.phel` when fixing or extending grammar patterns.
 
+### Analyzers, against real Phel (`npm run sweep`)
+
+The unit tests cover the shapes we thought of. To check the analyzers — paredit, scope, folding, references, ns, docs — against the shapes people actually write:
+
+```bash
+npm run sweep                          # defaults to ../phel-lang/src/phel
+npm run sweep -- /path/to/other/src    # or any directory of .phel files
+```
+
+It runs each analyzer over every file, probes the offset-driven entry points across each one, and exits non-zero if anything throws.
+
+**Read the counts, not just the exit code.** A number that looks wrong is worth chasing: the macro-template and sequential-rebinding bugs behind the unused-local hints were found this way, when phel's own stdlib came back reporting 98 unused bindings in code written by the language's authors. It now reports 15, and those are genuine.
+
 ### Completion + docs database (`src/phelCoreDocs.ts`)
 
 `src/phelCoreDocs.ts` lazy-loads `assets/phel-core-docs.json`, a generated array of `PhelDoc` records (one per `defn` / `defmacro` / `def` form) extracted from a phel-lang checkout. It is the single source of truth for completion, hover, signature help, and the `Phel: Show Doc` command.
