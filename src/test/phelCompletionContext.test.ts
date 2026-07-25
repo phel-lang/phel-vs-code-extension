@@ -3,6 +3,7 @@ import {
     aliasPrefix,
     aliasQualifiedCandidates,
     completionContextAt,
+    referableNames,
     requirableNamespaces,
 } from '../phelCompletionContext';
 import type { PhelDoc } from '../phelDocs';
@@ -129,5 +130,50 @@ describe('phelCompletionContext.requirableNamespaces', () => {
             'phel.string',
             'phel.test',
         ]);
+    });
+});
+
+describe('phelCompletionContext :refer vectors', () => {
+    const referCtx = (src: string) =>
+        completionContextAt(src, src.indexOf(':refer [') + ':refer ['.length, ' :refer [');
+
+    it('resolves the namespace for every require shape', () => {
+        const cases: [string, string][] = [
+            ['(ns a (:require [phel.string :as str :refer []]))', 'phel.string'],
+            ['(ns a (:require [phel.string :refer []]))', 'phel.string'],
+            ['(ns a (:require phel.test :as t :refer []))', 'phel.test'],
+            ['(ns a (:require phel.test :refer []))', 'phel.test'],
+            ['(ns a (:require [phel\\string :as s :refer []]))', 'phel.string'],
+            ['(ns a (:require phel.html :as h phel.test :as t :refer []))', 'phel.test'],
+            ['(ns a (:require phel.html :as h [phel.test :refer []]))', 'phel.test'],
+        ];
+        for (const [src, ns] of cases) {
+            assert.deepEqual(referCtx(src), { kind: 'ns-refer', ns }, src);
+        }
+    });
+
+    it('does not mistake the :as alias for the namespace', () => {
+        // The atom directly before `:refer` is the alias, not the namespace.
+        const ctx = referCtx('(ns a (:require [phel.string :as str :refer []]))');
+        assert.equal(ctx.kind === 'ns-refer' && ctx.ns, 'phel.string');
+    });
+
+    it('still reports an option position outside the refer vector', () => {
+        const src = '(ns a (:require [phel.string ]))';
+        const offset = src.indexOf('phel.string ') + 'phel.string '.length;
+        assert.deepEqual(completionContextAt(src, offset, '  (:require [phel.string '), {
+            kind: 'ns-entry-option',
+        });
+    });
+});
+
+describe('phelCompletionContext.referableNames', () => {
+    it('lists the public names of the namespace, sorted', () => {
+        assert.deepEqual(referableNames('phel.string', DOCS), ['blank?', 'join']);
+    });
+
+    it('skips private names and other namespaces', () => {
+        assert.ok(!referableNames('phel.string', DOCS).includes('hidden'));
+        assert.deepEqual(referableNames('phel.test', DOCS), ['is']);
     });
 });

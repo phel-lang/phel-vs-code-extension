@@ -11,7 +11,7 @@
 // Pure: no `vscode` import, so the decisions are unit-testable.
 
 import { parseAll, pathAt, type Form } from './phelParedit';
-import { aliasMapFromSource } from './phelNsAnalyzer';
+import { aliasMapFromSource, normalizeNs } from './phelNsAnalyzer';
 import type { PhelDoc } from './phelDocs';
 
 /** Clause heads a `(ns …)` form accepts, per the compiler's `NsSymbol`. */
@@ -28,7 +28,9 @@ export type CompletionContext =
     /** Inside `(:require …)` / `(:use …)`, outside any entry vector. */
     | { kind: 'ns-namespace' }
     /** Inside a `[some.ns …]` entry, past the namespace symbol. */
-    | { kind: 'ns-entry-option' };
+    | { kind: 'ns-entry-option' }
+    /** Inside a `:refer [...]` vector; `ns` is the namespace being referred. */
+    | { kind: 'ns-refer'; ns: string };
 
 /**
  * The alias being typed, when the token under the cursor looks like
@@ -51,6 +53,50 @@ function atomText(src: string, form: Form): string {
 function headText(src: string, form: Form): string | null {
     const head = form.children[0];
     return head && head.kind === 'atom' ? atomText(src, head) : null;
+}
+
+/**
+ * When `vec` is the argument of a `:refer` keyword, the namespace whose names
+ * it lists; otherwise null.
+ *
+ * Both require shapes are handled, because `:refer` sits in a different parent
+ * in each: inside the entry vector for `[some.ns :refer [a]]`, and directly
+ * inside the clause for the flat `some.ns :refer [a]`. In both, the namespace
+ * is the last plain symbol before the `:refer`.
+ */
+function referTargetNs(src: string, parent: Form | undefined, vec: Form): string | null {
+    if (!parent || (parent.kind !== 'vector' && parent.kind !== 'list')) {
+        return null;
+    }
+    const kids = parent.children;
+    const index = kids.indexOf(vec);
+    if (index < 1) {
+        return null;
+    }
+    const keyword = kids[index - 1];
+    if (keyword.kind !== 'atom' || atomText(src, keyword) !== ':refer') {
+        return null;
+    }
+    // Scan forward so an option's *argument* is never mistaken for the
+    // namespace: in `[some.ns :as x :refer [...]]` the atom directly before
+    // `:refer` is `x`, the alias.
+    let ns: string | null = null;
+    // For the flat shape the parent is the `(:require …)` list, whose head is
+    // a keyword but not an option, so it takes no argument.
+    const start = parent.kind === 'list' ? 1 : 0;
+    for (let i = start; i < index - 1; i++) {
+        const kid = kids[i];
+        if (kid.kind !== 'atom') {
+            continue;
+        }
+        const text = atomText(src, kid);
+        if (text.startsWith(':')) {
+            i++; // skip this option's argument
+            continue;
+        }
+        ns = normalizeNs(text);
+    }
+    return ns;
 }
 
 /**
@@ -83,6 +129,12 @@ export function completionContextAt(
     for (let i = path.length - 1; i > nsIndex; i--) {
         const form = path[i];
         if (form.kind === 'vector') {
+            // `:refer [a b]` — the names come from the entry's namespace, not
+            // from the option keywords.
+            const referNs = referTargetNs(src, path[i - 1], form);
+            if (referNs !== null) {
+                return { kind: 'ns-refer', ns: referNs };
+            }
             // `[some.ns :as x]` — past the namespace symbol, options are next.
             return { kind: 'ns-entry-option' };
         }
@@ -151,6 +203,17 @@ export function requirableNamespaces(
     for (const doc of docs) {
         if (doc.ns && !skip.has(doc.ns)) {
             out.add(doc.ns);
+        }
+    }
+    return [...out].sort();
+}
+
+/** Public names of `ns`, offerable inside its `:refer [...]` vector. */
+export function referableNames(ns: string, docs: readonly PhelDoc[]): string[] {
+    const out = new Set<string>();
+    for (const doc of docs) {
+        if (doc.ns === ns && !doc.private) {
+            out.add(doc.name);
         }
     }
     return [...out].sort();
