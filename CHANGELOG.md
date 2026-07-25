@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Snippets
+
+- **31 new snippets, 29 → 60.** The binding-vector conditionals (`if-let`, `when-let`, `if-some`, `when-some`, `when-first`), `binding`, `letfn`, `dotimes`, `foreach`, `condp`, `if-not`, `when-not`, `declare`; the rest of the threading family (`as->`, `some->`, `some->>`, `cond->`, `cond->>`, `doto`); the protocol surface (`defrecord`, `deftype`, `reify`, `extend-type`, `extend-protocol`, `defmulti`, `defmethod`); the test forms (`testing`, `are`, `with-mocks`); plus `match` and `lazy-seq`. Every body is taken from the form's own `:example` metadata or its phel-lang definition, so the scaffolding matches the real shape.
+- `src/test/snippets.test.ts` now fails the build when a snippet prefix matches no form in the symbol corpus, when two snippets share a prefix, or when a body's brackets do not balance.
+
 ### Language support
 
 - **Protocol-method parameters are locals.** `this` and friends inside a `defrecord` / `deftype` / `extend-type` / `extend-protocol` / `reify` implementation tail, and the parameters of a `defmethod`, now resolve to their own binding — previously renaming `this` in one method rewrote every `this` in the workspace. A `defprotocol` / `definterface` method form stays excluded: it is a signature with no body, so binding its names would report each one as an unused local. `defrecord` / `deftype` field vectors also stay out — those are struct keys, not locals.
