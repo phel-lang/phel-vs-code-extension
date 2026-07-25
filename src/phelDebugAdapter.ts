@@ -682,6 +682,11 @@ export class PhelDebugSession extends LoggingDebugSession {
             this.receiveBuffer = '';
             this.transactionId = 1;
             this.pendingCommands.clear();
+            // Breakpoint ids belong to the engine session that just ended. The
+            // next connection re-applies every breakpoint and gets fresh ids,
+            // so holding the old ones would grow the map on every request and
+            // aim removals at a session that no longer exists.
+            this.xdebugBreakpointIds.clear();
             this.connectionState = 'listening';
             this.sendEvent(
                 new OutputEvent('Request completed. Waiting for next connection...\n', 'console')
@@ -1365,6 +1370,8 @@ export class PhelDebugSession extends LoggingDebugSession {
             this.xdebugSocket.destroy();
             this.xdebugSocket = null;
         }
+
+        this.xdebugBreakpointIds.clear();
 
         if (this.server) {
             this.server.close();
