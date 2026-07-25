@@ -113,6 +113,75 @@ describe('parsePhelFile', function () {
         });
     });
 
+    describe('type, protocol and test forms', function () {
+        it('indexes a defstruct with its positional constructor signature', function () {
+            const doc = single('(defstruct Point [x y])', 'my.app');
+            assert.strictEqual(doc.name, 'Point');
+            assert.strictEqual(doc.form, 'defstruct');
+            assert.strictEqual(doc.kind, 'fn');
+            assert.strictEqual(doc.signature, '(Point x y)');
+        });
+
+        it('indexes a defrecord without mistaking its method tail for an arity', function () {
+            const doc = single('(defrecord Circle [r] Shape (area [this] 1))', 'my.app');
+            assert.strictEqual(doc.name, 'Circle');
+            assert.strictEqual(doc.signature, '(Circle r)');
+            assert.strictEqual(doc.arities, undefined);
+        });
+
+        it('indexes deftype, defprotocol, definterface, defenum and defexception', function () {
+            const docs = parsePhelFile(
+                `(deftype Sq [s])
+(defprotocol Shape (area [this]))
+(definterface Drawable (draw [this]))
+(defenum Color :red :green)
+(defexception MyError)`,
+                'my.app'
+            );
+            assert.deepStrictEqual(
+                docs.map((d) => [d.name, d.form, d.kind]),
+                [
+                    ['Sq', 'deftype', 'fn'],
+                    ['Shape', 'defprotocol', 'def'],
+                    ['Drawable', 'definterface', 'def'],
+                    ['Color', 'defenum', 'def'],
+                    ['MyError', 'defexception', 'def'],
+                ]
+            );
+        });
+
+        it('indexes defonce, defmulti and deftest', function () {
+            const docs = parsePhelFile(
+                `(defonce cache {})
+(defmulti area "Area of a shape." :shape)
+(deftest my-test (is true))`,
+                'my.app'
+            );
+            assert.deepStrictEqual(
+                docs.map((d) => d.name),
+                ['cache', 'area', 'my-test']
+            );
+            assert.strictEqual(docs[1].doc, 'Area of a shape.');
+        });
+
+        it('skips declare, whose names are defined for real further down', function () {
+            // Indexing it would double every declared symbol in the outline.
+            const docs = parsePhelFile('(declare later-fn)\n(defn later-fn [] 1)', 'my.app');
+            assert.deepStrictEqual(
+                docs.map((d) => [d.name, d.form]),
+                [['later-fn', 'defn']]
+            );
+        });
+
+        it('records the defining operator on the classic forms too', function () {
+            const docs = parsePhelFile('(defn a [] 1)\n(defmacro- b [] 1)\n(def- c 1)', 'my.app');
+            assert.deepStrictEqual(
+                docs.map((d) => d.form),
+                ['defn', 'defmacro-', 'def-']
+            );
+        });
+    });
+
     describe('multi-form input', function () {
         it('returns one doc per top-level form, in order', function () {
             const docs = parsePhelFile(
