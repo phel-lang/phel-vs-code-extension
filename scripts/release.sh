@@ -28,7 +28,7 @@
 #   8. (Only with --publish) publishes to the VS Code Marketplace via
 #      `vsce publish`.
 #
-# Pre-reqs (one-time): see CONTRIBUTING.md "Marketplace setup".
+# Pre-reqs (one-time): see docs/CONTRIBUTING.md "Marketplace setup".
 #   - gh authed (`gh auth status`)
 #   - For --publish: vsce logged in (`npx @vscode/vsce login Phel-Lang`)
 #     or VSCE_PAT env var set.
