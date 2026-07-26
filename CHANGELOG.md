@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Docs
+
+- Consolidated the documentation. `CONTRIBUTING.md` moved to `docs/CONTRIBUTING.md` — GitHub reads that location too, so the "Contributing guidelines" link on issues and PRs still resolves — and the root now holds only `README.md` and `CHANGELOG.md`, which tooling pins in place.
+- Removed `vsc-extension-quickstart.md`, untouched Yeoman scaffold that still described the project as "your extension" and duplicated nothing the real docs cover.
+- Trimmed the README feature list from sixteen dense paragraphs to eleven scannable lines, with the detail left in `docs/`. The docs index now lists every page — `refactoring.md` and `repl-and-paredit.md` were missing from it.
+
 ## [0.12.0] - 2026-07-26
 
 ### Language support

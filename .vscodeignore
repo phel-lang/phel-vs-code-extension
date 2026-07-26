@@ -17,10 +17,8 @@ dist/meta.json
 .prettierignore
 tsconfig.json
 esbuild.js
-vsc-extension-quickstart.md
 node_modules/**
 **/*.test.js
-CONTRIBUTING.md
 docs/**
 scripts/**
 .agnostic-ai/**

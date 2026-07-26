@@ -53,7 +53,7 @@ The macro and function lists are projections of the symbol corpus in `assets/phe
 npm run regen-docs -- /path/to/phel-lang --phel-version v0.49.0
 ```
 
-`MACROS` and `CORE_FNS` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` is hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source) - add new entries there by hand. See [CONTRIBUTING.md](../CONTRIBUTING.md) for the full procedure.
+`MACROS` and `CORE_FNS` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` is hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source) - add new entries there by hand. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full procedure.
 
 ## Snippets
 

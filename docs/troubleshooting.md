@@ -8,7 +8,7 @@ Common problems and fixes. If your issue isn't here, open one at [GitHub Issues]
 The extension activates on language `phel`. Confirm the file's language mode in the bottom-right status bar. If it says **Plain Text**, click it and pick *Phel*. If *Phel* isn't in the list, the extension didn't install - see [Installation](installation.md).
 
 **Some forms render as plain symbols.**
-The grammar tracks `phel-lang` `main`. If you're using a bleeding-edge form added after the last extension release, it may not be in the keyword list yet - file an issue with a code sample, or refresh the grammar yourself (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
+The grammar tracks `phel-lang` `main`. If you're using a bleeding-edge form added after the last extension release, it may not be in the keyword list yet - file an issue with a code sample, or refresh the grammar yourself (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 **`#tag` literals show with a default colour.**
 Tagged literals scope as `storage.type.tagged.phel`. Most themes don't style that scope explicitly. Add a rule in your settings:
