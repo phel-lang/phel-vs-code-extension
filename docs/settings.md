@@ -21,30 +21,16 @@ The extension shells out to the Phel CLI for diagnostics, formatting, the test r
 2. `phel.executablePath`.
 3. Built-in default `vendor/bin/phel`.
 
-### Example: binary in `bin/phel`
+### Example
 
 ```jsonc
 // .vscode/settings.json
 {
-  "phel.executablePath": "bin/phel"
-}
-```
-
-### Example: absolute path
-
-```jsonc
-{
-  "phel.executablePath": "/usr/local/bin/phel"
-}
-```
-
-### Example: per-subsystem override
-
-The default CLI for everything is `bin/phel`, but the test runner uses a wrapper script:
-
-```jsonc
-{
+  // Relative to the workspace folder; an absolute path such as
+  // "/usr/local/bin/phel" works the same way.
   "phel.executablePath": "bin/phel",
+
+  // Optional: one subsystem needs a different binary.
   "phel.test.command": "scripts/phel-with-coverage.sh"
 }
 ```
