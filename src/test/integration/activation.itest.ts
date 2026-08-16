@@ -13,12 +13,12 @@ interface Walkthrough {
 }
 
 /**
- * What `activate()` may take. Locally it is 20-35 ms; this is 20x the top of
- * that, because an xvfb runner is 4-5x slower and the number has to stay quiet
- * on a bad day. What it does catch is the class of regression that costs a
- * whole second: parsing the symbol corpus synchronously, or spawning the CLI,
- * on the activation path. Raise it with `PHEL_ACTIVATION_BUDGET_MS` to
- * investigate a slow machine, not to make a red run green.
+ * What `activate()` may take. Locally it is 20-35 ms and 80-110 ms on CI's xvfb
+ * runner; this is 20x the top of the local range, so it stays quiet on a bad
+ * day. What it does catch is the class of regression that costs a whole second:
+ * parsing the symbol corpus synchronously, or spawning the CLI, on the
+ * activation path. Raise it with `PHEL_ACTIVATION_BUDGET_MS` to investigate a
+ * slow machine, not to make a red run green.
  */
 const BUDGET_MS = Number(process.env.PHEL_ACTIVATION_BUDGET_MS ?? 750);
 

@@ -70,7 +70,7 @@ rather than something to read in a report:
 | Budget | Where | Today |
 |--------|-------|-------|
 | `dist/extension.js` under 200 000 bytes, and no `vscode-languageclient` / `vscode-jsonrpc` / `vscode-languageserver` / `@vscode/debugadapter` / `phelDebugAdapter.ts` among its inputs | `npm run bundle:check`, in CI right after `npm run tokenize` | 146.5 KB |
-| `activate()` under 750 ms | `activation.itest.ts`, in the integration run | 20-35 ms |
+| `activate()` under 750 ms | `activation.itest.ts`, in the integration run | 20-35 ms locally, 80-110 ms on CI's xvfb runner |
 
 `bundle:check` builds for production and then reads `dist/meta.json`, so it
 judges what users download; `bundle.itest.ts` makes the same split assertion in
@@ -78,9 +78,11 @@ the host, but only ever against the development build. The size ceiling leaves
 room to grow without leaving room for a deferred bundle to slip back in: the
 smaller of the two is 51 KB on its own.
 
-The activation budget is 20x the slowest it has been measured locally. An xvfb
-runner is 4-5x slower, and the point is not to police 10 ms - it is to catch the
-class of regression that costs a whole second, such as parsing the symbol corpus
+The activation budget is 20x the slowest it has been measured locally, which
+still leaves ~7x headroom over what CI actually reports - the run logs
+`activation: N ms`, so the real number is one grep away on any build. The point
+is not to police 10 ms of drift on a loaded runner; it is to catch the class of
+regression that costs a whole second, such as parsing the symbol corpus
 synchronously or spawning the CLI on the activation path. The suite sorts first
 in the default host, so it is the one that sees the cold `activate()`; if
 anything woke the extension earlier the case skips rather than measuring a
