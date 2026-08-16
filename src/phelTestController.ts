@@ -6,6 +6,10 @@
 // individual tests get pass / fail status plus the failing assertion message
 // and (for the failing form) detail. Tests not present in the report are
 // marked skipped.
+//
+// The item tree itself — discovery, the watcher that keeps it current, and the
+// grouping of a run request — is shared with the benchmark controller and lives
+// in `phelTestItems`.
 
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -15,6 +19,7 @@ import { resolvePhelExecutable } from './phelExecutable';
 import { runPhelCli } from './phelCli';
 import type { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 import { findDeftests } from './phelTestScanner';
+import { PhelTestItemTree, groupQueue, nameForLeaf } from './phelTestItems';
 import { type AggregatedCase, groupByName, parseJUnit } from './junitParser';
 import { type CloverFile, parseClover } from './cloverParser';
 
@@ -26,16 +31,6 @@ const COVERAGE_API_AVAILABLE =
 
 const NO_COVERAGE_DRIVER_RE = /--coverage requires the pcov or xdebug extension/i;
 
-/** How long a burst of file creations is allowed to coalesce into one rescan. */
-const RELOAD_DEBOUNCE_MS = 300;
-
-/**
- * Never look for tests inside dependencies: `vendor` is full of `.phel` files
- * whose `deftest`s belong to somebody else's suite, and running one from here
- * says nothing about this project.
- */
-const NEVER_TESTS = '**/{node_modules,vendor}/**';
-
 interface ResolvedCommand {
     command: string;
     cwd: string;
@@ -46,94 +41,6 @@ function resolveTestCommand(folder: vscode.WorkspaceFolder): ResolvedCommand {
         command: resolvePhelExecutable('test.command', folder),
         cwd: folder.uri.fsPath,
     };
-}
-
-async function readFile(uri: vscode.Uri): Promise<string | null> {
-    try {
-        return await fs.readFile(uri.fsPath, 'utf-8');
-    } catch {
-        return null;
-    }
-}
-
-function attachItems(
-    controller: vscode.TestController,
-    file: vscode.Uri,
-    text: string
-): vscode.TestItem | null {
-    const tests = findDeftests(text);
-    if (tests.length === 0) {
-        controller.items.delete(file.toString());
-        return null;
-    }
-    const fileItem =
-        controller.items.get(file.toString()) ??
-        controller.createTestItem(file.toString(), path.basename(file.fsPath), file);
-    fileItem.children.replace(
-        tests.map((t) => {
-            const id = `${file.toString()}::${t.name}`;
-            const item = controller.createTestItem(id, t.name, file);
-            item.range = new vscode.Range(t.line, t.nameCol, t.line, t.nameCol + t.name.length);
-            return item;
-        })
-    );
-    controller.items.add(fileItem);
-    return fileItem;
-}
-
-/**
- * Every `.phel` file that could hold a test. `test-dirs` from the project's
- * configuration is the authoritative answer; without it (no CLI, or one too old
- * to print its config) fall back to the whole folder minus the dependencies.
- */
-async function findTestFiles(projectConfig?: PhelProjectConfigProvider): Promise<vscode.Uri[]> {
-    const folders = vscode.workspace.workspaceFolders ?? [];
-    if (!projectConfig || folders.length === 0) {
-        return vscode.workspace.findFiles('**/*.phel', NEVER_TESTS);
-    }
-    const perFolder = await Promise.all(
-        folders.map(async (folder) => {
-            const dirs = await projectConfig.testDirs(folder);
-            const pattern = new vscode.RelativePattern(folder, testFilesGlob(dirs));
-            return vscode.workspace.findFiles(pattern, NEVER_TESTS);
-        })
-    );
-    return perFolder.flat();
-}
-
-function testFilesGlob(testDirs: readonly string[]): string {
-    const dirs = testDirs.map((dir) => dir.replace(/^\.\//, '').replace(/\/+$/, ''));
-    if (dirs.length === 0) {
-        return '**/*.phel';
-    }
-    return dirs.length === 1 ? `${dirs[0]}/**/*.phel` : `{${dirs.join(',')}}/**/*.phel`;
-}
-
-async function loadAllTests(
-    controller: vscode.TestController,
-    projectConfig?: PhelProjectConfigProvider
-): Promise<void> {
-    const uris = await findTestFiles(projectConfig);
-    // Read files concurrently; attach serially afterwards (attachItems mutates
-    // the controller and is cheap/synchronous).
-    const read = await Promise.all(uris.map(async (uri) => ({ uri, text: await readFile(uri) })));
-    const found = new Set<string>();
-    for (const { uri, text } of read) {
-        if (text !== null && attachItems(controller, uri, text)) {
-            found.add(uri.toString());
-        }
-    }
-    // A reload is also how a file that was deleted, or that left the configured
-    // test directories, disappears from the tree.
-    const stale: string[] = [];
-    controller.items.forEach((item) => {
-        if (!found.has(item.id)) {
-            stale.push(item.id);
-        }
-    });
-    for (const id of stale) {
-        controller.items.delete(id);
-    }
 }
 
 interface JUnitRunOutcome {
@@ -215,49 +122,6 @@ async function runPhelTestFile(
     };
 }
 
-interface QueueGroups {
-    /** File item → the set of leaf test items requested under it. */
-    byFile: Map<vscode.TestItem, vscode.TestItem[]>;
-}
-
-function groupQueue(
-    queue: readonly vscode.TestItem[],
-    request: vscode.TestRunRequest
-): QueueGroups {
-    const byFile = new Map<vscode.TestItem, vscode.TestItem[]>();
-    const addLeaf = (item: vscode.TestItem): void => {
-        if (request.exclude?.includes(item)) {
-            return;
-        }
-        // A leaf (deftest) item has an id of the form "<fileUri>::<name>".
-        const isLeaf = item.id.includes('::');
-        const fileItem = isLeaf ? item.parent : item;
-        if (!fileItem) {
-            return;
-        }
-        const leaves = byFile.get(fileItem) ?? [];
-        if (isLeaf) {
-            leaves.push(item);
-        } else {
-            item.children.forEach((child) => {
-                if (!request.exclude?.includes(child)) {
-                    leaves.push(child);
-                }
-            });
-        }
-        byFile.set(fileItem, leaves);
-    };
-    for (const item of queue) {
-        addLeaf(item);
-    }
-    return { byFile };
-}
-
-function nameForLeaf(item: vscode.TestItem): string {
-    const sep = item.id.indexOf('::');
-    return sep < 0 ? item.label : item.id.slice(sep + 2);
-}
-
 function messageFor(aggregated: AggregatedCase): vscode.TestMessage[] {
     return aggregated.failures.map((f) => {
         const parts = [f.message || (f.isError ? 'Error' : 'Assertion failed')];
@@ -310,21 +174,15 @@ function mergeCoverage(
 
 export class PhelTestController implements vscode.Disposable {
     private readonly controller: vscode.TestController;
+    private readonly tree: PhelTestItemTree;
     private readonly disposables: vscode.Disposable[] = [];
     /** Per-run cache of detailed line coverage, keyed by file URI string. */
     private coverageDetails = new Map<string, vscode.StatementCoverage[]>();
-    /** Coalesces the reloads a bulk file change (a branch switch) would trigger. */
-    private reloadTimer?: NodeJS.Timeout;
-    /** Set once the Test Explorer has asked for the tree; nothing to keep in step before. */
-    private loaded = false;
 
-    constructor(private readonly projectConfig?: PhelProjectConfigProvider) {
+    constructor(projectConfig?: PhelProjectConfigProvider) {
         this.controller = vscode.tests.createTestController('phel-tests', 'Phel');
-        this.disposables.push(this.controller);
-        this.controller.resolveHandler = async () => {
-            this.loaded = true;
-            await loadAllTests(this.controller, this.projectConfig);
-        };
+        this.tree = new PhelTestItemTree(this.controller, findDeftests, projectConfig);
+        this.disposables.push(this.controller, this.tree);
         this.disposables.push(
             this.controller.createRunProfile(
                 'Run',
@@ -344,41 +202,6 @@ export class PhelTestController implements vscode.Disposable {
                 Promise.resolve(this.coverageDetails.get(fileCoverage.uri.toString()) ?? []);
             this.disposables.push(coverageProfile);
         }
-        // A save updates the file it edited; creating or deleting a `.phel`
-        // file elsewhere (git checkout, a new test file, rm) has no document to
-        // hang off, so the tree follows the filesystem instead.
-        const watcher = vscode.workspace.createFileSystemWatcher('**/*.phel');
-        this.disposables.push(
-            vscode.workspace.onDidSaveTextDocument(async (doc) => {
-                if (doc.languageId !== 'phel') {
-                    return;
-                }
-                attachItems(this.controller, doc.uri, doc.getText());
-            }),
-            watcher,
-            watcher.onDidCreate(() => this.scheduleReload()),
-            watcher.onDidDelete((uri) => this.controller.items.delete(uri.toString()))
-        );
-        if (this.projectConfig) {
-            // `test-dirs` decides what is scanned at all.
-            this.disposables.push(this.projectConfig.onDidChange(() => this.scheduleReload()));
-        }
-    }
-
-    /** Rescan soon, once, however many files changed. */
-    private scheduleReload(): void {
-        if (!this.loaded) {
-            // The tree was never built, so there is nothing to bring up to date
-            // — and scanning the workspace for a view nobody opened is not free.
-            return;
-        }
-        if (this.reloadTimer) {
-            clearTimeout(this.reloadTimer);
-        }
-        this.reloadTimer = setTimeout(() => {
-            this.reloadTimer = undefined;
-            void loadAllTests(this.controller, this.projectConfig);
-        }, RELOAD_DEBOUNCE_MS);
     }
 
     private async run(
@@ -386,13 +209,7 @@ export class PhelTestController implements vscode.Disposable {
         token: vscode.CancellationToken,
         withCoverage: boolean
     ): Promise<void> {
-        const queue: vscode.TestItem[] = [];
-        if (request.include) {
-            queue.push(...request.include);
-        } else {
-            this.controller.items.forEach((it) => queue.push(it));
-        }
-        const { byFile } = groupQueue(queue, request);
+        const byFile = groupQueue(request.include ?? this.tree.roots(), request);
         const run = this.controller.createTestRun(request);
         if (withCoverage) {
             this.coverageDetails = new Map();
@@ -479,9 +296,6 @@ export class PhelTestController implements vscode.Disposable {
     }
 
     dispose(): void {
-        if (this.reloadTimer) {
-            clearTimeout(this.reloadTimer);
-        }
         for (const d of this.disposables) {
             d.dispose();
         }

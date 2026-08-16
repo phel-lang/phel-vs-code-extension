@@ -11,7 +11,7 @@ The extension shells out to the Phel CLI for diagnostics, formatting, the test r
 | `phel.executablePath` | string | `vendor/bin/phel` | Workspace-wide CLI path. Used by all subsystems unless overridden. Relative paths resolve against the workspace folder; absolute paths are used as-is. |
 | `phel.diagnostics.command` | string | `""` | Override `phel.executablePath` for `phel lint` / `phel analyze`. Empty string → fall back to `phel.executablePath`. |
 | `phel.format.command` | string | `""` | Override `phel.executablePath` for `phel format`. Empty string → fall back to `phel.executablePath`. |
-| `phel.test.command` | string | `""` | Override `phel.executablePath` for the test CodeLens / Test Explorer. Empty string → fall back to `phel.executablePath`. |
+| `phel.test.command` | string | `""` | Override `phel.executablePath` for the test CodeLens / Test Explorer. Empty string → fall back to `phel.executablePath`. Benchmarks are not covered by it: `phel bench` has no per-command override anywhere. |
 | `phel.repl.command` | string | `""` | Override `phel.executablePath` for the REPL terminal. Empty string → fall back to `phel.executablePath`. |
 | `phel.repl.args` | string[] | `["repl"]` | Arguments passed to the Phel CLI when starting the REPL. |
 
@@ -75,7 +75,7 @@ Some behaviour has no setting here on purpose: your `phel-config.php` already an
 | From `phel-config.php` | What follows it |
 |---|---|
 | `warn-deprecations` | Migration severity. On → a call to a deprecated form is a **warning**, exactly what `phel build` reports. Off (the default) → a struck-through **hint**. Removed names and syntax are always warnings, and so is the `\` namespace separator, which Phel announces whether or not the flag is set. |
-| `test-dirs` | What the Test Explorer scans. Without it, every `.phel` file in the folder except `vendor` and `node_modules`. |
+| `test-dirs` | What both Explorer trees scan, for `deftest` and for `defbench`. Without it, every `.phel` file in the folder except `vendor` and `node_modules`. |
 | `cache-dir` | The `cacheDir` a Phel debug session defaults to (`<cache-dir>/compiled`), unless the launch configuration sets one. |
 
 No Phel installed, or one too old to print its configuration? Every one of these falls back to what it did before, so a project without `vendor/bin/phel` behaves exactly as it always has.

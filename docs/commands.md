@@ -37,7 +37,10 @@ Registered by [`src/phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.
 | Phel: Run Benchmarks in Current File | `phel.benchFile` | Same prompt, then `phel bench <file> [--filter=…]` in the folder owning that file, with `<file>` relative to it. Also backs the file-level `▶ Run all benchmarks in file` lens. | Phel CLI | — |
 | Phel: Run Benchmark | `phel.runBenchmark` | `phel bench <file> --filter=<name>` in the folder owning that file. Takes `(uri, name)` from the `▶ Run benchmark` CodeLens — **not for the palette**: without a name it does nothing. `phel bench` has no per-name entry point, so the name goes through `--filter`, a substring match. | Phel CLI | — |
 
-The Test Explorer ([`src/phelTestController.ts`](../src/phelTestController.ts)) is not a command: it registers run / debug profiles that the Testing view drives.
+Neither Explorer tree is a command: each registers run profiles that the Testing view drives.
+
+- **Phel** ([`src/phelTestController.ts`](../src/phelTestController.ts)) — one item per `deftest`, run through `phel test --reporter=junit-xml`, with a coverage profile.
+- **Phel Benchmarks** ([`src/phelBenchController.ts`](../src/phelBenchController.ts)) — one item per `defbench`, run through `phel bench <file>` (plus `--filter=<name>` when a single benchmark was asked for) and read back from the table it prints, so each item's duration is that benchmark's mean and the whole table lands in the run output. A benchmark cannot fail, only take time: a row that comes back is passed, one the runner left out is skipped, and a run with no table at all is an error carrying what the CLI said. Kept apart from the tests so that "Run All Tests" never times a benchmark. Uses `phel.executablePath`.
 
 ## Project
 
