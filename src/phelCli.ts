@@ -6,6 +6,7 @@
 import { spawn } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 import * as vscode from 'vscode';
+import { toInvocation } from './phelInvocation';
 
 export interface PhelCliResult {
     code: number;
@@ -31,7 +32,8 @@ export function runPhelCli(
     options: RunPhelCliOptions = {}
 ): Promise<PhelCliResult> {
     return new Promise((resolve) => {
-        const proc = spawn(command, [...args], { cwd });
+        const inv = toInvocation(command, args);
+        const proc = spawn(inv.file, inv.args, { cwd, shell: inv.shell });
         let stdout = '';
         let stderr = '';
         // Decode across chunk boundaries: `chunk.toString()` on a chunk that

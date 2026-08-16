@@ -1,0 +1,3 @@
+# Check every text file out with LF, on Windows too: the build runs
+# `prettier --check`, which fails on a CRLF working copy.
+* text=auto eol=lf

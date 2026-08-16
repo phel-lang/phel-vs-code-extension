@@ -104,7 +104,8 @@ return (new \\Phel\\Config\\PhelConfig())
         it('should construct cache path correctly', function () {
             const tempDir = '/tmp/phel';
             const cacheDir = path.join(tempDir, 'cache', 'compiled');
-            assert.strictEqual(cacheDir, '/tmp/phel/cache/compiled');
+            // Normalised, so the separator is whatever the host platform uses.
+            assert.strictEqual(cacheDir, path.normalize('/tmp/phel/cache/compiled'));
         });
     });
 });

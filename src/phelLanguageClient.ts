@@ -22,6 +22,7 @@ import {
     ErrorAction,
     type ErrorHandler,
     type ErrorHandlerResult,
+    type Executable,
     LanguageClient,
     type LanguageClientOptions,
     type Message,
@@ -30,6 +31,7 @@ import {
     TransportKind,
 } from 'vscode-languageclient/node';
 import { resolvePhelExecutable } from './phelExecutable';
+import { toInvocation } from './phelInvocation';
 import { LspRestartBudget } from './lspRestartBudget';
 
 const OUTPUT_CHANNEL_NAME = 'Phel Language Server';
@@ -116,10 +118,16 @@ export async function startLanguageClient(
         context.subscriptions.push(outputChannel);
     }
 
-    const serverOptions: ServerOptions = {
-        run: { command, args, transport: TransportKind.stdio },
-        debug: { command, args, transport: TransportKind.stdio },
-    };
+    // Windows cannot start the extension-less Composer proxy; `toInvocation`
+    // turns it into `php vendor/bin/phel lsp`.
+    const inv = toInvocation(command, args);
+    const executable = (): Executable => ({
+        command: inv.file,
+        args: [...inv.args],
+        options: { shell: inv.shell },
+        transport: TransportKind.stdio,
+    });
+    const serverOptions: ServerOptions = { run: executable(), debug: executable() };
 
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'phel' }],
@@ -138,7 +146,7 @@ export async function startLanguageClient(
     try {
         await client.start();
         context.subscriptions.push(client);
-        log(`Phel language server started (${command} ${args.join(' ')}).`);
+        log(`Phel language server started (${inv.file} ${inv.args.join(' ')}).`);
         return true;
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
