@@ -1,0 +1,146 @@
+{
+  "globalFunctions": [
+    {
+      "label": "strtotime",
+      "kind": "global",
+      "detail": "strtotime(string $datetime, ?int $baseTimestamp): int|false",
+      "documentation": ""
+    },
+    {
+      "label": "strtok",
+      "kind": "global",
+      "detail": "strtok(string $string, ?string $token): string|false",
+      "documentation": ""
+    },
+    {
+      "label": "strtoupper",
+      "kind": "global",
+      "detail": "strtoupper(string $string): string",
+      "documentation": ""
+    },
+    {
+      "label": "strtolower",
+      "kind": "global",
+      "detail": "strtolower(string $string): string",
+      "documentation": ""
+    }
+  ],
+  "instanceMethods": [
+    {
+      "label": "getTimezone",
+      "kind": "macro",
+      "detail": "getTimezone()",
+      "documentation": ""
+    },
+    {
+      "label": "getOffset",
+      "kind": "macro",
+      "detail": "getOffset()",
+      "documentation": ""
+    },
+    {
+      "label": "getTimestamp",
+      "kind": "macro",
+      "detail": "getTimestamp()",
+      "documentation": ""
+    }
+  ],
+  "instanceProperties": [
+    {
+      "label": "prefix",
+      "kind": "local",
+      "detail": "string property",
+      "documentation": ""
+    }
+  ],
+  "staticMethods": [
+    {
+      "label": "createFromFormat",
+      "kind": "macro",
+      "detail": "createFromFormat(string $format, string $datetime, ?DateTimeZone $timezone)",
+      "documentation": ""
+    },
+    {
+      "label": "createFromTimestamp",
+      "kind": "macro",
+      "detail": "createFromTimestamp(int|float $timestamp)",
+      "documentation": ""
+    }
+  ],
+  "classConstants": [
+    {
+      "label": "ATOM",
+      "kind": "keyword",
+      "detail": "constant",
+      "documentation": ""
+    }
+  ],
+  "classNames": [
+    {
+      "label": "DateTime",
+      "kind": "global",
+      "detail": "class",
+      "documentation": ""
+    },
+    {
+      "label": "DateTimeImmutable",
+      "kind": "global",
+      "detail": "class",
+      "documentation": ""
+    },
+    {
+      "label": "DateTimeZone",
+      "kind": "global",
+      "detail": "class",
+      "documentation": ""
+    },
+    {
+      "label": "DateTimeInterface",
+      "kind": "global",
+      "detail": "interface",
+      "documentation": ""
+    }
+  ],
+  "superglobals": [
+    {
+      "label": "$_SERVER",
+      "kind": "variable",
+      "detail": "PHP superglobal",
+      "documentation": "Server and execution environment information."
+    },
+    {
+      "label": "$_SESSION",
+      "kind": "variable",
+      "detail": "PHP superglobal",
+      "documentation": "Session variables."
+    }
+  ],
+  "dotShorthand": [
+    {
+      "label": "format",
+      "kind": "macro",
+      "detail": "format(string $format)",
+      "documentation": ""
+    }
+  ],
+  "phelFallback": [
+    {
+      "label": "xs",
+      "kind": "local",
+      "detail": "local binding",
+      "documentation": ""
+    },
+    {
+      "label": "macroexpand",
+      "kind": "global",
+      "detail": "core",
+      "documentation": "Recursively expands the given form until it is no longer a macro call."
+    },
+    {
+      "label": "map",
+      "kind": "global",
+      "detail": "core",
+      "documentation": "Returns a lazy sequence of the result of applying `f` to all of the first items in each coll,\n   followed by applying `f` to all the second items in each coll until anyone of the colls is exhausted.\n\n  When given a single collection, applies the function to each element.\n  When applied to a map, iterates over entries as `[key value]` pairs,\n  matching Clojure semantics.\n  With multiple collections, applies the function to corresponding elements from each collection,\n  stopping when the shortest collection is exhausted."
+    }
+  ]
+}

@@ -3,8 +3,9 @@
 // `{"id", "method", "params"}`; the answer is `{"id", "result"}` or
 // `{"id", "error": {code, message}}`. The methods we care about here are
 // `analyzeSource {source, uri}` - the analyzer diagnostics `phel analyze`
-// prints - and the three navigation ones (`indexProject`, `resolveSymbol`,
-// `findReferences`), but the transport is method-agnostic.
+// prints - the three navigation ones (`indexProject`, `resolveSymbol`,
+// `findReferences`) and `completeAtPoint {source, line, col}`, but the
+// transport is method-agnostic.
 //
 // Why a daemon: nearly all of `phel analyze`'s wall time is booting PHP and
 // preloading the file's dependencies. That is affordable once per save and
@@ -26,6 +27,7 @@ import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import * as readline from 'node:readline';
 import { LspRestartBudget } from './lspRestartBudget';
 import { isUnknownCommandError } from './phelDiagnostics';
+import { type DaemonCompletion, parseCompletionResult } from './phelInteropCompletion';
 import { toInvocation } from './phelInvocation';
 import { normalizeNs } from './phelNsAnalyzer';
 import {
@@ -258,6 +260,33 @@ export class PhelApiDaemonClient {
                 namespace: normalizeNs(namespace),
                 symbol,
             })
+        );
+    }
+
+    /**
+     * The completions the compiler offers at a point in `source`.
+     *
+     * `line1` and `col1` are the daemon's own convention: both 1-based, the
+     * column counting the characters before the cursor plus one, so a cursor at
+     * the start of a line is `col1 = 1`. Callers coming from an editor position
+     * add one to each.
+     *
+     * The answer is served from whatever index this process has cached (none
+     * until `indexProject` has run), which the PHP-interop half does not need:
+     * it reflects over the classes the daemon itself has loaded.
+     */
+    async completeAtPoint(
+        source: string,
+        line1: number,
+        col1: number,
+        key: string
+    ): Promise<DaemonCompletion[]> {
+        return parseCompletionResult(
+            await this.request<unknown>(
+                'completeAtPoint',
+                { source, line: line1, col: col1 },
+                { key }
+            )
         );
     }
 

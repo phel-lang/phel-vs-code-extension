@@ -38,6 +38,27 @@ Two positions get their own, much smaller list instead of the flat core one:
 | Inside a `[some.ns …]` entry | `:as`, `:refer` |
 | Inside that entry's `:refer [ … ]` | Every public name of the namespace being required |
 
+### PHP interop
+
+The corpus above stops where PHP begins: no `.phel` file declares `strtoupper`, `DateTimeImmutable` or `format`. Those come from the compiler instead — the same long-lived `phel api-daemon` behind [live diagnostics](settings.md#live-diagnostics), which reflects over the classes your project can actually load and answers a second completion provider registered next to the bundled one. VS Code merges the two lists, so nothing that worked before goes away.
+
+Seven positions are recognised, and they are the ones Phel's own `PhpInteropContextResolver` recognises:
+
+| Typing | What you get |
+|---|---|
+| `(php/-> receiver metho…` | Public instance methods and properties of the receiver's class |
+| `(php/:: Class metho…` and `\Class/metho…` | Public static methods, constants and `$`-prefixed static properties |
+| `(.metho…` / `(.-fiel…`, receiver after the cursor | The same instance members, for the dot shorthands |
+| `(php/new \Fo…` and a bare `\Fo…` | Class, interface, enum and trait names |
+| `php/strto…` | PHP's global functions, with their signatures |
+| `php/$_SE…` | The superglobals |
+
+The receiver's class is resolved lexically: a `(php/new \Foo …)` binding, a `^{:tag \Foo}` or `^\Foo` annotation, a `(:use Foo\Bar)` import, or the return type of the method a `(php/-> x (get-thing) (…` chain hops through.
+
+Two things follow from where this runs. It needs `phel.diagnostics.live` on and a Phel with the `api-daemon` command; without either, completion is exactly what it was. And it runs on the keystroke path, so the daemon gets **400 ms** — a busy or still-booting one costs the suggestion for that keystroke and nothing else, and the next keystroke asks again. Turn it off per folder with `phel.completion.phpInterop`.
+
+The daemon has no signature-help method today, so a method's rendered signature is shown as the item's detail and repeated in its documentation popup: that popup is the only place it is readable.
+
 ### Bundled providers vs. the language server
 
 These bundled providers are the zero-config default: they work offline, with no extra process or warmup, and cover ~80% of the daily friction.

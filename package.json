@@ -852,6 +852,12 @@
                     "scope": "resource",
                     "markdownDescription": "Override `#phel.executablePath#` for diagnostics only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
+                "phel.completion.phpInterop": {
+                    "type": "boolean",
+                    "default": true,
+                    "scope": "resource",
+                    "markdownDescription": "Complete PHP symbols in interop positions — the members of the class behind `(php/-> receiver …)` / `(php/:: Class …)` / `(.method x)`, the classes behind `\\Foo` and `(php/new \\Foo)`, PHP's global functions after `php/`, and the superglobals after `php/$` — through the same long-lived `phel api-daemon` live diagnostics use, which reflects over the classes your project can actually load. Needs `#phel.diagnostics.live#` on and a Phel that has the `api-daemon` command; the daemon gets 400 ms per keystroke, so a busy or still-booting one costs nothing but the suggestion."
+                },
                 "phel.format.enabled": {
                     "type": "boolean",
                     "default": true,

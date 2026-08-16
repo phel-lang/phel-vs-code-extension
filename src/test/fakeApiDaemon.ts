@@ -23,6 +23,11 @@
 // to nothing, so the same run also exercises the fallback to the TypeScript
 // index.
 //
+// `completeAtPoint` answers with two PHP global functions and one Phel core
+// symbol, whatever the cursor is on: the extension's own gate decides *whether*
+// to ask, and the Phel item is there because the real daemon adds one whenever
+// it does not read the position as interop - which the mapping has to drop.
+//
 // Compiled to `out/test/fakeApiDaemon.js`; `npm test` globs `*.test.js`, so it
 // is never collected as a suite.
 
@@ -94,6 +99,32 @@ function location(line: number, col: number): Record<string, unknown> {
  */
 function greetReferences(): Record<string, unknown>[] {
     return [location(3, 7), location(1, 1)];
+}
+
+/** What `completeAtPoint` answers, in the shape the real daemon uses. */
+function completions(): Record<string, unknown>[] {
+    return [
+        {
+            label: 'strtoupper',
+            kind: 'global',
+            detail: 'strtoupper(string $string): string',
+            documentation: '',
+        },
+        {
+            label: 'strtolower',
+            kind: 'global',
+            detail: 'strtolower(string $string): string',
+            documentation: '',
+        },
+        // Not a PHP symbol: the mapping drops it rather than offering a second
+        // copy of what the bundled provider already lists.
+        {
+            label: 'str-contains?',
+            kind: 'global',
+            detail: 'core',
+            documentation: 'Returns true when `s` contains `subs`.',
+        },
+    ];
 }
 
 /** The short name of a `namespace/name` key, or the key itself. */
@@ -203,6 +234,9 @@ if (subcommand !== 'api-daemon') {
                     result:
                         shortName(String(params.symbol ?? '')) === 'greet' ? greetReferences() : [],
                 });
+                return;
+            case 'completeAtPoint':
+                respond({ id: request.id, result: completions() });
                 return;
             case '__stats':
                 respond({
