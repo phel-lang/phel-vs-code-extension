@@ -1,62 +1,70 @@
 import * as assert from 'assert';
+import { formatDbgpCommand } from '../dbgpCommand';
+import { breakpointSetArgs, phelExpressionToPhp } from '../xdebugBreakpointConditions';
 
 /**
  * Tests for Phel Debug Adapter utilities.
  *
  * Note: The PhelDebugSession class relies heavily on VS Code APIs and network operations,
- * so we test the pure utility functions by replicating their logic here.
+ * so we test the pure utility functions by replicating their logic here. The parts that
+ * have been extracted into modules of their own (the DBGp command line, the breakpoint
+ * arguments, the Phel to PHP translation) are imported and driven directly.
  */
 
 describe('PhelDebugAdapter Utilities', function () {
-    describe('convertPhelToPHP', function () {
-        // Replicate the convertPhelToPHP logic
-        function convertPhelToPHP(expression: string): string {
-            let php = expression.trim();
+    // The exact bytes `setXdebugBreakpoint` puts on the wire: the adapter
+    // composes these two functions and appends the NUL the transport frames on.
+    describe('breakpoint_set command line', function () {
+        const URI = 'file:///tmp/phel/demo__a5b0.php';
 
-            // If it looks like a variable reference (kebab-case identifier)
-            if (/^[a-z][a-z0-9-]*$/i.test(php)) {
-                // Convert kebab-case to snake_case and add $
-                php = '$' + php.replace(/-/g, '_');
-            }
-            // If it's a keyword
-            else if (php.startsWith(':')) {
-                const name = php.substring(1);
-                php = `new \\Phel\\Lang\\Keyword("${name}")`;
-            }
-
-            return php;
+        function breakpointSet(
+            line: number,
+            options?: { condition?: string; hitCondition?: string }
+        ): string {
+            const command = breakpointSetArgs(URI, line, options);
+            return formatDbgpCommand('breakpoint_set', 3, command.args, command.data);
         }
 
-        it('should convert simple variable names', function () {
-            assert.strictEqual(convertPhelToPHP('foo'), '$foo');
-            assert.strictEqual(convertPhelToPHP('bar'), '$bar');
-            assert.strictEqual(convertPhelToPHP('x'), '$x');
+        it('sets a plain line breakpoint', function () {
+            assert.strictEqual(breakpointSet(29), `breakpoint_set -i 3 -t line -f ${URI} -n 29`);
         });
 
-        it('should convert kebab-case to snake_case', function () {
-            assert.strictEqual(convertPhelToPHP('my-var'), '$my_var');
-            assert.strictEqual(convertPhelToPHP('some-long-name'), '$some_long_name');
-            assert.strictEqual(convertPhelToPHP('a-b-c'), '$a_b_c');
+        it('sends a condition as a base64 payload after --', function () {
+            // Xdebug evaluates this as PHP in the frame it is about to stop in,
+            // so the Phel name has to arrive munged.
+            assert.strictEqual(
+                breakpointSet(29, { condition: 'item-count > 3' }),
+                `breakpoint_set -i 3 -t conditional -f ${URI} -n 29 -- ` +
+                    Buffer.from('$item_count > 3').toString('base64')
+            );
         });
 
-        it('should convert keywords to Phel Keyword objects', function () {
-            assert.strictEqual(convertPhelToPHP(':status'), 'new \\Phel\\Lang\\Keyword("status")');
-            assert.strictEqual(convertPhelToPHP(':my-key'), 'new \\Phel\\Lang\\Keyword("my-key")');
+        it('sends a hit count as -h/-o', function () {
+            assert.strictEqual(
+                breakpointSet(29, { hitCondition: '% 5' }),
+                `breakpoint_set -i 3 -t line -f ${URI} -n 29 -h 5 -o %`
+            );
         });
 
-        it('should handle variables with numbers', function () {
-            assert.strictEqual(convertPhelToPHP('var1'), '$var1');
-            assert.strictEqual(convertPhelToPHP('x2y3'), '$x2y3');
+        it('sends a conditional breakpoint with a hit count as both', function () {
+            assert.strictEqual(
+                breakpointSet(7, { condition: 'done?', hitCondition: '>= 2' }),
+                `breakpoint_set -i 3 -t conditional -f ${URI} -n 7 -h 2 -o >= -- ` +
+                    Buffer.from('$done_QMARK_').toString('base64')
+            );
+        });
+    });
+
+    describe('formatDbgpCommand', function () {
+        it('writes the transaction id every response is matched by', function () {
+            assert.strictEqual(formatDbgpCommand('run', 12), 'run -i 12');
         });
 
-        it('should preserve PHP expressions', function () {
-            assert.strictEqual(convertPhelToPHP('$foo'), '$foo');
-            assert.strictEqual(convertPhelToPHP('$arr[0]'), '$arr[0]');
-        });
-
-        it('should handle whitespace', function () {
-            assert.strictEqual(convertPhelToPHP('  foo  '), '$foo');
-            assert.strictEqual(convertPhelToPHP('\tbar\n'), '$bar');
+        it('base64s the payload of an eval', function () {
+            assert.strictEqual(
+                formatDbgpCommand('eval', 4, {}, phelExpressionToPhp('my-var')),
+                `eval -i 4 -- ${Buffer.from('$my_var').toString('base64')}`
+            );
         });
     });
 

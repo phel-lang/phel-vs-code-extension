@@ -101,6 +101,13 @@ export function terminalArgs(terminal: vscode.Terminal): readonly string[] {
     return typeof shellArgs === 'string' ? [shellArgs] : shellArgs;
 }
 
+/** The environment the terminal's process was started with, if any was set. */
+export function terminalEnv(
+    terminal: vscode.Terminal
+): Readonly<Record<string, string | null | undefined>> {
+    return (terminal.creationOptions as vscode.TerminalOptions).env ?? {};
+}
+
 /**
  * The executable the terminal's process was started as — the Phel CLI path the
  * extension resolved, absolute. (On Windows a CLI that exists is run through

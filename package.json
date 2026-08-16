@@ -296,6 +296,12 @@
                 "icon": "$(beaker)"
             },
             {
+                "command": "phel.debugTest",
+                "title": "Phel: Debug Test",
+                "category": "Phel",
+                "icon": "$(debug-alt)"
+            },
+            {
                 "command": "phel.test.watch",
                 "title": "Phel: Watch Tests",
                 "category": "Phel"
@@ -579,13 +585,18 @@
                     "when": "resourceLangId == phel"
                 },
                 {
-                    "command": "phel.benchFile",
+                    "command": "phel.debugTest",
                     "group": "2_run@2",
+                    "when": "resourceLangId == phel && config.phel.debug.enabled"
+                },
+                {
+                    "command": "phel.benchFile",
+                    "group": "2_run@3",
                     "when": "resourceLangId == phel"
                 },
                 {
                     "command": "phel.runFile",
-                    "group": "2_run@3",
+                    "group": "2_run@4",
                     "when": "resourceLangId == phel"
                 },
                 {

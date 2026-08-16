@@ -20,8 +20,20 @@ import { SourceMapManager } from './sourceMapManager';
 import { XdebugBreakpointRegistry } from './xdebugBreakpointRegistry';
 import { XdebugPendingCommands } from './xdebugPendingCommands';
 import { DbgpMessageReader } from './dbgpMessageReader';
+import { formatDbgpCommand } from './dbgpCommand';
 import { decodeDbgpCdata } from './dbgpValueDecoder';
-import { parseBreakpointSetResponse } from './xdebugResponse';
+import {
+    type BreakpointSetResult,
+    parseBreakLocation,
+    parseBreakpointSetResponse,
+} from './xdebugResponse';
+import {
+    type BreakpointOptions,
+    breakpointSetArgs,
+    interpolateLogMessage,
+    matchBreakpoint,
+    phelExpressionToPhp,
+} from './xdebugBreakpointConditions';
 
 interface PhelLaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
     program?: string;
@@ -40,6 +52,18 @@ interface PhelBreakpoint {
     phelLine: number;
     phpFile: string | null;
     phpLine: number | null;
+    /**
+     * Every PHP line installed for this breakpoint. One Phel line can compile
+     * to several expressions, and the engine reports the line it stopped on —
+     * so recognising a hit means knowing all of them, not just the primary.
+     */
+    phpLines: number[];
+    /** Stop only when Xdebug finds this expression truthy. */
+    condition?: string;
+    /** VS Code's hit-count expression, e.g. `>= 3`. */
+    hitCondition?: string;
+    /** A logpoint: print this and keep running, never stop. */
+    logMessage?: string;
 }
 
 /**
@@ -70,7 +94,6 @@ export class PhelDebugSession extends LoggingDebugSession {
 
     // Exception breakpoint settings
     private breakOnAllExceptions = false;
-    private breakOnUncaughtExceptions = true;
 
     // Step filter settings
     private skipPhelInternals = true;
@@ -108,8 +131,8 @@ export class PhelDebugSession extends LoggingDebugSession {
         response.body = response.body || {};
         response.body.supportsConfigurationDoneRequest = true;
         response.body.supportsFunctionBreakpoints = false;
-        response.body.supportsConditionalBreakpoints = false;
-        response.body.supportsHitConditionalBreakpoints = false;
+        response.body.supportsConditionalBreakpoints = true;
+        response.body.supportsHitConditionalBreakpoints = true;
         response.body.supportsEvaluateForHovers = true;
         response.body.supportsStepBack = false;
         response.body.supportsSetVariable = true;
@@ -125,24 +148,25 @@ export class PhelDebugSession extends LoggingDebugSession {
         response.body.supportTerminateDebuggee = true;
         response.body.supportsDelayedStackTraceLoading = false;
         response.body.supportsLoadedSourcesRequest = false;
-        response.body.supportsLogPoints = false;
+        response.body.supportsLogPoints = true;
         response.body.supportsTerminateThreadsRequest = false;
         response.body.supportsSetExpression = false;
         response.body.supportsTerminateRequest = true;
 
-        // Exception breakpoint filters
+        // One filter, off by default. DBGp breaks where an exception is
+        // *thrown* and cannot be asked whether it will be caught — traced
+        // against Xdebug 3.4: `breakpoint_set -t exception -x Exception` stops
+        // on a `try`/`catch` that handles it perfectly well, while an uncaught
+        // exception with no exception breakpoint set does not stop at all. So
+        // there is no "uncaught only" to offer. The filter that claimed to be
+        // one, and was on by default, stopped every `phel test` run inside the
+        // console component's own caught exceptions, before reaching a test.
         response.body.exceptionBreakpointFilters = [
             {
                 filter: 'all',
                 label: 'All Exceptions',
-                description: 'Break on all PHP exceptions',
+                description: 'Break wherever a PHP exception or error is thrown, caught or not',
                 default: false,
-            },
-            {
-                filter: 'uncaught',
-                label: 'Uncaught Exceptions',
-                description: 'Break on uncaught PHP exceptions',
-                default: true,
             },
         ];
 
@@ -205,7 +229,6 @@ export class PhelDebugSession extends LoggingDebugSession {
         args: DebugProtocol.SetExceptionBreakpointsArguments
     ): void {
         this.breakOnAllExceptions = args.filters.includes('all');
-        this.breakOnUncaughtExceptions = args.filters.includes('uncaught');
 
         this.sendResponse(response);
     }
@@ -239,11 +262,20 @@ export class PhelDebugSession extends LoggingDebugSession {
             for (const bp of args.breakpoints) {
                 const phelLine = bp.line;
                 const phelColumn = bp.column; // VS Code may provide column info
+                // A logpoint is a breakpoint the engine still stops on; what
+                // makes it a logpoint is that we print and resume. Its
+                // condition and hit count go to the engine either way.
+                const options: BreakpointOptions = {
+                    condition: bp.condition,
+                    hitCondition: bp.hitCondition,
+                };
 
                 let phpFile: string | null = null;
                 let phpLine: number | null = null;
+                const phpLines: number[] = [];
                 let verified = false;
                 let candidateCount = 0;
+                let rejected: string | undefined;
 
                 if (this.sourceMapManager.isPhelFile(sourcePath)) {
                     // Try multi-breakpoint approach first
@@ -274,20 +306,23 @@ export class PhelDebugSession extends LoggingDebugSession {
                         }
 
                         verified = true;
+                        phpLines.push(...candidates.lines);
+                        if (!phpLines.includes(phpLine)) {
+                            phpLines.push(phpLine);
+                        }
 
                         if (this.xdebugSocket) {
-                            // Set breakpoint on the primary line
-                            await this.setXdebugBreakpoint(phpFile, phpLine, sourcePath);
-
-                            // Also set breakpoints on other candidates for multi-expression lines
-                            for (const candidateLine of candidates.lines) {
-                                if (candidateLine !== phpLine) {
-                                    await this.setXdebugBreakpoint(
-                                        phpFile,
-                                        candidateLine,
-                                        sourcePath
-                                    );
-                                }
+                            // Every candidate line gets the same condition and
+                            // hit count: the line is one unit in the source, so
+                            // it has to behave as one whatever it compiled to.
+                            for (const candidateLine of phpLines) {
+                                const result = await this.setXdebugBreakpoint(
+                                    phpFile,
+                                    candidateLine,
+                                    sourcePath,
+                                    options
+                                );
+                                rejected ??= result.error;
                             }
                         }
                     } else {
@@ -299,13 +334,30 @@ export class PhelDebugSession extends LoggingDebugSession {
                         if (translation) {
                             phpFile = translation.file;
                             phpLine = translation.line;
+                            phpLines.push(phpLine);
                             verified = true;
 
                             if (this.xdebugSocket) {
-                                await this.setXdebugBreakpoint(phpFile, phpLine, sourcePath);
+                                rejected = (
+                                    await this.setXdebugBreakpoint(
+                                        phpFile,
+                                        phpLine,
+                                        sourcePath,
+                                        options
+                                    )
+                                ).error;
                             }
                         }
                     }
+                }
+
+                if (rejected) {
+                    // The engine refused it outright. Saying so on the
+                    // breakpoint beats a filled circle that never fires. (A
+                    // condition that is merely invalid PHP is *not* refused:
+                    // Xdebug takes it and evaluates it later, so that one can
+                    // only fail silently — `docs/debugging.md` says so.)
+                    verified = false;
                 }
 
                 const breakpoint: PhelBreakpoint = {
@@ -315,13 +367,19 @@ export class PhelDebugSession extends LoggingDebugSession {
                     phelLine,
                     phpFile,
                     phpLine,
+                    phpLines,
+                    condition: bp.condition,
+                    hitCondition: bp.hitCondition,
+                    logMessage: bp.logMessage,
                 };
 
                 phelBreakpoints.push(breakpoint);
 
                 // Construct message with candidate info
                 let message = 'Source map not found';
-                if (verified && phpFile && phpLine) {
+                if (rejected) {
+                    message = `Xdebug rejected the breakpoint: ${rejected}`;
+                } else if (verified && phpFile && phpLine) {
                     message = `Mapped to ${path.basename(phpFile)}:${phpLine}`;
                     if (candidateCount > 1) {
                         message += ` (+${candidateCount - 1} expressions)`;
@@ -509,13 +567,7 @@ export class PhelDebugSession extends LoggingDebugSession {
         }
 
         try {
-            // Convert Phel-style names to PHP
-            const phpExpression = this.convertPhelToPHP(args.expression);
-
-            const xdebugResponse = await this.sendXdebugCommand('eval', {}, phpExpression);
-
-            // Parse the result
-            const result = this.parseEvalResult(xdebugResponse);
+            const result = await this.evaluatePhel(args.expression);
 
             response.body = {
                 result: result.value,
@@ -523,9 +575,15 @@ export class PhelDebugSession extends LoggingDebugSession {
                 variablesReference: result.variablesReference,
             };
         } catch (err) {
-            // Evaluation failed - return error message
+            // The watch panel and hovers evaluate on their own initiative, on
+            // whatever the cursor happens to be over — an out-of-scope name is
+            // the normal case there, not an error to shout about. The REPL
+            // asked, so it gets the reason.
+            const quiet = args.context === 'watch' || args.context === 'hover';
             response.body = {
-                result: `Error: ${err instanceof Error ? err.message : String(err)}`,
+                result: quiet
+                    ? '<not available>'
+                    : `Error: ${err instanceof Error ? err.message : String(err)}`,
                 variablesReference: 0,
             };
         }
@@ -534,25 +592,16 @@ export class PhelDebugSession extends LoggingDebugSession {
     }
 
     /**
-     * Convert Phel-style expression to PHP.
-     * Examples: foo-bar -> $foo_bar, :keyword -> new Keyword('keyword')
+     * Evaluate a Phel expression in the frame the engine is stopped in.
+     * Rejects when Xdebug reports an error (`parseEvalResult` throws).
      */
-    private convertPhelToPHP(expression: string): string {
-        let php = expression.trim();
-
-        // If it looks like a variable reference (kebab-case identifier)
-        if (/^[a-z][a-z0-9-]*$/i.test(php)) {
-            // Convert kebab-case to snake_case and add $
-            php = '$' + php.replace(/-/g, '_');
-        }
-        // If it's a keyword
-        else if (php.startsWith(':')) {
-            const name = php.substring(1);
-            php = `new \\Phel\\Lang\\Keyword("${name}")`;
-        }
-        // Already looks like PHP
-
-        return php;
+    private async evaluatePhel(expression: string): Promise<{
+        value: string;
+        type: string;
+        variablesReference: number;
+    }> {
+        const xml = await this.sendXdebugCommand('eval', {}, phelExpressionToPhp(expression));
+        return this.parseEvalResult(xml);
     }
 
     /**
@@ -763,27 +812,20 @@ export class PhelDebugSession extends LoggingDebugSession {
 
     /**
      * Apply exception breakpoint settings to Xdebug.
+     *
+     * `-x *` covers both hierarchies (`Exception` and `Error`) in one
+     * breakpoint. Nothing is installed unless the filter is on: see the note
+     * on `exceptionBreakpointFilters`.
      */
     private async applyExceptionBreakpoints(): Promise<void> {
-        // Remove existing exception breakpoints
+        if (!this.breakOnAllExceptions) {
+            return;
+        }
         try {
-            // Set breakpoint on all exceptions if enabled
-            if (this.breakOnAllExceptions) {
-                await this.sendXdebugCommand('breakpoint_set', {
-                    t: 'exception',
-                    x: '*', // All exceptions
-                });
-            } else if (this.breakOnUncaughtExceptions) {
-                // Xdebug breaks on uncaught exceptions by default, but we can be explicit
-                await this.sendXdebugCommand('breakpoint_set', {
-                    t: 'exception',
-                    x: 'Error', // PHP 7+ Error class
-                });
-                await this.sendXdebugCommand('breakpoint_set', {
-                    t: 'exception',
-                    x: 'Exception', // Base Exception class
-                });
-            }
+            await this.sendXdebugCommand('breakpoint_set', {
+                t: 'exception',
+                x: '*', // All exceptions
+            });
         } catch {
             // Exception breakpoints might not be supported in all Xdebug versions
         }
@@ -800,6 +842,11 @@ export class PhelDebugSession extends LoggingDebugSession {
         for (const [, breakpoints] of this.breakpoints) {
             for (const bp of breakpoints) {
                 let success = false;
+                const options: BreakpointOptions = {
+                    condition: bp.condition,
+                    hitCondition: bp.hitCondition,
+                };
+                bp.phpLines = [];
 
                 // Get candidate lines for this breakpoint
                 const candidates = this.sourceMapManager.getBreakpointCandidates(
@@ -813,14 +860,18 @@ export class PhelDebugSession extends LoggingDebugSession {
                     // Try each candidate line until one is resolved
                     for (const candidateLine of candidates.lines) {
                         try {
-                            success = await this.setXdebugBreakpoint(
+                            const result = await this.setXdebugBreakpoint(
                                 candidates.file,
                                 candidateLine,
-                                bp.phelFile
+                                bp.phelFile,
+                                options
                             );
-                            if (success) {
-                                bp.phpLine = candidateLine;
-                                break;
+                            if (result.ok) {
+                                bp.phpLines.push(candidateLine);
+                                if (!success) {
+                                    bp.phpLine = candidateLine;
+                                    success = true;
+                                }
                             }
                         } catch {
                             // Try next candidate
@@ -836,11 +887,17 @@ export class PhelDebugSession extends LoggingDebugSession {
                         bp.phpFile = translation.file;
                         bp.phpLine = translation.line;
                         try {
-                            success = await this.setXdebugBreakpoint(
-                                translation.file,
-                                translation.line,
-                                bp.phelFile
-                            );
+                            success = (
+                                await this.setXdebugBreakpoint(
+                                    translation.file,
+                                    translation.line,
+                                    bp.phelFile,
+                                    options
+                                )
+                            ).ok;
+                            if (success) {
+                                bp.phpLines.push(translation.line);
+                            }
                         } catch {
                             // Ignore
                         }
@@ -889,7 +946,7 @@ export class PhelDebugSession extends LoggingDebugSession {
             const status = statusMatch[1];
 
             if (status === 'break') {
-                this.handleBreakEvent().catch(() => {});
+                this.handleBreakEvent(xml).catch(() => {});
             } else if (status === 'stopping') {
                 // Let Xdebug finish so HTTP response is sent
                 this.sendXdebugCommand('run').catch(() => {});
@@ -898,9 +955,9 @@ export class PhelDebugSession extends LoggingDebugSession {
     }
 
     /**
-     * Handle break event - checks step filters.
+     * Handle break event - checks step filters, then logpoints.
      */
-    private async handleBreakEvent(): Promise<void> {
+    private async handleBreakEvent(xml: string): Promise<void> {
         // Get current file from stack trace
         const frames = await this.getXdebugStackTrace();
         if (frames.length > 0) {
@@ -914,8 +971,56 @@ export class PhelDebugSession extends LoggingDebugSession {
             }
         }
 
+        const logMessage = this.breakpointAt(xml)?.logMessage;
+        if (logMessage !== undefined) {
+            // A logpoint never stops: it prints from the frame it is standing
+            // in — which is the only place its `{expressions}` can be read —
+            // and lets execution go on.
+            await this.printLogPoint(logMessage);
+            await this.sendXdebugCommand('run');
+            return;
+        }
+
         this.sendEvent(new OutputEvent('🛑 Breakpoint hit!\n', 'console'));
         this.sendEvent(new StoppedEvent('breakpoint', PhelDebugSession.THREAD_ID));
+    }
+
+    /**
+     * Which of our breakpoints the engine stopped on, when it says where.
+     *
+     * DBGp reports the location, never the breakpoint id, so the answer comes
+     * from the PHP lines each breakpoint was installed on. Both sides go
+     * through `normalizePath` because the URI we sent was a resolved path and
+     * the one coming back is whatever PHP included.
+     */
+    private breakpointAt(xml: string): PhelBreakpoint | undefined {
+        const at = parseBreakLocation(xml);
+        if (!at) {
+            return undefined;
+        }
+        const file = this.normalizePath(this.mapRemoteToLocal(this.fromFileUri(at.fileUri)));
+        const installed = [...this.breakpoints.values()].flat().map((bp) => ({
+            phpFile: bp.phpFile === null ? null : this.normalizePath(bp.phpFile),
+            phpLines: bp.phpLines,
+            breakpoint: bp,
+        }));
+        return matchBreakpoint(installed, file, at.line)?.breakpoint;
+    }
+
+    /**
+     * Print a logpoint's message, with every `{expression}` in it evaluated in
+     * the frame execution is paused in. A failing expression prints its reason
+     * inline rather than swallowing the whole line.
+     */
+    private async printLogPoint(template: string): Promise<void> {
+        const text = await interpolateLogMessage(template, async (expression) => {
+            try {
+                return (await this.evaluatePhel(expression)).value;
+            } catch (err) {
+                return `<${err instanceof Error ? err.message : String(err)}>`;
+            }
+        });
+        this.sendEvent(new OutputEvent(text + '\n', 'console'));
     }
 
     /**
@@ -991,19 +1096,8 @@ export class PhelDebugSession extends LoggingDebugSession {
             }
 
             const tid = this.transactionId++;
-            let cmd = `${command} -i ${tid}`;
-
-            for (const [key, value] of Object.entries(args)) {
-                cmd += ` -${key} ${value}`;
-            }
-
-            // Add base64-encoded data payload if provided
-            if (data) {
-                const encoded = Buffer.from(data).toString('base64');
-                cmd += ` -- ${encoded}`;
-            }
-
-            cmd += '\0';
+            // The NUL terminates the frame; the command itself is protocol.
+            const cmd = formatDbgpCommand(command, tid, args, data) + '\0';
 
             this.pendingCommands.add(tid, resolve);
             this.xdebugSocket.write(cmd);
@@ -1056,21 +1150,21 @@ export class PhelDebugSession extends LoggingDebugSession {
     }
 
     /**
-     * Set a breakpoint in Xdebug.
+     * Set a breakpoint in Xdebug, with its condition and hit count when it has
+     * them. A condition travels as the data payload of a `conditional`
+     * breakpoint; a hit count as `-h`/`-o` on either kind.
      */
     private async setXdebugBreakpoint(
         file: string,
         line: number,
-        sourcePath?: string
-    ): Promise<boolean> {
+        sourcePath?: string,
+        options: BreakpointOptions = {}
+    ): Promise<BreakpointSetResult> {
         const remoteFile = this.mapLocalToRemote(file);
         const fileUri = this.toFileUri(remoteFile);
 
-        const response = await this.sendXdebugCommand('breakpoint_set', {
-            t: 'line',
-            f: fileUri,
-            n: line.toString(),
-        });
+        const command = breakpointSetArgs(fileUri, line, options);
+        const response = await this.sendXdebugCommand('breakpoint_set', command.args, command.data);
 
         const result = parseBreakpointSetResponse(response);
 
@@ -1079,7 +1173,7 @@ export class PhelDebugSession extends LoggingDebugSession {
             this.xdebugBreakpointIds.record(sourcePath, result.id);
         }
 
-        return result.ok;
+        return result;
     }
 
     /**

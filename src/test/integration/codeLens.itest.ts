@@ -1,8 +1,8 @@
 // The CodeLenses a `.phel` file carries: the test / benchmark ones on a
-// `deftest` file — one lens per `deftest`, one per `defbench`, and the two
-// file-level lenses that run all of each — and the reference count above every
-// definition. The commands they carry are what the editor invokes on click, so
-// they are the part worth pinning.
+// `deftest` file — two per `deftest` (run, debug), one per `defbench`, and the
+// two file-level lenses that run all of each — and the reference count above
+// every definition. The commands they carry are what the editor invokes on
+// click, so they are the part worth pinning.
 
 import * as assert from 'node:assert/strict';
 import * as vscode from 'vscode';
@@ -30,17 +30,22 @@ describe('test CodeLens', function () {
         // runner discovers, not a symbol anything calls.
         assert.deepEqual(lenses.map((lens) => lens.command?.command).sort(), [
             'phel.benchFile',
+            'phel.debugTest',
+            'phel.debugTest',
             'phel.runBenchmark',
             'phel.runTest',
             'phel.runTest',
             'phel.runTestsInFile',
         ]);
 
-        const runTest = lenses.filter((lens) => lens.command?.command === 'phel.runTest');
-        assert.deepEqual(
-            runTest.map((lens) => lens.command?.arguments?.[1]),
-            ['greets-a-name', 'greets-an-empty-name']
-        );
+        for (const command of ['phel.runTest', 'phel.debugTest']) {
+            const perTest = lenses.filter((lens) => lens.command?.command === command);
+            assert.deepEqual(
+                perTest.map((lens) => lens.command?.arguments?.[1]),
+                ['greets-a-name', 'greets-an-empty-name'],
+                `${command} lenses`
+            );
+        }
     });
 });
 
