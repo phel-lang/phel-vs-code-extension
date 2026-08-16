@@ -11,7 +11,7 @@
 // shortened.
 
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 interface ProblemPattern {
@@ -27,14 +27,17 @@ interface ProblemPattern {
 interface ProblemMatcher {
     name: string;
     owner: string;
+    source?: string;
     severity?: string;
     fileLocation: unknown;
     background?: { activeOnStart?: boolean; beginsPattern: string; endsPattern: string };
     pattern: ProblemPattern;
 }
 
+const repoRoot = join(__dirname, '..', '..');
+
 const manifest: { contributes: { problemMatchers: ProblemMatcher[] } } = JSON.parse(
-    readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf-8')
+    readFileSync(join(repoRoot, 'package.json'), 'utf-8')
 );
 
 function matcher(name: string): ProblemMatcher {
@@ -56,6 +59,32 @@ function parse(pattern: ProblemPattern, line: string): Record<string, string> | 
         }
     }
     return fields;
+}
+
+/**
+ * Every name `src/` passes to `createDiagnosticCollection`. VS Code uses that
+ * name as the marker owner of the collection, so it is also the set of owners a
+ * problem matcher must stay out of. Two of the calls name a `COLLECTION_NAME`
+ * constant instead of a literal, which is resolved in the file it came from.
+ */
+function diagnosticCollectionNames(): string[] {
+    const dir = join(repoRoot, 'src');
+    const names = new Set<string>();
+    for (const file of readdirSync(dir).filter((name) => name.endsWith('.ts'))) {
+        const source = readFileSync(join(dir, file), 'utf-8');
+        for (const [, arg] of source.matchAll(/createDiagnosticCollection\(\s*([^)]+?)\s*\)/g)) {
+            const literal = /^'([^']*)'$/.exec(arg);
+            if (literal) {
+                names.add(literal[1]);
+                continue;
+            }
+            assert.match(arg, /^[\w$]+$/, `unreadable collection name ${arg} in src/${file}`);
+            const constant = new RegExp(`\\b${arg} = '([^']*)'`).exec(source);
+            assert.ok(constant, `cannot resolve the collection name ${arg} in src/${file}`);
+            names.add(constant[1]);
+        }
+    }
+    return [...names];
 }
 
 describe('$phel-lint problem matcher', () => {
@@ -193,4 +222,35 @@ describe('$phel-test-watch problem matcher', () => {
             assert.equal(parse(watch.pattern, line), undefined, line);
         }
     });
+});
+
+describe('problem matcher ownership', () => {
+    // A matcher's `owner` is the marker owner VS Code files its problems under,
+    // and so is the name of a `DiagnosticCollection`. Sharing one means a task
+    // run replaces — and on the next run clears — the markers the extension put
+    // there itself, so the two must never collide. `source` is what the
+    // Problems panel shows, and stays `phel` for both.
+    const collections = diagnosticCollectionNames();
+
+    it('reads the collection names out of src/', () => {
+        // Without this the assertions below would pass on an empty scan. `phel`
+        // is the on-save collection, named through a constant; `phel-unused` is
+        // one of the literals — a scan that misses either kind is broken.
+        for (const name of ['phel', 'phel-unused']) {
+            assert.ok(
+                collections.includes(name),
+                `no createDiagnosticCollection('${name}') found among ${collections.join(', ')}`
+            );
+        }
+    });
+
+    for (const matcher of manifest.contributes.problemMatchers) {
+        it(`keeps $${matcher.name} off every collection's owner`, () => {
+            assert.ok(
+                !collections.includes(matcher.owner),
+                `$${matcher.name} is owned by '${matcher.owner}', which is also a diagnostic collection`
+            );
+            assert.equal(matcher.source, 'phel');
+        });
+    }
 });

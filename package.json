@@ -125,7 +125,7 @@
             {
                 "name": "phel-lint",
                 "label": "Phel lint",
-                "owner": "phel",
+                "owner": "phel-tasks",
                 "source": "phel",
                 "fileLocation": [
                     "autoDetect",
@@ -144,7 +144,7 @@
             {
                 "name": "phel-test-watch",
                 "label": "Phel test (watch)",
-                "owner": "phel",
+                "owner": "phel-tasks",
                 "source": "phel",
                 "severity": "error",
                 "fileLocation": [
