@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { runPhelCli } from './phelCli';
+import { parseJsonLoose } from './phelProjectConfig';
 import { pickWorkspaceFolder } from './phelWorkspace';
 
 const OUTPUT_CHANNEL_NAME = 'Phel Doctor';
@@ -92,21 +93,9 @@ async function showConfig(): Promise<void> {
 }
 
 function prettyJson(raw: string): string | null {
-    try {
-        return JSON.stringify(JSON.parse(raw), null, 2) + '\n';
-    } catch {
-        // Output wasn't pure JSON (older Phel, or a warning was prepended).
-        const start = raw.indexOf('{');
-        const end = raw.lastIndexOf('}');
-        if (start >= 0 && end > start) {
-            try {
-                return JSON.stringify(JSON.parse(raw.slice(start, end + 1)), null, 2) + '\n';
-            } catch {
-                return null;
-            }
-        }
-        return null;
-    }
+    // Tolerates output that wasn't pure JSON (older Phel, or a warning ahead of it).
+    const parsed = parseJsonLoose(raw);
+    return parsed === null ? null : JSON.stringify(parsed, null, 2) + '\n';
 }
 
 export function registerDoctorCommands(context: vscode.ExtensionContext): void {

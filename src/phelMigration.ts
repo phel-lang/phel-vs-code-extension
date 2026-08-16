@@ -228,6 +228,12 @@ export interface MigrationIssue {
     message: string;
     /** Set when the rewrite is mechanical enough to offer as a quick fix. */
     fix?: MigrationFix;
+    /**
+     * Set on the deprecations the compiler announces whether or not
+     * `warn-deprecations` is on — today only the `\` separator, by ADR 0014,
+     * because it is the one deprecation already scheduled for removal.
+     */
+    announcedByDefault?: true;
 }
 
 /**
@@ -553,6 +559,7 @@ function separatorIssue(src: string, form: Form): MigrationIssue | undefined {
             end: form.bodyEnd,
             name: text,
             status: entry.status,
+            announcedByDefault: true,
             message: `${head}; import the class with \`(:use ${dotted})\` and refer to it by its short name.`,
         };
     }
@@ -562,6 +569,7 @@ function separatorIssue(src: string, form: Form): MigrationIssue | undefined {
         end: form.bodyEnd,
         name: text,
         status: entry.status,
+        announcedByDefault: true,
         replacement,
         message: `${head}; write \`${replacement}\`.`,
         fix: {

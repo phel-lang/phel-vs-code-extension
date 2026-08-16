@@ -13,6 +13,7 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { runPhelCli } from './phelCli';
+import type { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 import { findDeftests } from './phelTestScanner';
 import { type AggregatedCase, groupByName, parseJUnit } from './junitParser';
 import { type CloverFile, parseClover } from './cloverParser';
@@ -24,6 +25,16 @@ const COVERAGE_API_AVAILABLE =
     typeof vscode.StatementCoverage === 'function';
 
 const NO_COVERAGE_DRIVER_RE = /--coverage requires the pcov or xdebug extension/i;
+
+/** How long a burst of file creations is allowed to coalesce into one rescan. */
+const RELOAD_DEBOUNCE_MS = 300;
+
+/**
+ * Never look for tests inside dependencies: `vendor` is full of `.phel` files
+ * whose `deftest`s belong to somebody else's suite, and running one from here
+ * says nothing about this project.
+ */
+const NEVER_TESTS = '**/{node_modules,vendor}/**';
 
 interface ResolvedCommand {
     command: string;
@@ -70,15 +81,58 @@ function attachItems(
     return fileItem;
 }
 
-async function loadAllTests(controller: vscode.TestController): Promise<void> {
-    const uris = await vscode.workspace.findFiles('**/*.phel', '**/node_modules/**');
+/**
+ * Every `.phel` file that could hold a test. `test-dirs` from the project's
+ * configuration is the authoritative answer; without it (no CLI, or one too old
+ * to print its config) fall back to the whole folder minus the dependencies.
+ */
+async function findTestFiles(projectConfig?: PhelProjectConfigProvider): Promise<vscode.Uri[]> {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    if (!projectConfig || folders.length === 0) {
+        return vscode.workspace.findFiles('**/*.phel', NEVER_TESTS);
+    }
+    const perFolder = await Promise.all(
+        folders.map(async (folder) => {
+            const dirs = await projectConfig.testDirs(folder);
+            const pattern = new vscode.RelativePattern(folder, testFilesGlob(dirs));
+            return vscode.workspace.findFiles(pattern, NEVER_TESTS);
+        })
+    );
+    return perFolder.flat();
+}
+
+function testFilesGlob(testDirs: readonly string[]): string {
+    const dirs = testDirs.map((dir) => dir.replace(/^\.\//, '').replace(/\/+$/, ''));
+    if (dirs.length === 0) {
+        return '**/*.phel';
+    }
+    return dirs.length === 1 ? `${dirs[0]}/**/*.phel` : `{${dirs.join(',')}}/**/*.phel`;
+}
+
+async function loadAllTests(
+    controller: vscode.TestController,
+    projectConfig?: PhelProjectConfigProvider
+): Promise<void> {
+    const uris = await findTestFiles(projectConfig);
     // Read files concurrently; attach serially afterwards (attachItems mutates
     // the controller and is cheap/synchronous).
     const read = await Promise.all(uris.map(async (uri) => ({ uri, text: await readFile(uri) })));
+    const found = new Set<string>();
     for (const { uri, text } of read) {
-        if (text !== null) {
-            attachItems(controller, uri, text);
+        if (text !== null && attachItems(controller, uri, text)) {
+            found.add(uri.toString());
         }
+    }
+    // A reload is also how a file that was deleted, or that left the configured
+    // test directories, disappears from the tree.
+    const stale: string[] = [];
+    controller.items.forEach((item) => {
+        if (!found.has(item.id)) {
+            stale.push(item.id);
+        }
+    });
+    for (const id of stale) {
+        controller.items.delete(id);
     }
 }
 
@@ -259,12 +313,17 @@ export class PhelTestController implements vscode.Disposable {
     private readonly disposables: vscode.Disposable[] = [];
     /** Per-run cache of detailed line coverage, keyed by file URI string. */
     private coverageDetails = new Map<string, vscode.StatementCoverage[]>();
+    /** Coalesces the reloads a bulk file change (a branch switch) would trigger. */
+    private reloadTimer?: NodeJS.Timeout;
+    /** Set once the Test Explorer has asked for the tree; nothing to keep in step before. */
+    private loaded = false;
 
-    constructor() {
+    constructor(private readonly projectConfig?: PhelProjectConfigProvider) {
         this.controller = vscode.tests.createTestController('phel-tests', 'Phel');
         this.disposables.push(this.controller);
         this.controller.resolveHandler = async () => {
-            await loadAllTests(this.controller);
+            this.loaded = true;
+            await loadAllTests(this.controller, this.projectConfig);
         };
         this.disposables.push(
             this.controller.createRunProfile(
@@ -285,14 +344,41 @@ export class PhelTestController implements vscode.Disposable {
                 Promise.resolve(this.coverageDetails.get(fileCoverage.uri.toString()) ?? []);
             this.disposables.push(coverageProfile);
         }
+        // A save updates the file it edited; creating or deleting a `.phel`
+        // file elsewhere (git checkout, a new test file, rm) has no document to
+        // hang off, so the tree follows the filesystem instead.
+        const watcher = vscode.workspace.createFileSystemWatcher('**/*.phel');
         this.disposables.push(
             vscode.workspace.onDidSaveTextDocument(async (doc) => {
                 if (doc.languageId !== 'phel') {
                     return;
                 }
                 attachItems(this.controller, doc.uri, doc.getText());
-            })
+            }),
+            watcher,
+            watcher.onDidCreate(() => this.scheduleReload()),
+            watcher.onDidDelete((uri) => this.controller.items.delete(uri.toString()))
         );
+        if (this.projectConfig) {
+            // `test-dirs` decides what is scanned at all.
+            this.disposables.push(this.projectConfig.onDidChange(() => this.scheduleReload()));
+        }
+    }
+
+    /** Rescan soon, once, however many files changed. */
+    private scheduleReload(): void {
+        if (!this.loaded) {
+            // The tree was never built, so there is nothing to bring up to date
+            // — and scanning the workspace for a view nobody opened is not free.
+            return;
+        }
+        if (this.reloadTimer) {
+            clearTimeout(this.reloadTimer);
+        }
+        this.reloadTimer = setTimeout(() => {
+            this.reloadTimer = undefined;
+            void loadAllTests(this.controller, this.projectConfig);
+        }, RELOAD_DEBOUNCE_MS);
     }
 
     private async run(
@@ -393,6 +479,9 @@ export class PhelTestController implements vscode.Disposable {
     }
 
     dispose(): void {
+        if (this.reloadTimer) {
+            clearTimeout(this.reloadTimer);
+        }
         for (const d of this.disposables) {
             d.dispose();
         }
