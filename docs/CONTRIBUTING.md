@@ -39,7 +39,13 @@ the editor uses.
 ```bash
 npm run test:integration            # compile, bundle, download VS Code, run
 VSCODE_TEST_VERSION=1.88.0 npm run test:integration   # pin a version
+VSCODE_TEST_USER_DATA_DIR=/tmp/vscode-phel npm run test:integration   # short profile path
 ```
+
+The last one is for a checkout nested deeply enough that the host's IPC socket
+path, which sits under the profile directory, exceeds the ~103-character unix
+socket limit - a git worktree usually does. VS Code then refuses to start with
+`listen EINVAL`.
 
 The download lands in `.vscode-test/` (gitignored) and is reused. The run needs
 Node 22, which is what `@vscode/test-electron` requires.
@@ -48,12 +54,21 @@ Node 22, which is what `@vscode/test-electron` requires.
 
 | Path | Purpose |
 |------|---------|
-| `src/test/integration/runTests.ts` | Launcher: downloads VS Code, opens the fixture workspace, points the host at `index.js` |
-| `src/test/integration/index.ts` | Runs inside the host; builds the Mocha run over every compiled `*.itest.js` |
+| `src/test/integration/runTests.ts` | Launcher: downloads VS Code, opens each fixture workspace, points the host at `index.js` |
+| `src/test/integration/index.ts` | Runs inside the host; builds the Mocha run over the compiled `*.itest.js` that belong to it |
 | `src/test/integration/helpers.ts` | `activateExtension`, `openFixture`, `positionOf`, `waitFor` |
 | `src/test/integration/*.itest.ts` | The suites |
 | `test-fixtures/workspace/` | A small Phel project: `phel-config.php`, `composer.json`, `src/app/*.phel`, `tests/app/core_test.phel` |
-| `test-fixtures/multi-root.code-workspace` | Two-folder workspace, for the multi-root cases |
+| `test-fixtures/workspace2/` | A second project (`src/util/strings.phel`, with a `deftest` and a `defbench`) |
+| `test-fixtures/multi-root.code-workspace` | Two-folder workspace over both of the above, for the multi-root cases |
+
+The launcher starts VS Code **twice**, sequentially: once on
+`test-fixtures/workspace`, once on `test-fixtures/multi-root.code-workspace`.
+"Which workspace folder does this command run in" can only be asked of a window
+that has more than one, and running every suite in both would only double the
+runtime. `MULTI_ROOT_SUITES` in `index.ts` lists the suites belonging to the
+second host; every other suite runs in the first. Add a multi-root suite to that
+set, or it will run in the single-folder window and fail there.
 
 The `.itest.ts` suffix is what keeps the two suites apart. `npm test` globs
 `out/test/**/*.test.js`, which never matches `*.itest.js`, so the integration

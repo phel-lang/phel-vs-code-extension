@@ -9,6 +9,7 @@ import {
 } from './phelDiagnostics';
 import { affectsPhelExecutable, resolvePhelExecutable } from './phelExecutable';
 import { toInvocation } from './phelInvocation';
+import { pickWorkspaceFolder } from './phelWorkspace';
 
 const COLLECTION_NAME = 'phel';
 
@@ -101,9 +102,8 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
     // `phel lint` walks the configured source dirs, so one run can populate
     // diagnostics for files that were never opened.
     const lintWorkspace = async () => {
-        const folder = vscode.workspace.workspaceFolders?.[0];
+        const folder = await pickWorkspaceFolder('Phel: open a folder to lint a workspace.');
         if (!folder) {
-            void vscode.window.showWarningMessage('Phel: open a folder to lint a workspace.');
             return;
         }
         const command = resolvePhelExecutable('diagnostics.command', folder);

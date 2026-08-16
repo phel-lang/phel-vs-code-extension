@@ -1,6 +1,18 @@
 // Pure helpers for the Phel CLI command wrappers (template parsing, build
 // args). Kept free of `vscode` so they can be unit-tested.
 
+import * as path from 'path';
+
+/**
+ * The path argument for a CLI command that runs with `root` as its cwd: the
+ * target relative to that root, so a file is named the same way whichever
+ * folder of a multi-root workspace it lives in. Falls back to the absolute
+ * path when the two are the same directory, which relativises to nothing.
+ */
+export function relativeTargetPath(root: string, target: string): string {
+    return path.relative(root, target) || target;
+}
+
 export interface PhelTemplate {
     name: string;
     description: string;

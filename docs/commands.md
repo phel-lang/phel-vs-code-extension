@@ -12,6 +12,8 @@ The extension activates on `onLanguage:phel`, so the commands only show up in th
 | nREPL | Needs a `phel nrepl` server. The first nREPL command in a workspace folder attaches to one or starts one, so only **Disconnect** truly requires an existing connection. |
 | nothing | Pure editor-side work; no CLI, no network. |
 
+**Which folder a command runs in.** Anything invoked on a file — a CodeLens, one of the menus below, the Test Explorer — runs in the workspace folder that owns *that file*, with the file passed relative to it. The folder-wide commands (watch, build, init, balance, doctor, config, lint) run in the active file's folder; when the active file belongs to no folder and the workspace has more than one, VS Code asks which folder to use, and cancelling the pick cancels the command.
+
 ## Where to find them
 
 The palette has all of them, but the ones you reach for while writing code also sit where the file is:
@@ -30,10 +32,10 @@ Registered by [`src/phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.
 |---|---|---|---|---|
 | Phel: Run Test | `phel.runTest` | `phel test --filter '^<name>$' <file>` in the **Phel Tests** terminal. Uses `phel.test.command`. Takes `(uri, testName)` from the `▶ Run test` CodeLens; from the palette there is no name, so it degrades to running the whole active file. | Phel CLI | — |
 | Phel: Run All Tests in File | `phel.runTestsInFile` | `phel test <file>` in the **Phel Tests** terminal, on the passed uri or the active editor. Uses `phel.test.command`. | Phel CLI | — |
-| Phel: Watch Tests | `phel.test.watch` | `phel test --watch` in the **Phel Test (watch)** terminal, at the workspace-folder root. Uses `phel.test.command`. | Phel CLI | — |
-| Phel: Run Benchmarks | `phel.bench` | Prompts for a `--filter` substring, then `phel bench [--filter=…]` in the **Phel Bench** terminal. Uses `phel.executablePath`. | Phel CLI | — |
-| Phel: Run Benchmarks in Current File | `phel.benchFile` | Same prompt, then `phel bench <file> [--filter=…]`. Also backs the file-level `▶ Run all benchmarks in file` lens. | Phel CLI | — |
-| Phel: Run Benchmark | `phel.runBenchmark` | `phel bench <file> --filter=<name>`. Takes `(uri, name)` from the `▶ Run benchmark` CodeLens — **not for the palette**: without a name it does nothing. `phel bench` has no per-name entry point, so the name goes through `--filter`, a substring match. | Phel CLI | — |
+| Phel: Watch Tests | `phel.test.watch` | `phel test --watch` in the **Phel Test (watch)** terminal, at the root of the active file's workspace folder (or the picked one). Uses `phel.test.command`. | Phel CLI | — |
+| Phel: Run Benchmarks | `phel.bench` | Prompts for a `--filter` substring, then `phel bench [--filter=…]` in the **Phel Bench** terminal, at the active file's workspace-folder root. Uses `phel.executablePath`. | Phel CLI | — |
+| Phel: Run Benchmarks in Current File | `phel.benchFile` | Same prompt, then `phel bench <file> [--filter=…]` in the folder owning that file, with `<file>` relative to it. Also backs the file-level `▶ Run all benchmarks in file` lens. | Phel CLI | — |
+| Phel: Run Benchmark | `phel.runBenchmark` | `phel bench <file> --filter=<name>` in the folder owning that file. Takes `(uri, name)` from the `▶ Run benchmark` CodeLens — **not for the palette**: without a name it does nothing. `phel bench` has no per-name entry point, so the name goes through `--filter`, a substring match. | Phel CLI | — |
 
 The Test Explorer ([`src/phelTestController.ts`](../src/phelTestController.ts)) is not a command: it registers run / debug profiles that the Testing view drives.
 
@@ -47,7 +49,7 @@ The Test Explorer ([`src/phelTestController.ts`](../src/phelTestController.ts)) 
 | Phel: Check Balanced Delimiters | `phel.balance` | Quick pick between report-only and fix, then `phel balance [--fix]` in the **Phel Balance** terminal. `--fix` rewrites source on disk, so the pick is the confirmation. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Doctor (check project health) | `phel.doctor` | `phel doctor`, streamed into the **Phel Doctor** output channel, with the exit code appended. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Show Effective Configuration | `phel.showConfig` | `phel config --format=json`, opened pretty-printed in a JSON tab. Uses `phel.executablePath`. | Phel CLI | — |
-| Phel: Lint Workspace | `phel.lintWorkspace` | `phel lint --format=json` over the first workspace folder, filling the Problems panel for every file it reports — including ones never opened. Uses `phel.diagnostics.command`. | Phel CLI | — |
+| Phel: Lint Workspace | `phel.lintWorkspace` | `phel lint --format=json` over one workspace folder — the active file's, or the picked one — filling the Problems panel for every file it reports, including ones never opened. Uses `phel.diagnostics.command`. | Phel CLI | — |
 
 Sources: [`phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.ts) (build / init / run / balance), [`phelDoctorProvider.ts`](../src/phelDoctorProvider.ts) (doctor / config), [`phelDiagnosticsProvider.ts`](../src/phelDiagnosticsProvider.ts) (lint).
 
@@ -59,7 +61,7 @@ Registered by [`src/phelReplProvider.ts`](../src/phelReplProvider.ts) when `phel
 
 | Command | Id | What it runs / does | Needs | Key |
 |---|---|---|---|---|
-| Phel: Start REPL | `phel.repl.start` | Opens a terminal running `phel.repl.command` with `phel.repl.args` (default `vendor/bin/phel repl`), at the workspace-folder root. | Phel CLI | — |
+| Phel: Start REPL | `phel.repl.start` | Opens a terminal running `phel.repl.command` with `phel.repl.args` (default `vendor/bin/phel repl`), at the root of the active file's workspace folder. | Phel CLI | — |
 | Phel: Eval Form Under Cursor | `phel.repl.evalForm` | Sends the top-level form containing the cursor, flattened to one line. | Phel CLI | `ctrl+enter` (`cmd+enter`) |
 | Phel: Eval Selection | `phel.repl.evalSelection` | Sends the selection, or the current line when the selection is empty. | Phel CLI | `ctrl+shift+enter` (`cmd+shift+enter`) |
 | Phel: Eval Next Form | `phel.repl.evalNextForm` | Sends the next top-level form and moves the cursor past it. | Phel CLI | — |
