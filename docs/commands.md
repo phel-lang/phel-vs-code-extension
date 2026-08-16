@@ -128,6 +128,7 @@ Registered by [`src/phelReplProvider.ts`](../src/phelReplProvider.ts) when `phel
 | Phel: Eval Next Form | `phel.repl.evalNextForm` | Sends the next top-level form and moves the cursor past it. | Phel CLI | — |
 | Phel: Eval File | `phel.repl.evalFile` | Sends the whole buffer. | Phel CLI | — |
 | Phel: Switch REPL to Current Namespace | `phel.repl.switchNs` | Sends `(in-ns 'this.ns)` for the active file's `(ns …)` form. | Phel CLI | — |
+| Phel: REPL History | `phel.repl.history` | Picker over the forms in `.vscode/phel-repl-history.phel`, newest first and one row per distinct form; picking one sends it to the REPL terminal again. Each row carries an **Eval in nREPL** button while a connection is live. | nothing | — |
 
 Everything sent is appended to `.vscode/phel-repl-history.phel` while `phel.repl.history.enabled` is on.
 
@@ -142,6 +143,9 @@ Registered by [`src/phelNreplProvider.ts`](../src/phelNreplProvider.ts) when `ph
 | Phel: nREPL Eval Form Under Cursor | `phel.nrepl.eval` | `eval` op on the top-level form at the cursor, prefixed with an `(in-ns …)` for the file's namespace. | nREPL | — |
 | Phel: nREPL Eval Form Inline | `phel.nrepl.evalInline` | Same `eval`, plus a dimmed `=> …` decoration after the form. Clears on the next edit. | nREPL | `ctrl+alt+enter` (`cmd+alt+enter`) |
 | Phel: nREPL Eval Selection | `phel.nrepl.evalSelection` | `eval` op on the selection, or the current line when the selection is empty. | nREPL | — |
+| Phel: nREPL Evaluate to Comment | `phel.nrepl.evalToComment` | Same `eval`, and writes the value under the form as a `;; => …` comment. Evaluating the form again rewrites that block instead of adding a second one. | nREPL | `ctrl+alt+c` (`cmd+alt+c`) |
+| Phel: nREPL Evaluate and Replace Form | `phel.nrepl.evalAndReplace` | Same `eval`, and replaces the form with its value. An error result is reported and the form left alone. | nREPL | — |
+| Phel: nREPL Show Last Result | `phel.nrepl.showResult` | Opens `phel-result:last.phel` beside the editor: a read-only Phel document holding the value of the last evaluation, updated by every eval command while it is open. | nREPL | — |
 | Phel: nREPL Load File | `phel.nrepl.loadFile` | `load-file` op carrying the buffer contents and its path (the path shows up in compile-error locations). | nREPL | — |
 | Phel: nREPL Reload Changed Namespaces | `phel.nrepl.reload` | `reload` op with `all=0`. Also fired on save when `phel.nrepl.reloadOnSave` is on **and** a connection already exists — saving never starts one. | nREPL | — |
 | Phel: nREPL Reload All Namespaces | `phel.nrepl.reloadAll` | `reload` op with `all=1`. | nREPL | — |

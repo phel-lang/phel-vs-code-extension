@@ -426,6 +426,11 @@
                 "category": "Phel"
             },
             {
+                "command": "phel.repl.history",
+                "title": "Phel: REPL History",
+                "category": "Phel"
+            },
+            {
                 "command": "phel.nrepl.connect",
                 "title": "Phel: Connect to nREPL Server",
                 "category": "Phel"
@@ -448,6 +453,21 @@
             {
                 "command": "phel.nrepl.evalSelection",
                 "title": "Phel: nREPL Eval Selection",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.evalToComment",
+                "title": "Phel: nREPL Evaluate to Comment",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.evalAndReplace",
+                "title": "Phel: nREPL Evaluate and Replace Form",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.nrepl.showResult",
+                "title": "Phel: nREPL Show Last Result",
                 "category": "Phel"
             },
             {
@@ -530,6 +550,21 @@
                 {
                     "command": "phel.nrepl.evalInline",
                     "group": "1_eval@3",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.nrepl.evalToComment",
+                    "group": "1_eval@4",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.nrepl.evalAndReplace",
+                    "group": "1_eval@5",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.nrepl.showResult",
+                    "group": "1_eval@6",
                     "when": "resourceLangId == phel"
                 },
                 {
@@ -677,6 +712,14 @@
                     "when": "editorLangId == phel"
                 },
                 {
+                    "command": "phel.nrepl.evalToComment",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.nrepl.evalAndReplace",
+                    "when": "editorLangId == phel"
+                },
+                {
                     "command": "phel.selection.expand",
                     "when": "editorLangId == phel"
                 },
@@ -754,6 +797,12 @@
                 "command": "phel.nrepl.evalInline",
                 "key": "ctrl+alt+enter",
                 "mac": "cmd+alt+enter",
+                "when": "editorTextFocus && editorLangId == phel"
+            },
+            {
+                "command": "phel.nrepl.evalToComment",
+                "key": "ctrl+alt+c",
+                "mac": "cmd+alt+c",
                 "when": "editorTextFocus && editorLangId == phel"
             },
             {

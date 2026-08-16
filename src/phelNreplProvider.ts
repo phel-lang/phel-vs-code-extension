@@ -5,6 +5,9 @@
 //   phel.nrepl.eval            — eval the form under the cursor, show the result
 //   phel.nrepl.evalInline      — eval the form under the cursor, show `=> …` inline
 //   phel.nrepl.evalSelection   — eval the selection
+//   phel.nrepl.evalToComment   — eval the form, write the value under it as `;; => …`
+//   phel.nrepl.evalAndReplace  — eval the form, replace it with its value
+//   phel.nrepl.showResult      — open the last value in a read-only document
 //   phel.nrepl.loadFile        — load the whole file
 //   phel.nrepl.reload          — reload changed namespaces
 //   phel.nrepl.reloadAll       — reload every project namespace
@@ -19,6 +22,7 @@
 // (see phelNreplHoverProvider.ts). Neither opens a connection on its own.
 
 import * as vscode from 'vscode';
+import { type EvalEdit, commentResultEdit, replaceFormEdit } from './phelEvalEdits';
 import { isErrorResult, type OpResult, PhelNreplConnection } from './phelNreplClient';
 import { parseNsForm } from './phelNsAnalyzer';
 import { topLevelFormAt } from './phelRepl';
@@ -30,9 +34,15 @@ import { PhelNreplHoverProvider } from './phelNreplHoverProvider';
 import { phelRuntimeState } from './phelRuntimeState';
 
 let inlineEval: PhelInlineEval | undefined;
+let lastResult: LastResultDocument | undefined;
 
 const OUTPUT_CHANNEL_NAME = 'Phel nREPL';
 const DEFTEST_HEAD_RE = /^\(deftest\s+(?:\^\S+\s+)*([^\s()[\]{}]+)/;
+
+/** Scheme of the read-only document `phel.nrepl.showResult` opens. */
+const RESULT_SCHEME = 'phel-result';
+/** `.phel` so the host gives the document the Phel language, and its highlighting. */
+const RESULT_URI = vscode.Uri.parse(`${RESULT_SCHEME}:last.phel`);
 
 let output: vscode.OutputChannel | undefined;
 const connections = new Map<string, PhelNreplConnection>();
@@ -165,8 +175,82 @@ function reportResult(label: string, result: OpResult): void {
     }
 }
 
+/**
+ * The value a result carries, as text: the printed values, the error when the
+ * server reported one, `nil` when an op returned nothing.
+ *
+ * This is the captured value, not a re-read of `*1`. Phel's nREPL keeps a
+ * per-session `*1`/`*2`/`*3` ring, but it surfaces them as fields on the eval
+ * response — they are not bound in the environment the code compiles in, so
+ * `(phel.pprint/pprint-str *1)` would come back an unresolved symbol.
+ */
+function resultText(result: OpResult): string {
+    if (isErrorResult(result)) {
+        return result.err.trim() || 'error';
+    }
+    return result.values.join('\n') || 'nil';
+}
+
+/**
+ * Backs `phel-result:last.phel`. A content provider rather than a webview: the
+ * result of a Phel eval is Phel data, so the editor already knows how to
+ * highlight it, the document is read-only by construction, and it can be
+ * pinned and diffed like any other. Costs nothing in the bundle.
+ */
+class LastResultDocument implements vscode.TextDocumentContentProvider {
+    private text = '';
+    private readonly emitter = new vscode.EventEmitter<vscode.Uri>();
+    readonly onDidChange = this.emitter.event;
+
+    provideTextDocumentContent(): string {
+        return this.text;
+    }
+
+    /** Record the newest value; the open document (if any) redraws with it. */
+    set(text: string): void {
+        this.text = text;
+        this.emitter.fire(RESULT_URI);
+    }
+
+    dispose(): void {
+        this.emitter.dispose();
+    }
+}
+
+/** Every eval command feeds the last-result document, open or not. */
+function rememberResult(result: OpResult): void {
+    lastResult?.set(resultText(result));
+}
+
+/**
+ * Evaluate `code` over a connection that already exists for `folder`, reporting
+ * into the nREPL output channel. Answers false when nothing is connected: like
+ * hover evaluation, this may only use a connection the user asked for (the REPL
+ * history picker offers it as an extra, and must not start a server behind one).
+ */
+export async function evalOverLiveConnection(
+    folder: vscode.WorkspaceFolder,
+    code: string
+): Promise<boolean> {
+    const conn = peekConnection(folder);
+    if (!conn) {
+        return false;
+    }
+    const result = await conn.eval(code);
+    reportResult('eval (history)', result);
+    rememberResult(result);
+    return true;
+}
+
 function nsFor(doc: vscode.TextDocument): string | undefined {
     return parseNsForm(doc.getText())?.name ?? undefined;
+}
+
+/** Apply an offset-based edit from `phelEvalEdits` to the editor's buffer. */
+async function applyEvalEdit(editor: vscode.TextEditor, edit: EvalEdit): Promise<void> {
+    const doc = editor.document;
+    const range = new vscode.Range(doc.positionAt(edit.start), doc.positionAt(edit.end));
+    await editor.edit((builder) => builder.replace(range, edit.text));
 }
 
 async function evalForm(): Promise<void> {
@@ -184,6 +268,7 @@ async function evalForm(): Promise<void> {
     await withConnection(doc, async (conn) => {
         const result = await conn.eval(form.text, nsFor(doc));
         reportResult('eval', result);
+        rememberResult(result);
     });
 }
 
@@ -203,11 +288,76 @@ async function evalFormInline(): Promise<void> {
     await withConnection(doc, async (conn) => {
         const result = await conn.eval(form.text, nsFor(doc));
         reportResult('eval', result);
+        rememberResult(result);
         const isError = isErrorResult(result);
         inlineEval?.show(editor, form.end, {
             text: formatInlineResult(result.values, result.err, isError),
             isError,
         });
+    });
+}
+
+/**
+ * Eval the top-level form under the cursor and write the value under it as a
+ * `;; => …` comment, replacing the one a previous eval of the same form left.
+ */
+async function evalToComment(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'phel') {
+        return;
+    }
+    const doc = editor.document;
+    const offset = doc.offsetAt(editor.selection.active);
+    const form = topLevelFormAt(doc.getText(), offset);
+    if (!form) {
+        vscode.window.showWarningMessage('No Phel form under cursor.');
+        return;
+    }
+    await withConnection(doc, async (conn) => {
+        const result = await conn.eval(form.text, nsFor(doc));
+        reportResult('eval to comment', result);
+        rememberResult(result);
+        await applyEvalEdit(editor, commentResultEdit(doc.getText(), form.end, resultText(result)));
+    });
+}
+
+/**
+ * Replace the top-level form under the cursor with what it evaluated to. An
+ * error result is reported and nothing is written: the form is the only copy of
+ * itself, and a stack trace in its place would lose it.
+ */
+async function evalAndReplace(): Promise<void> {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'phel') {
+        return;
+    }
+    const doc = editor.document;
+    const offset = doc.offsetAt(editor.selection.active);
+    const form = topLevelFormAt(doc.getText(), offset);
+    if (!form) {
+        vscode.window.showWarningMessage('No Phel form under cursor.');
+        return;
+    }
+    await withConnection(doc, async (conn) => {
+        const result = await conn.eval(form.text, nsFor(doc));
+        reportResult('eval and replace', result);
+        rememberResult(result);
+        if (isErrorResult(result)) {
+            vscode.window.showWarningMessage(
+                'Phel nREPL: the form errored; it was left as it is (see the Phel nREPL output).'
+            );
+            return;
+        }
+        await applyEvalEdit(editor, replaceFormEdit(form, resultText(result)));
+    });
+}
+
+/** Open (or focus) the read-only document holding the value of the last eval. */
+async function showResult(): Promise<void> {
+    const doc = await vscode.workspace.openTextDocument(RESULT_URI);
+    await vscode.window.showTextDocument(doc, {
+        preview: false,
+        viewColumn: vscode.ViewColumn.Beside,
     });
 }
 
@@ -225,6 +375,7 @@ async function evalSelection(): Promise<void> {
     await withConnection(doc, async (conn) => {
         const result = await conn.eval(text, nsFor(doc));
         reportResult('eval selection', result);
+        rememberResult(result);
     });
 }
 
@@ -339,9 +490,12 @@ function disposeAll(): void {
 
 export function registerNreplCommands(context: vscode.ExtensionContext): void {
     inlineEval = new PhelInlineEval();
+    lastResult = new LastResultDocument();
     context.subscriptions.push(
         inlineEval,
+        lastResult,
         channel(),
+        vscode.workspace.registerTextDocumentContentProvider(RESULT_SCHEME, lastResult),
         // Hover evaluation only ever uses a connection that already exists, so
         // it is registered up front and stays inert until one does.
         vscode.languages.registerHoverProvider('phel', new PhelNreplHoverProvider(peekConnection)),
@@ -350,6 +504,9 @@ export function registerNreplCommands(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('phel.nrepl.eval', evalForm),
         vscode.commands.registerCommand('phel.nrepl.evalInline', evalFormInline),
         vscode.commands.registerCommand('phel.nrepl.evalSelection', evalSelection),
+        vscode.commands.registerCommand('phel.nrepl.evalToComment', evalToComment),
+        vscode.commands.registerCommand('phel.nrepl.evalAndReplace', evalAndReplace),
+        vscode.commands.registerCommand('phel.nrepl.showResult', showResult),
         vscode.commands.registerCommand('phel.nrepl.loadFile', loadFile),
         vscode.commands.registerCommand('phel.nrepl.reload', () => reload(false)),
         vscode.commands.registerCommand('phel.nrepl.reloadAll', () => reload(true)),
