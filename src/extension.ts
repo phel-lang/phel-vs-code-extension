@@ -11,6 +11,7 @@ import { PhelHoverProvider } from './phelHoverProvider';
 import { PhelSignatureHelpProvider } from './phelSignatureHelpProvider';
 import { PHEL_DOCS } from './phelCoreDocs';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
+import { PhelDocsPanel } from './phelDocsPanelProvider';
 import { buildQuickPickEntries } from './phelShowDoc';
 import { registerDiagnostics } from './phelDiagnosticsProvider';
 import { PhelDaemonDiagnostics } from './phelDaemonDiagnosticsProvider';
@@ -191,10 +192,12 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // Register command: Show Phel documentation
+    const docsPanel = new PhelDocsPanel();
+    context.subscriptions.push(docsPanel);
     context.subscriptions.push(
-        vscode.commands.registerCommand('phel.showDoc', async (symbol?: string) => {
-            await runShowDocCommand(symbol);
-        })
+        vscode.commands.registerCommand('phel.showDoc', (symbol?: string) =>
+            runShowDocCommand(docsPanel, symbol)
+        )
     );
 
     // Watch for configuration changes
@@ -428,7 +431,12 @@ function registerLanguageProviders(
     );
 
     context.subscriptions.push(
-        vscode.languages.registerHoverProvider('phel', new PhelHoverProvider(workspaceIndexer))
+        vscode.languages.registerHoverProvider(
+            'phel',
+            // The daemon is what reflects a `php/<fn>` signature; it is the same
+            // process live diagnostics and the project index already use.
+            new PhelHoverProvider(workspaceIndexer, liveDiagnostics)
+        )
     );
 
     context.subscriptions.push(
@@ -541,28 +549,36 @@ function registerLanguageProviders(
 }
 
 /**
- * Resolve a symbol (from arg, cursor, or quick-pick) and show its docs in
- * a Markdown preview tab.
+ * Resolve a symbol (from arg, cursor, or quick-pick) and show its docs in the
+ * docs panel, falling back to a Markdown preview tab where no webview can be
+ * had. Answers which symbol it settled on, which is also what the integration
+ * suite reads back.
  */
-async function runShowDocCommand(symbolArg?: string): Promise<void> {
+async function runShowDocCommand(
+    panel: PhelDocsPanel,
+    symbolArg?: string
+): Promise<{ symbol: string } | undefined> {
     let symbol = symbolArg ?? wordAtCursor();
     if (!symbol || !lookupSymbol(symbol, PHEL_DOCS)) {
         symbol = await pickSymbol();
         if (!symbol) {
-            return;
+            return undefined;
         }
     }
     const doc = lookupSymbol(symbol, PHEL_DOCS);
     if (!doc) {
         vscode.window.showWarningMessage(`No Phel documentation found for "${symbol}".`);
-        return;
+        return undefined;
     }
-    const markdown = renderDocMarkdown(doc);
-    const tdoc = await vscode.workspace.openTextDocument({
-        content: markdown,
-        language: 'markdown',
-    });
-    await vscode.commands.executeCommand('markdown.showPreview', tdoc.uri);
+    if (!panel.show(doc)) {
+        const markdown = renderDocMarkdown(doc);
+        const tdoc = await vscode.workspace.openTextDocument({
+            content: markdown,
+            language: 'markdown',
+        });
+        await vscode.commands.executeCommand('markdown.showPreview', tdoc.uri);
+    }
+    return { symbol: doc.qualifiedName };
 }
 
 function wordAtCursor(): string | undefined {

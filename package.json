@@ -57,7 +57,8 @@
     "activationEvents": [
         "onLanguage:phel",
         "onDebugResolve:phel",
-        "onTaskType:phel"
+        "onTaskType:phel",
+        "onWebviewPanel:phel.docs"
     ],
     "contributes": {
         "languages": [
