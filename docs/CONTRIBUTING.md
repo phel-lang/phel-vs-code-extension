@@ -238,6 +238,13 @@ Keep the subject under ~70 characters; put the *why* in the body when it isn't o
 
 Cut a release entirely from GitHub Actions: no local install, no manual marketplace upload.
 
+### Before cutting
+
+Two things the workflow cannot check for you:
+
+- **Screenshots**: if the release changed how a feature looks, re-take the shot it appears in, following [`docs/media/README.md`](media/README.md), and push it in the same batch. The Marketplace serves README images off the default branch, so a stale one keeps showing until the file changes - the listing does not wait for a release.
+- **The real-CLI integration run** is green (see [above](#against-a-real-phel-cli)). CI has no PHP project to point at, so this is the only pass over the CLI-backed half.
+
 ### One-click release (recommended)
 
 1. Make sure CHANGELOG `## [Unreleased]` is up to date on `main`.
@@ -300,9 +307,23 @@ Rotation: regenerate in Azure DevOps, update the `VSCE_PAT` secret (and `vsce lo
 
 Listed in `package.json` and shipped inside the `.vsix`:
 
-- `displayName`, `description`, `categories`, `keywords` - surface in search.
+- `displayName`, `description`, `categories`, `keywords` - surface in search. `categories` has to come from [the Marketplace's own list](https://code.visualstudio.com/api/references/extension-manifest); `keywords` is capped at 30. Neither is checked by `vsce` - an unknown category packages fine and is then ignored by the gallery - so `packageManifest.test.ts` checks both.
 - `repository.url`, `bugs.url`, `homepage` - render as sidebar links.
-- `icon` - 128×128 PNG (currently absent; add one before the first publish for a better listing).
+- `icon` - `icon.png`, 256×256.
+- `galleryBanner` - `#1e1e1e` / `dark`, matching the Dark Modern theme the screenshots are taken in.
+
+Screenshots are the one asset that is **not** in the vsix. `vsce` rewrites every
+relative image source in the README to
+`https://github.com/phel-lang/phel-vs-code-extension/raw/HEAD/<path>`, so the
+listing loads them from the default branch: they have to be pushed before the
+release that shows them, and `.vscodeignore` excludes `docs/**` precisely so they
+do not also travel inside the package. There is no way to capture them from a
+test - the extension host has no screenshot API, and every frame worth showing is
+a transient overlay that closes when automation takes focus - so
+[`docs/media/README.md`](media/README.md) is the recipe instead: window size,
+theme, zoom, and the exact keystrokes behind each of the three shots.
+`scripts/make-gif.sh` turns captured frames into an optimised GIF for the ones
+that need motion.
 
 ## Updating the language surface
 

@@ -1,7 +1,7 @@
 {
     "name": "phel-lang",
     "displayName": "Phel Lang",
-    "description": "Phel language support for VS Code: syntax highlighting, code completion, and snippets for .phel files (plus an optional Xdebug-based debug adapter).",
+    "description": "Phel language support for VS Code: syntax highlighting, completion, lint and format on save, REPL and nREPL, Test Explorer, paredit, and an Xdebug debugger for .phel files.",
     "version": "0.13.0",
     "publisher": "Phel-Lang",
     "license": "MIT",
@@ -11,6 +11,9 @@
     "categories": [
         "Programming Languages",
         "Snippets",
+        "Linters",
+        "Formatters",
+        "Testing",
         "Debuggers"
     ],
     "keywords": [
@@ -21,6 +24,13 @@
         "clojure",
         "php",
         "functional",
+        "repl",
+        "nrepl",
+        "paredit",
+        "structural editing",
+        "test explorer",
+        "interop",
+        "language server",
         "syntax-highlighting",
         "completion",
         "snippets",

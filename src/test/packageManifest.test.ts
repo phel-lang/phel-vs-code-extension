@@ -57,6 +57,8 @@ interface ConfigurationProperty {
 const repoRoot = join(__dirname, '..', '..');
 
 const manifest: {
+    categories: string[];
+    keywords: string[];
     contributes: {
         commands: ContributedCommand[];
         submenus?: Submenu[];
@@ -212,6 +214,69 @@ describe('package.json walkthrough', () => {
                 step.completionEvents?.length,
                 `${walkthrough}/${step.id} has no completionEvents`
             );
+        }
+    });
+});
+
+// The Marketplace listing is built from fields nothing else in the repo reads,
+// and every way of getting them wrong is silent: an unknown category is
+// dropped from the facets, keywords past the thirtieth are ignored, and a README
+// image whose path is not on the default branch renders as a broken image —
+// `vsce` rewrites relative image sources to
+// `https://github.com/<project>/raw/HEAD/<path>`, so the page loads them from
+// GitHub rather than from the vsix.
+describe('package.json marketplace metadata', () => {
+    /**
+     * The categories the Marketplace knows, from
+     * <https://code.visualstudio.com/api/references/extension-manifest>. `vsce`
+     * itself does not check them: an unknown one is accepted at package time and
+     * then quietly ignored by the gallery.
+     */
+    const CATEGORIES = new Set([
+        'Programming Languages',
+        'Snippets',
+        'Linters',
+        'Themes',
+        'Debuggers',
+        'Formatters',
+        'Keymaps',
+        'SCM Providers',
+        'Other',
+        'Extension Packs',
+        'Language Packs',
+        'Data Science',
+        'Machine Learning',
+        'Visualization',
+        'Notebooks',
+        'Education',
+        'Testing',
+    ]);
+
+    /** Markdown `![alt](src)` and HTML `<img src="…">`, which the README has both of. */
+    const IMAGE_SOURCES = [/!\[[^\]]*\]\(([^)\s]+)/g, /<img[^>]+src="([^"]+)"/g];
+
+    const readme = readFileSync(join(repoRoot, 'README.md'), 'utf-8');
+
+    it('uses only categories the Marketplace knows', () => {
+        for (const category of manifest.categories) {
+            assert.ok(CATEGORIES.has(category), `no such Marketplace category: ${category}`);
+        }
+    });
+
+    it('stays inside the 30-keyword limit, with no repeats', () => {
+        const { keywords } = manifest;
+        assert.ok(keywords.length <= 30, `${keywords.length} keywords, the Marketplace takes 30`);
+        assert.deepEqual([...new Set(keywords)], keywords, 'duplicate keyword');
+    });
+
+    it('references only images that exist', () => {
+        const sources = IMAGE_SOURCES.flatMap((pattern) =>
+            [...readme.matchAll(pattern)].map(([, src]) => src)
+        );
+        // Badges are absolute URLs and hosted elsewhere; only the repo's own
+        // files are ours to keep in place.
+        for (const src of sources.filter((s) => !/^https?:\/\//.test(s))) {
+            assert.ok(existsSync(join(repoRoot, src)), `README references missing image ${src}`);
         }
     });
 });
