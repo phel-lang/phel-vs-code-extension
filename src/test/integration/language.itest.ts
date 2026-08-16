@@ -19,21 +19,27 @@ describe('language features', function () {
     });
 
     it('completes special forms, core functions and workspace symbols', async function () {
-        const position = positionOf(main, '(str prefix ', '(str prefix '.length);
-        // `greet` arrives with the workspace index, which starts asynchronously
-        // on activation; the core names are there from the first keystroke.
-        const labels = await waitFor('the workspace index to reach completion', async () => {
-            const list = await vscode.commands.executeCommand<vscode.CompletionList>(
-                'vscode.executeCompletionItemProvider',
-                main.uri,
-                position
-            );
-            const found = (list?.items ?? []).map(labelOf);
-            return found.includes('greet') ? found : undefined;
-        });
+        const items = await completionsIn(main);
+        const labels = items.map(labelOf);
 
         assert.ok(labels.includes('defn'), 'no `defn` among the completions');
         assert.ok(labels.includes('map'), 'no `map` among the completions');
+    });
+
+    it('completes the core forms that are bootstrapped with a bare `def`', async function () {
+        // `defn`, `defmacro` and `first` are `(def name {…} (fn …))` in core,
+        // so the corpus records them as plain `def`s rather than as a macro or
+        // a function. `defn` also has a snippet of the same name, which is what
+        // hid that the provider was offering neither — hence the detail, which
+        // only the completion provider's own items carry.
+        const items = await completionsIn(main);
+        const detailsOf = (label: string) =>
+            items.filter((item) => labelOf(item) === label).map((item) => item.detail);
+
+        assert.ok(detailsOf('defn').includes('Phel macro'), 'no corpus-backed `defn`');
+        assert.ok(detailsOf('defmacro').includes('Phel macro'), 'no corpus-backed `defmacro`');
+        assert.ok(detailsOf('first').includes('Phel core function'), 'no corpus-backed `first`');
+        assert.ok(detailsOf('*ns*').includes('Phel core value'), 'no corpus-backed `*ns*`');
     });
 
     it('hovers a core function with its qualified name', async function () {
@@ -212,6 +218,24 @@ describe('language features', function () {
         assert.ok(tokens.data.length > 0, 'no semantic tokens');
     });
 });
+
+/**
+ * The completion list inside the `str` call of `main.phel`. `greet` arrives
+ * with the workspace index, which starts asynchronously on activation; the core
+ * names are there from the first keystroke.
+ */
+async function completionsIn(doc: vscode.TextDocument): Promise<readonly vscode.CompletionItem[]> {
+    const position = positionOf(doc, '(str prefix ', '(str prefix '.length);
+    return waitFor('the workspace index to reach completion', async () => {
+        const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+            'vscode.executeCompletionItemProvider',
+            doc.uri,
+            position
+        );
+        const found = list?.items ?? [];
+        return found.some((item) => labelOf(item) === 'greet') ? found : undefined;
+    });
+}
 
 function hoverText(hovers: readonly vscode.Hover[] | undefined): string {
     return (hovers ?? [])

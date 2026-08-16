@@ -14,7 +14,7 @@ signature help, diagnostics, an Xdebug debug adapter, and REPL/paredit helpers.
 - **Providers** live in `src/*.ts` (completion, hover, diagnostics, signature help, definition, references, rename, format) with tests in `src/test/`.
 - **Language surface** = three sources:
   - `assets/phel-core-docs.json` — generated symbol corpus (completion/hover/signature). Never hand-edit; regenerate via the `regen-phel-corpus` skill.
-  - `src/phelCoreSymbols.ts` — `MACROS`/`CORE_FNS` derive from the corpus; `SPECIAL_FORMS` is hand-curated for engine forms that live in phel-lang PHP, not `.phel`.
+  - `src/phelCoreSymbols.ts` — `MACROS`/`CORE_FNS`/`CORE_VALUES` derive from the corpus; `SPECIAL_FORMS` is hand-curated for engine forms that live in phel-lang PHP, not `.phel`, and `CORE_DEF_FORMS` for the bootstrap `(def …)` forms the corpus records without their `:macro` / `:private` markers.
   - `syntaxes/phel.tmLanguage.json` + `snippets/phel.code-snippets` — highlighting and snippets.
 - `out/` and `dist/` are generated (tsc, esbuild). Never edit them.
 

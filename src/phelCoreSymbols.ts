@@ -5,7 +5,8 @@
 // They live in PHP, not in any `.phel` source, so they can't be derived from
 // `PHEL_DOCS`.
 //
-// `MACROS` and `CORE_FNS` are projections of `PHEL_DOCS`. Regenerate the
+// `MACROS`, `CORE_FNS` and `CORE_VALUES` are projections of `PHEL_DOCS`, with
+// the bare-`def` forms of `CORE_DEF_FORMS` folded in. Regenerate the
 // underlying database via `node scripts/regen-core-docs.cjs /path/to/phel-lang`
 // (see CONTRIBUTING.md) and these arrays follow automatically.
 
@@ -95,10 +96,69 @@ function namesWhere(predicate: (doc: PhelDoc) => boolean): string[] {
     return uniqueSorted(PHEL_DOCS.filter(predicate).map((d) => d.name));
 }
 
+/**
+ * How to offer the `phel.core` names a bare `(def …)` introduces.
+ *
+ * Core bootstraps itself: `defn` and `defmacro` are installed as
+ * `(def defn {:macro true} (fn …))` — they are what every later `defn` is
+ * written with — and the earliest functions (`first`, `next`, `with-meta`) are
+ * defined the same way, before `defn` exists. The corpus takes `kind` and
+ * `private` from the defining operator, so all of them are recorded as public
+ * `def`s, and the `{:macro true}` / `{:private true}` / `^:private` markers
+ * that tell them apart are not carried. This table restores that split; it is
+ * hand-kept for the same reason `SPECIAL_FORMS` is — the fact lives in the
+ * phel source, not in the corpus.
+ *
+ * Only the names worth offering are listed: the fifteen core `def`s phel marks
+ * private stay out, and so do `def-`, `concat`, `hash-map`, `list` and
+ * `vector`, which `SPECIAL_FORMS` already offers because the compiler
+ * special-cases them. Entries are still filtered through the corpus, so a name
+ * upstream drops disappears from completion with it.
+ *
+ * Source: `src/phel/core.phel`, `src/phel/core/defs.phel`,
+ * `src/phel/core/meta.phel` and `src/phel/core/math.phel` in phel-lang.
+ */
+const CORE_DEF_FORMS: ReadonlyMap<string, 'macro' | 'fn' | 'value'> = new Map([
+    ['declare', 'macro'],
+    ['defmacro', 'macro'],
+    ['defn', 'macro'],
+    ['meta', 'macro'],
+    ['array-map', 'fn'],
+    ['first', 'fn'],
+    ['next', 'fn'],
+    ['queue', 'fn'],
+    ['to-php-array', 'fn'],
+    ['vary-meta', 'fn'],
+    ['with-meta', 'fn'],
+    ['*argv*', 'value'],
+    ['*assert*', 'value'],
+    ['*file*', 'value'],
+    ['*ns*', 'value'],
+    ['*program*', 'value'],
+    ['NAN', 'value'],
+]);
+
+function coreDefNames(as: 'macro' | 'fn' | 'value'): string[] {
+    return namesWhere(
+        (d) =>
+            d.kind === 'def' &&
+            !d.private &&
+            d.ns === 'phel.core' &&
+            CORE_DEF_FORMS.get(d.name) === as
+    );
+}
+
 /** Public macros across every shipped `phel.*` namespace. */
-export const MACROS: readonly string[] = namesWhere((d) => d.kind === 'macro' && !d.private);
+export const MACROS: readonly string[] = uniqueSorted([
+    ...namesWhere((d) => d.kind === 'macro' && !d.private),
+    ...coreDefNames('macro'),
+]);
 
 /** Public functions defined inside the auto-imported `phel.core` namespace. */
-export const CORE_FNS: readonly string[] = namesWhere(
-    (d) => d.kind === 'fn' && !d.private && d.ns === 'phel.core'
-);
+export const CORE_FNS: readonly string[] = uniqueSorted([
+    ...namesWhere((d) => d.kind === 'fn' && !d.private && d.ns === 'phel.core'),
+    ...coreDefNames('fn'),
+]);
+
+/** Public `phel.core` values: the dynamic vars and the numeric constants. */
+export const CORE_VALUES: readonly string[] = coreDefNames('value');

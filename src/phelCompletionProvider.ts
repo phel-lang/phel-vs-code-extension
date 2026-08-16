@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CORE_FNS, MACROS, PHP_SUPERGLOBALS, SPECIAL_FORMS } from './phelCoreSymbols';
+import { CORE_FNS, CORE_VALUES, MACROS, PHP_SUPERGLOBALS, SPECIAL_FORMS } from './phelCoreSymbols';
 import { MIGRATIONS } from './phelMigration';
 import { buildCallSnippet, isCalleePosition } from './phelCallSnippet';
 import {
@@ -78,6 +78,13 @@ function buildBaseSpecs(): ItemSpec[] {
             label: name,
             kind: vscode.CompletionItemKind.Function,
             detail: 'Phel core function',
+        });
+    }
+    for (const name of CORE_VALUES) {
+        specs.push({
+            label: name,
+            kind: vscode.CompletionItemKind.Variable,
+            detail: 'Phel core value',
         });
     }
     return specs;

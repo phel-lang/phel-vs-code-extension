@@ -347,7 +347,7 @@ npm run regen-docs -- /path/to/phel-lang --phel-version v0.50.0
 
 The script walks `src/phel/**/*.phel`, detects each file's namespace from its `(ns ...)` or `(in-ns ...)` form, runs the parser in `src/phelDocs.ts`, and writes the JSON corpus. `--phel-version` (default `main`) is the git ref used to build `View source` links.
 
-`src/phelCoreSymbols.ts` exposes flat name arrays projected from this database (`MACROS`, `CORE_FNS`) plus a hand-curated `SPECIAL_FORMS` for the engine special forms (which live in PHP, not in any `.phel` file).
+`src/phelCoreSymbols.ts` exposes flat name arrays projected from this database (`MACROS`, `CORE_FNS`, `CORE_VALUES`) plus a hand-curated `SPECIAL_FORMS` for the engine special forms (which live in PHP, not in any `.phel` file) and a hand-curated `CORE_DEF_FORMS` for the names `phel.core` bootstraps with a bare `(def …)` - see [completion.md](completion.md#completion).
 
 ### Snippets (`snippets/phel.code-snippets`)
 
