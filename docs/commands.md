@@ -205,8 +205,10 @@ The debug session itself is started from a launch configuration of type `phel`, 
 
 | Command | Id | What it runs / does | Needs | Key |
 |---|---|---|---|---|
-| Phel: Show Documentation | `phel.showDoc` | Resolves the symbol from its argument, the word at the cursor, or a quick pick over the bundled corpus, then opens the rendered doc in a Markdown preview. Reads `assets/phel-core-docs.json`. | nothing | — |
+| Phel: Show Documentation | `phel.showDoc` | Resolves the symbol from its argument, the word at the cursor, or a quick pick over the bundled corpus, then opens it in the searchable **Phel API** panel — one webview per window, reused. Reads `assets/phel-core-docs.json`; falls back to a Markdown preview where no webview can be opened. Returns `{ symbol }`. | nothing | — |
 | Phel: Go to Test / Source File | `phel.ns.goToTest` | Opens the other half of the current namespace - `src/app/core.phel` ↔ `tests/app/core_test.phel`, following the project's `src-dirs` / `test-dirs`. Offers to scaffold the test file when there is none. See [refactoring](refactoring.md#go-to-test--source-file). | Phel CLI (for a non-default layout) | — |
+
+The panel itself is [`src/phelDocsPanel.ts`](../src/phelDocsPanel.ts) (the HTML, pure) and [`src/phelDocsPanelProvider.ts`](../src/phelDocsPanelProvider.ts) (the webview); see [the docs panel](completion.md#the-docs-panel).
 
 Go to definition, find references, rename, outline and code actions are language-feature providers rather than commands; they answer VS Code's own entries (<kbd>F12</kbd>, <kbd>Shift</kbd>+<kbd>F12</kbd>, <kbd>F2</kbd>, <kbd>Ctrl</kbd>+<kbd>.</kbd>). See [refactoring](refactoring.md).
 

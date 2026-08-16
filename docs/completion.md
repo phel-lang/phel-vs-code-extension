@@ -93,6 +93,63 @@ npm run regen-docs -- /path/to/phel-lang --phel-version v0.50.0
 
 `MACROS`, `CORE_FNS` and `CORE_VALUES` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` and `CORE_DEF_FORMS` are hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source; the bootstrap `def`s are the ones described above) - add new entries there by hand. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full procedure.
 
+## The docs panel
+
+**Phel: Show Documentation** (palette, or the editor's right-click **Phel**
+submenu) opens **Phel API**: one searchable panel per window over the same
+`assets/phel-core-docs.json` every other feature reads. The symbol under the
+cursor is preselected, the search box filters the ~900 public symbols by name
+and by docstring as you type, and the pane beside it shows what a hover would,
+plus the example, the see-also list, a **View source** link into the phel-lang
+tag the corpus was generated from, and the namespace's page on phel-lang.org.
+
+The page is built at runtime and loads nothing: no stylesheet, no script, no
+image comes from anywhere, and its content policy (`default-src 'none'`) admits
+only the one `<style>` and the one `<script>` carrying that render's nonce.
+Docstrings are source text, so everything the panel does not render itself is
+escaped; what it renders is fenced code, inline code, `http(s)` links and
+emphasis, which is all a doc record can produce.
+
+The phel-lang.org link points at the namespace page rather than at the symbol.
+The site's per-symbol anchors are slugified headings de-duplicated in document
+order - `map?` is `#map-1`, and `assert` is `#assert-1` because `*assert*` took
+`#assert` first - so nothing in the corpus can derive one, and landing on the
+wrong symbol would be worse than landing at the top of the right page.
+
+Where the window cannot host a webview at all, the command falls back to the
+Markdown preview it used before.
+
+## PHP function hover
+
+Hovering a `php/<fn>` call - `(php/strtoupper text)` - answers with the
+signature and the manual:
+
+> **`php/strtoupper`** *PHP function*
+>
+> ```php
+> strtoupper(string $string): string
+> ```
+>
+> [strtoupper on php.net](https://www.php.net/manual/function.strtoupper.php)
+
+The signature is reflected by `phel api-daemon` out of the PHP that is running,
+extensions included, so it is this project's answer rather than a snapshot of
+some other PHP's - the same `completeAtPoint` request behind [PHP interop
+completion](#php-interop), asked at the end of the token. It therefore needs
+`phel.diagnostics.live`, the warm process live diagnostics and the project index
+already use. A hover cannot wait for a PHP boot, so the first one against a cold
+daemon shows the link alone; the request it started fills the cache, and hovering
+again shows the signature, from then on for the rest of the session.
+
+There is deliberately no bundled description. php.net's prose is CC-BY licensed
+and moves with every PHP release, so a copy would be both an attribution
+obligation and a snapshot that rots. The link never goes stale, and the
+signature is the one part no bundled copy could get right.
+
+The interop special forms keep their own hovers: `php/new` is Phel syntax rather
+than a function (and carries its 0.50 migration note), and `php/$_SERVER` and
+friends are superglobals.
+
 ## Parameter inlay hints
 
 The same corpus that backs signature help can name the arguments *in place*, so
