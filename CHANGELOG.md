@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Docs
+
+- `docs/commands.md`: every contributed command with its id, the exact CLI invocation or editor operation behind it, which setting resolves the executable, what it needs (Phel CLI / nREPL / nothing), and its default keybinding — including the two that only make sense from a CodeLens. A unit test keeps the id column in step with `contributes.commands`.
+
 ## [0.13.0] - 2026-08-16
 
 ### Added

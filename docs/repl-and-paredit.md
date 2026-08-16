@@ -2,7 +2,7 @@
 
 ## Integrated REPL
 
-`Phel: Start REPL` opens an integrated terminal running the configured Phel CLI (defaults to `vendor/bin/phel repl`). The terminal is reused across evaluations.
+`Phel: Start REPL` (`phel.repl.start`) opens an integrated terminal running the configured Phel CLI (defaults to `vendor/bin/phel repl`). The terminal is reused across evaluations. Ids for every command below are in the [commands reference](commands.md).
 
 | Command | Default key | What it does |
 |---|---|---|
@@ -29,8 +29,8 @@ started yourself — from a terminal, a `docker exec`, or another editor — and
 the extension **attaches** to it instead of starting a second one. Without the
 file (or when its port no longer answers, which usually means the server
 crashed) the extension starts its own `phel nrepl --port=0` and reads the port
-from its banner. `Phel: nREPL Disconnect` closes the socket either way, and only
-stops a server the extension started.
+from its banner. `Phel: Disconnect from nREPL Server` (`phel.nrepl.disconnect`)
+closes the socket either way, and only stops a server the extension started.
 
 Add `.nrepl-port` to `.gitignore`; it is a per-machine, per-run file.
 
