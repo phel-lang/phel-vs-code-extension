@@ -3,7 +3,8 @@
 // refactor does not apply at that position). No `vscode` imports, so the
 // transforms are unit-testable in isolation from the code-action provider.
 
-import { parseAll, pathAt, type Form } from './phelParedit';
+import { pathAt, type Form } from './phelParedit';
+import { parseAllCached } from './phelParseCache';
 
 export interface RefactorEdit {
     /** Replace `[start, end)` in the source with `text`. */
@@ -26,7 +27,7 @@ function headName(src: string, f: Form): string | null {
 
 /** Innermost enclosing list form at `offset`, or null. */
 function enclosingList(src: string, offset: number): Form | null {
-    const path = pathAt(parseAll(src), offset);
+    const path = pathAt(parseAllCached(src), offset);
     for (let i = path.length - 1; i >= 0; i--) {
         if (path[i].kind === 'list') {
             return path[i];
@@ -37,7 +38,7 @@ function enclosingList(src: string, offset: number): Form | null {
 
 /** Innermost enclosing container (list / vector / map) at `offset`, or null. */
 function enclosingContainer(src: string, offset: number): Form | null {
-    const path = pathAt(parseAll(src), offset);
+    const path = pathAt(parseAllCached(src), offset);
     for (let i = path.length - 1; i >= 0; i--) {
         const k = path[i].kind;
         if (k === 'list' || k === 'vector' || k === 'map') {
@@ -103,7 +104,7 @@ export function threadForm(src: string, offset: number, last: boolean): Refactor
  * `(->> xs (filter p) (map f))` becomes `(map f (filter p xs))`.
  */
 export function unthreadForm(src: string, offset: number): RefactorEdit | null {
-    const path = pathAt(parseAll(src), offset);
+    const path = pathAt(parseAllCached(src), offset);
     let form: Form | null = null;
     for (let i = path.length - 1; i >= 0; i--) {
         const name = headName(src, path[i]);

@@ -2,7 +2,8 @@
 // selection [start, end], returns the next-larger form span. The provider
 // keeps a per-document stack and pops it for shrink.
 
-import { parseAll, pathAt, type Form } from './phelParedit';
+import { pathAt, type Form } from './phelParedit';
+import { parseAllCached } from './phelParseCache';
 
 export interface Span {
     start: number;
@@ -10,7 +11,7 @@ export interface Span {
 }
 
 export function expandSelection(src: string, start: number, end: number): Span | null {
-    const forms = parseAll(src);
+    const forms = parseAllCached(src);
     const mid = Math.floor((start + end) / 2);
     const path = pathAt(forms, mid);
     const fromPath = pickEnclosing(path, start, end);
