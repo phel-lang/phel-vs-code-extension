@@ -78,6 +78,16 @@ describe('phelNsAnalyzer.buildRequireEdit', () => {
     it('returns null when there is no ns form', () => {
         assert.equal(buildRequireEdit(null, 'other.ns', 'foo'), null);
     });
+
+    it('extends an entry that lives in a later clause', () => {
+        const src =
+            '(ns my.app\n  (:require [a.b :refer [x]])\n  (:require [other.ns :refer [a]]))';
+        const edit = buildRequireEdit(parseNsForm(src), 'other.ns', 'b');
+        assert.equal(
+            applyEdit(src, edit),
+            '(ns my.app\n  (:require [a.b :refer [x]])\n  (:require [other.ns :refer [a b]]))'
+        );
+    });
 });
 
 describe('phelNsAnalyzer.aliasMapFromSource', () => {
@@ -119,6 +129,14 @@ describe('phelNsAnalyzer.aliasMapFromSource', () => {
         );
         assert.equal(map.get('str'), 'phel.string');
         assert.equal(map.get('t'), 'phel.test');
+    });
+
+    it('reads every clause, which is how phel init writes them', () => {
+        const map = aliasMapFromSource(
+            '(ns a\n  (:require phel.test :as t)\n  (:require phel.html :as h))'
+        );
+        assert.equal(map.get('t'), 'phel.test');
+        assert.equal(map.get('h'), 'phel.html');
     });
 
     it('normalises the backslash separator Phel sources use', () => {

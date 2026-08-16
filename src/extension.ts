@@ -27,6 +27,7 @@ import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelS
 import { PhelSemanticTokensProvider, SEMANTIC_LEGEND } from './phelSemanticTokens';
 import { PhelUnusedLocals } from './phelUnusedLocals';
 import { PhelMigrationDiagnostics } from './phelMigrationProvider';
+import { PhelNsHygiene } from './phelNsHygieneProvider';
 import { PhelCodeActionProvider } from './phelCodeActionsProvider';
 import { PhelFoldingRangeProvider } from './phelFoldingProvider';
 import { PhelInlayHintsProvider } from './phelInlayHintsProvider';
@@ -483,6 +484,7 @@ function registerLanguageProviders(
 
     context.subscriptions.push(new PhelUnusedLocals());
     context.subscriptions.push(new PhelMigrationDiagnostics(workspaceIndexer, projectConfig));
+    context.subscriptions.push(new PhelNsHygiene(projectConfig));
 
     context.subscriptions.push(
         vscode.languages.registerCodeActionsProvider(

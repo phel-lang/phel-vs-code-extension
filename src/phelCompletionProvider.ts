@@ -8,7 +8,7 @@ import {
     renderSuperglobalMarkdown,
     renderSupersededMarkdown,
 } from './phelDocsLookup';
-import { buildRequireEdit, parseNsForm, type NsForm } from './phelNsAnalyzer';
+import { buildRequireEdit, parseNsForm, requireEntries, type NsForm } from './phelNsAnalyzer';
 import {
     aliasQualifiedCandidates,
     completionContextAt,
@@ -323,7 +323,7 @@ export class PhelCompletionProvider implements vscode.CompletionItemProvider {
         }
 
         const nsForm = parseNsForm(src);
-        const already = nsForm?.requireClause?.entries.map((e) => e.ns) ?? [];
+        const already = requireEntries(nsForm).map((e) => e.ns);
         const namespaces = requirableNamespaces(src, docs, nsForm?.name, already).map((ns) => {
             const item = new vscode.CompletionItem(ns, vscode.CompletionItemKind.Module);
             item.detail = 'namespace';

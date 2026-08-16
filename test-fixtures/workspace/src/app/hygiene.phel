@@ -1,0 +1,8 @@
+(ns app.hygiene
+  (:require phel.test :refer [deftest is])
+  (:require app.core :refer [greet]))
+
+(defn shout
+  "Greets `name` loudly. Nothing here uses `phel.test`, which is the point."
+  [name]
+  (str (greet name) "!!"))

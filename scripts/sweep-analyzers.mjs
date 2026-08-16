@@ -34,6 +34,7 @@ const scope = require(join(out, 'phelScope.js'));
 const folding = require(join(out, 'phelFolding.js'));
 const references = require(join(out, 'phelReferences.js'));
 const nsAnalyzer = require(join(out, 'phelNsAnalyzer.js'));
+const nsHygiene = require(join(out, 'phelNsHygiene.js'));
 const docs = require(join(out, 'phelDocs.js'));
 const migration = require(join(out, 'phelMigration.js'));
 const inlayHints = require(join(out, 'phelInlayHints.js'));
@@ -74,6 +75,7 @@ const totals = {
     folds: 0,
     symbols: 0,
     requires: 0,
+    deadRequires: 0,
     migrations: 0,
     hints: 0,
     indentLines: 0,
@@ -119,7 +121,12 @@ for (const file of files) {
     totals.folds += attempt(file, 'computeFoldRanges', () => folding.computeFoldRanges(src))?.length ?? 0;
     totals.symbols += attempt(file, 'parsePhelFile', () => docs.parsePhelFile(src, 'sweep'))?.length ?? 0;
     totals.requires +=
-        attempt(file, 'parseNsForm', () => nsAnalyzer.parseNsForm(src))?.requireClause?.entries.length ?? 0;
+        attempt(file, 'parseNsForm', () => nsAnalyzer.requireEntries(nsAnalyzer.parseNsForm(src)))?.length ?? 0;
+    // Should stay a small fraction of `requires`: phel's own stdlib does not
+    // require namespaces it never touches, so a large count means the detector
+    // is missing a shape of use rather than that the corpus is untidy.
+    totals.deadRequires += attempt(file, 'findUnusedRequires', () => nsHygiene.findUnusedRequires(src))?.length ?? 0;
+    attempt(file, 'sortRequiresEdit', () => nsHygiene.sortRequiresEdit(src));
     // Over a phel-lang checkout this should be near zero: the stdlib was
     // rewritten onto the Clojure-style spelling in 0.50, so a large count means
     // the detector is firing on names it should have treated as shadowed.

@@ -11,7 +11,7 @@
 
 import * as vscode from 'vscode';
 import { lookupSymbol } from './phelDocsLookup';
-import { aliasMapFromSource, normalizeNs, parseNsForm } from './phelNsAnalyzer';
+import { aliasMapFromSource, normalizeNs, parseNsForm, requireEntries } from './phelNsAnalyzer';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import {
     daemonSymbolKey,
@@ -67,8 +67,10 @@ export class PhelDefinitionProvider implements vscode.DefinitionProvider {
         offset: number
     ): vscode.Location | null {
         const index = this.indexer.projectIndexFor(document.uri);
-        const clause = parseNsForm(src)?.requireClause;
-        if (!index || !clause || offset < clause.start || offset >= clause.end) {
+        const clause = parseNsForm(src)?.requireClauses.find(
+            (c) => offset >= c.start && offset < c.end
+        );
+        if (!index || !clause) {
             return null;
         }
         // The clause spans the `:refer` names too, so the token has to *be* one
@@ -104,9 +106,7 @@ export class PhelDefinitionProvider implements vscode.DefinitionProvider {
         // A `:refer`'d name belongs to the namespace it was referred from, not
         // to this one; that is the whole point of asking a namespace-aware
         // index rather than searching by name.
-        const referred = nsForm?.requireClause?.entries.find((entry) =>
-            entry.refer.includes(word)
-        )?.ns;
+        const referred = requireEntries(nsForm).find((entry) => entry.refer.includes(word))?.ns;
         const key = daemonSymbolKey(word, referred ?? nsForm?.name ?? '', aliasMapFromSource(src));
         if (!key) {
             return null;

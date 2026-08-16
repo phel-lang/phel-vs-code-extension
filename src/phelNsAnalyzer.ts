@@ -38,22 +38,30 @@ export interface NsForm {
     /** Position just before the closing `)` of the ns form (for inserts). */
     closeOffset: number;
     name: string;
+    /**
+     * Every `(:require ...)` clause, in source order. A `(ns ...)` form may
+     * hold several — one per required namespace is what `phel init` scaffolds —
+     * so a reader that stops at the first misses everything after it.
+     */
+    requireClauses: RequireClause[];
+    /** The first clause, which is where a new entry is appended. */
     requireClause: RequireClause | null;
+}
+
+/** Every entry of every `(:require ...)` clause in the form. */
+export function requireEntries(ns: NsForm | null): RequireEntry[] {
+    return (ns?.requireClauses ?? []).flatMap((clause) => clause.entries);
 }
 
 /**
  * Build the alias map for the given source: `alias -> target.ns` for every
- * `[other.ns :as alias]` entry in the file's `(:require ...)` clause. Used
+ * `[other.ns :as alias]` entry in the file's `(:require ...)` clauses. Used
  * by hover / definition / completion / signature providers to resolve
  * `alias/name` into a fully-qualified lookup.
  */
 export function aliasMapFromSource(src: string): Map<string, string> {
     const map = new Map<string, string>();
-    const ns = parseNsForm(src);
-    if (!ns?.requireClause) {
-        return map;
-    }
-    for (const entry of ns.requireClause.entries) {
+    for (const entry of requireEntries(parseNsForm(src))) {
         if (entry.as && entry.ns) {
             map.set(entry.as, entry.ns);
         }
@@ -79,13 +87,14 @@ export function parseNsForm(src: string): NsForm | null {
             return null;
         }
         const name = atomText(src, nameChild);
-        const requireClause = findRequireClause(src, form);
+        const requireClauses = findRequireClauses(src, form);
         return {
             start: form.start,
             end: form.end,
             closeOffset: form.innerEnd,
             name,
-            requireClause,
+            requireClauses,
+            requireClause: requireClauses[0] ?? null,
         };
     }
     return null;
@@ -104,7 +113,8 @@ export function normalizeNs(text: string): string {
     return text.replace(/\\/g, '.');
 }
 
-function findRequireClause(src: string, ns: Form): RequireClause | null {
+function findRequireClauses(src: string, ns: Form): RequireClause[] {
+    const out: RequireClause[] = [];
     for (const child of ns.children) {
         if (child.kind !== 'list' || child.children.length === 0) {
             continue;
@@ -116,13 +126,13 @@ function findRequireClause(src: string, ns: Form): RequireClause | null {
         if (atomText(src, head) !== ':require') {
             continue;
         }
-        return {
+        out.push({
             start: child.start,
             end: child.end,
             entries: parseRequireEntries(src, child.children.slice(1)),
-        };
+        });
     }
-    return null;
+    return out;
 }
 
 /**
@@ -271,7 +281,9 @@ export function buildRequireEdit(
         };
     }
 
-    const existing = nsForm.requireClause.entries.find((e) => e.ns === targetNs);
+    // The namespace may already be required from a later clause; only the
+    // insert of a *new* entry belongs in the first one.
+    const existing = requireEntries(nsForm).find((e) => e.ns === targetNs);
     if (!existing) {
         return {
             insertAt: nsForm.requireClause.end - 1,

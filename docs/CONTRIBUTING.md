@@ -35,7 +35,7 @@ Open the repo in VS Code and press <kbd>F5</kbd>. That starts an Extension Devel
 
 | Bundle | Loaded | Size (minified) |
 |--------|--------|-----------------|
-| `extension.js` | on activation | ~147 KB, 100% our own code |
+| `extension.js` | on activation | ~171 KB, 100% our own code |
 | `phelLanguageClient.js` | only when `phel.lsp.enabled` is on | ~348 KB, almost all `vscode-languageclient` |
 | `phelDebugAdapter.js` | only once a debug session starts | ~51 KB, half `@vscode/debugadapter` |
 
@@ -69,7 +69,7 @@ rather than something to read in a report:
 
 | Budget | Where | Today |
 |--------|-------|-------|
-| `dist/extension.js` under 200 000 bytes, and no `vscode-languageclient` / `vscode-jsonrpc` / `vscode-languageserver` / `@vscode/debugadapter` / `phelDebugAdapter.ts` among its inputs | `npm run bundle:check`, in CI right after `npm run tokenize` | 146.5 KB |
+| `dist/extension.js` under 200 000 bytes, and no `vscode-languageclient` / `vscode-jsonrpc` / `vscode-languageserver` / `@vscode/debugadapter` / `phelDebugAdapter.ts` among its inputs | `npm run bundle:check`, in CI right after `npm run tokenize` | 170.5 KB |
 | `activate()` under 750 ms | `activation.itest.ts`, in the integration run | 20-35 ms locally, 80-110 ms on CI's xvfb runner |
 
 `bundle:check` builds for production and then reads `dist/meta.json`, so it
@@ -164,10 +164,10 @@ first two hosts only. `scripts/make-real-cli-fixture.sh` writes a throwaway
 project (mktemp by default) holding one instance of every case the suites need —
 a lint warning and a lint error, a file only the linter objects to, a passing and
 a failing `deftest`, a `defbench`, a removed and a deprecated form, a
-`:deprecated` definition with a caller, two namespaces where one requires the
-other, and an empty one for the suite that types a body into it — plus a
-`.vscode/settings.json` pointing `phel.executablePath` at a wrapper around the
-checkout's `bin/phel`.
+`:deprecated` definition with a caller, an unused `:require`, two namespaces
+where one requires the other, and an empty one for the suite that types a body
+into it — plus a `.vscode/settings.json` pointing `phel.executablePath` at a
+wrapper around the checkout's `bin/phel`.
 The suites edit that project (they save files and rewrite `phel-config.php`), so
 re-run the script for a clean one rather than reusing it across days.
 

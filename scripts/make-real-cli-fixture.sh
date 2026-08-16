@@ -9,8 +9,8 @@
 # pointed at it, holding one instance of every case the suites assert on -
 # a lint warning, a lint error, a file only the linter objects to, a failing and
 # a passing `deftest`, a `defbench`, a removed and a deprecated form, a
-# `:deprecated` definition with a caller, and two namespaces where one requires
-# the other.
+# `:deprecated` definition with a caller, an unused `:require`, and two
+# namespaces where one requires the other.
 #
 # It is written outside the repo (mktemp by default) because it is a scratch
 # project: the suites save files in it, rewrite its `phel-config.php`, and leave
@@ -99,10 +99,23 @@ EOF
 
 cat >"$target/src/consumer.phel" <<'EOF'
 (ns demo.consumer
-  (:require demo.strings :refer [shout]))
+  (:require demo.strings :refer [shout])
+  (:require demo.unused-dep))
 
 (defn announce [text]
   (str "** " (shout text) " **"))
+EOF
+
+# The second require above names this namespace and never uses it, which is what
+# `phel lint` reports as `phel/unused-require` - the one finding the editor-side
+# hygiene hints have to agree with, and hand over to, after a save. It has to be
+# a namespace that compiles: requiring `demo.legacy` (which uses the removed
+# `push`) would break `demo.consumer` for every other suite.
+cat >"$target/src/unused_dep.phel" <<'EOF'
+(ns demo.unused-dep)
+
+(defn helper [x]
+  (str x))
 EOF
 
 # `phel lint` reports `phel/unused-binding` here and nothing else; the analyzer

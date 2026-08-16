@@ -98,3 +98,40 @@ When you accept a completion for a workspace symbol whose namespace isn't alread
 - Target ns required with `:refer` → extends the existing vector.
 
 `phel.core` and same-namespace symbols are skipped (no edit needed).
+
+## Namespace hygiene
+
+### Unused requires
+
+A `(:require …)` entry nothing in the file uses is faded, the way an unused local is, with a **Remove unused require '…'** quick fix (<kbd>Ctrl</kbd>+<kbd>.</kbd>) on it. Applying it drops the entry, and takes the whole `(:require …)` clause with it when that was the last one.
+
+An entry is unused when neither the alias it binds nor any of its `:refer` names occurs outside the `(ns …)` form. The alias is whatever `:as` says, or - exactly as the compiler decides it - the last segment of the namespace, so `(:require phel.json)` is used by `(json/encode x)` and by nothing else.
+
+Two things are deliberate:
+
+- **A single dead `:refer` gets its own hint.** `phel lint` reports the entry or nothing, because a lint rule can only point at a form; the quick fix here can edit text, so `[app.core :refer [greet shout]]` where only `greet` is called offers **Remove unused refer 'shout'** and leaves the entry alone. Dropping the last name in a vector drops the empty `:refer` with it.
+- **A use inside a syntax-quoted macro template counts.** The template is not the code that runs, but its expansion is, and that expansion does reach the namespace. Erring towards "used" costs a require that stays; erring the other way offers to break the build.
+
+This is the same rule as `phel lint`'s `phel/unused-require`, computed in the editor so it arrives while you type. Once a save has run the CLI, its warning replaces the hint on the same entry - the CLI saw the whole project, and it is what CI runs. The quick fix works on either.
+
+### Sort requires
+
+**Source Action → Sort requires** orders the `(:require …)` entries by namespace. Only the entries move: the whitespace between them stays where you put it, so a clause with one entry per line keeps one entry per line. It is idempotent, which makes it safe to run on save:
+
+```jsonc
+"[phel]": {
+  "editor.codeActionsOnSave": { "source.organizeImports": "explicit" }
+}
+```
+
+### Go to Test / Source File
+
+`phel.ns.goToTest` opens the other half of the namespace you are in, following [Phel's own test convention](https://github.com/phel-lang/phel-lang/blob/main/src/php/Run/Domain/Init/ProjectTemplateGenerator.php): `demo.strings` in `src/strings.phel` pairs with `demo.strings-test` in `tests/strings_test.phel`, and a `-` in a namespace segment is a `_` in the file name. The directories come from the project's `src-dirs` and `test-dirs`, defaulting to `src` and `tests`.
+
+When the test file does not exist yet, the command offers to create it with a `(ns …)` header and one `deftest` to replace. The other direction never scaffolds: a test says what it wants to call, not what the file under it should hold.
+
+### `(ns …)` in a new file
+
+Create an empty `.phel` file and it gets its `(ns …)` form, derived from the files around it. That indirection is necessary: `phel config` does not print the project's main namespace, so `src/strings.phel` could be `demo.strings` or `app.strings` and only the neighbours know which. A sibling declaring `demo.strings` in `src/strings.phel` says "drop `src`, prepend `demo`", and the nearest sibling in the tree wins. With no sibling to learn from, the path is used as-is with a leading `src` / `tests` removed.
+
+Only a genuinely empty buffer is touched, and `phel.ns.autoInsert` turns it off.
