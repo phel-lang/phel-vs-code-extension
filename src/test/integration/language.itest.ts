@@ -90,6 +90,43 @@ describe('language features', function () {
         assert.equal(help.signatures[help.activeSignature].label, '(greet name)');
     });
 
+    it('goes to the definition of a workspace symbol, in the file that defines it', async function () {
+        // No `vendor/bin/phel` in the fixture, so there is no analysis daemon
+        // and no project index: this is the workspace index answering, which is
+        // what every install without a Phel CLI gets.
+        const position = positionOf(main, '(greet person)', 1);
+        const locations = await waitFor('the workspace index to reach definitions', async () => {
+            const found = await vscode.commands.executeCommand<vscode.Location[]>(
+                'vscode.executeDefinitionProvider',
+                main.uri,
+                position
+            );
+            return found && found.length > 0 ? found : undefined;
+        });
+
+        assert.equal(locations[0].uri.toString(), core.uri.toString());
+        assert.equal(locations[0].range.start.line, positionOf(core, '(defn greet').line);
+    });
+
+    it('lists references to a workspace symbol across the files that use it', async function () {
+        const position = positionOf(main, '(greet person)', 1);
+        const locations = await waitFor('the workspace index to reach references', async () => {
+            const found = await vscode.commands.executeCommand<vscode.Location[]>(
+                'vscode.executeReferenceProvider',
+                main.uri,
+                position
+            );
+            return found && found.some((l) => l.uri.toString() === core.uri.toString())
+                ? found
+                : undefined;
+        });
+
+        assert.ok(
+            locations.some((l) => l.uri.toString() === main.uri.toString()),
+            'no reference in the file the cursor is in'
+        );
+    });
+
     it('folds every multi-line form', async function () {
         const ranges = await vscode.commands.executeCommand<vscode.FoldingRange[]>(
             'vscode.executeFoldingRangeProvider',

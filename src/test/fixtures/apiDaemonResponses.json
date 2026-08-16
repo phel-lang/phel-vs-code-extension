@@ -1,0 +1,143 @@
+{
+  "indexProject": {
+    "namespaces": 3,
+    "definitions": 3,
+    "symbols": {
+      "phel.html/escape-html": {
+        "namespace": "phel.html",
+        "name": "escape-html",
+        "uri": "/project/src/phel/html.phel",
+        "line": 24,
+        "col": 15,
+        "kind": "defn",
+        "signature": [
+          "[s]"
+        ],
+        "docstring": "Escapes HTML special characters to prevent XSS.",
+        "private": false,
+        "deprecated": ""
+      },
+      "phel.http-client/key->string": {
+        "namespace": "phel.http-client",
+        "name": "key->string",
+        "uri": "/project/src/phel/http-client.phel",
+        "line": 10,
+        "col": 8,
+        "kind": "defn",
+        "signature": [
+          "[k]"
+        ],
+        "docstring": "Converts a keyword or string key to its string form.",
+        "private": true,
+        "deprecated": ""
+      },
+      "/to-php-array": {
+        "namespace": "",
+        "name": "to-php-array",
+        "uri": "/project/src/phel/core/defs.phel",
+        "line": 48,
+        "col": 6,
+        "kind": "def",
+        "signature": [],
+        "docstring": "",
+        "private": false,
+        "deprecated": "0.51.0"
+      }
+    },
+    "references": {
+      "phel.html/escape-html": [
+        {
+          "uri": "/project/src/phel/html.phel",
+          "line": 24,
+          "col": 15,
+          "endLine": 0,
+          "endCol": 0
+        },
+        {
+          "uri": "/project/src/phel/html.phel",
+          "line": 94,
+          "col": 45,
+          "endLine": 0,
+          "endCol": 0
+        },
+        {
+          "uri": "/project/src/phel/html.phel",
+          "line": 94,
+          "col": 74,
+          "endLine": 0,
+          "endCol": 0
+        }
+      ],
+      "s/includes?": [
+        {
+          "uri": "/project/src/phel/http-client.phel",
+          "line": 45,
+          "col": 31,
+          "endLine": 0,
+          "endCol": 0
+        },
+        {
+          "uri": "/project/src/phel/cli.phel",
+          "line": 500,
+          "col": 25,
+          "endLine": 0,
+          "endCol": 0
+        }
+      ]
+    },
+    "namespaceLocations": {
+      "phel.html": {
+        "uri": "/project/src/phel/html.phel",
+        "line": 1,
+        "col": 5,
+        "endLine": 1,
+        "endCol": 14
+      },
+      "phel.http-client": {
+        "uri": "/project/src/phel/http-client.phel",
+        "line": 1,
+        "col": 5,
+        "endLine": 1,
+        "endCol": 21
+      }
+    }
+  },
+  "resolveSymbol": {
+    "namespace": "phel.html",
+    "name": "escape-html",
+    "uri": "/project/src/phel/html.phel",
+    "line": 24,
+    "col": 15,
+    "kind": "defn",
+    "signature": [
+      "[s]"
+    ],
+    "docstring": "Escapes HTML special characters to prevent XSS.",
+    "private": false,
+    "deprecated": ""
+  },
+  "resolveSymbolMissing": null,
+  "findReferences": [
+    {
+      "uri": "/project/src/phel/html.phel",
+      "line": 24,
+      "col": 15,
+      "endLine": 0,
+      "endCol": 0
+    },
+    {
+      "uri": "/project/src/phel/html.phel",
+      "line": 94,
+      "col": 45,
+      "endLine": 0,
+      "endCol": 0
+    },
+    {
+      "uri": "/project/src/phel/html.phel",
+      "line": 94,
+      "col": 74,
+      "endLine": 0,
+      "endCol": 0
+    }
+  ]
+}

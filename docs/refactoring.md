@@ -2,11 +2,28 @@
 
 ## Go to Definition (`F12`)
 
-Place the cursor on a symbol and press <kbd>F12</kbd>. The extension first checks the workspace index for a `defn` / `defmacro` / `def`, then falls back to the bundled core docs.
+Place the cursor on a symbol and press <kbd>F12</kbd>. A local binding resolves to its own binding site; otherwise the extension checks the workspace index for a `defn` / `defmacro` / `def`, then falls back to the bundled core docs.
+
+With an analysis daemon running (see [below](#what-the-analysis-daemon-adds)) two more things work:
+
+- **A namespace in `(:require …)`** jumps to the `(ns …)` form of the file that declares it. Nothing answers this without the daemon — a namespace is not a symbol in the workspace index.
+- **A name is resolved within its namespace** rather than by name alone, so two definitions called `render` in different namespaces are told apart, and the jump lands on the name itself rather than on the `(` that opens the form.
 
 ## Find All References (`shift+F12`)
 
 Lists every standalone occurrence of the symbol across every indexed `.phel` file plus the active buffer. Strings, character literals, line comments, and block comments are skipped, so you don't get false positives in docstrings.
+
+The daemon's own reference sites are merged in on top of that. They are worth having because a scan for a token cannot see a namespace-qualified use — `s/includes?` is one token, and searching for `includes?` never matches inside it — while the daemon indexed it under exactly that spelling. A file with unsaved changes is the one place the daemon is ignored: it read the file off disk, so the buffer wins for its own hits.
+
+## What the analysis daemon adds
+
+Both features above use the same long-lived `phel api-daemon` that serves [live diagnostics](settings.md#live-diagnostics), so `phel.diagnostics.live` (default on) is the switch for all of it. There is one process per workspace folder, and it holds an index of the project built from the `src-dirs` and `test-dirs` of the [effective config](settings.md#what-the-project-config-decides) — `src` and `tests` when no CLI could say.
+
+That index is rebuilt two seconds after each save, and never on a keystroke: walking a project costs a pass through PHP, so navigation asks a daemon that is already running and already has an index, and falls back to the workspace index whenever there is none.
+
+**Staleness.** Between a save and the rebuild, and after the daemon has been restarted (which it is whenever a save invalidates what it had loaded), the daemon's index is behind or absent. Both cases degrade to the built-in workspace index rather than to a wrong answer, and the next save puts it back. **Phel: Restart Analysis Daemon** (`phel.diagnostics.restartDaemon`) drops the process if it ever looks stuck; the **Phel Analysis** output channel logs what it does.
+
+**Without a Phel CLI**, or with one older than the `api-daemon` command, or with `phel.diagnostics.live` off, everything here keeps working exactly as it did before the daemon existed.
 
 ## Rename Symbol (`F2`)
 

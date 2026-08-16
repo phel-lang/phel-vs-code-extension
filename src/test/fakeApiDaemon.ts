@@ -16,10 +16,18 @@
 // leaves the on-save path quiet instead of hanging it on a daemon that never
 // speaks.
 //
+// The navigation methods (`indexProject`, `resolveSymbol`, `findReferences`)
+// answer canned data about one symbol, `greet`, in `<cwd>/src/app/core.phel` -
+// the fixture workspace the integration suite launches VS Code with, since the
+// client runs the daemon from the workspace folder. Everything else resolves
+// to nothing, so the same run also exercises the fallback to the TypeScript
+// index.
+//
 // Compiled to `out/test/fakeApiDaemon.js`; `npm test` globs `*.test.js`, so it
 // is never collected as a suite.
 
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as readline from 'node:readline';
 
 interface Request {
@@ -54,6 +62,46 @@ function diagnosticsFor(params: Record<string, unknown>): unknown[] {
     ];
 }
 
+/** The one file the canned index knows about, as the daemon would report it. */
+function indexedFile(): string {
+    return path.join(process.cwd(), 'src', 'app', 'core.phel');
+}
+
+/** `greet`, at the position `(defn greet` has in the fixture's `core.phel`. */
+function greetDefinition(): Record<string, unknown> {
+    return {
+        namespace: 'app.core',
+        name: 'greet',
+        uri: indexedFile(),
+        line: 3,
+        col: 7,
+        kind: 'defn',
+        signature: ['[name]'],
+        docstring: 'Greets `name` by name.',
+        private: false,
+        deprecated: '',
+    };
+}
+
+function location(line: number, col: number): Record<string, unknown> {
+    return { uri: indexedFile(), line, col, endLine: 0, endCol: 0 };
+}
+
+/**
+ * The definition site, which the token scanner finds as well (so a merged
+ * answer has to keep it once), plus the `ns` line, which it never would - a
+ * stand-in for the namespace-qualified references only the daemon sees.
+ */
+function greetReferences(): Record<string, unknown>[] {
+    return [location(3, 7), location(1, 1)];
+}
+
+/** The short name of a `namespace/name` key, or the key itself. */
+function shortName(symbol: string): string {
+    const slash = symbol.indexOf('/');
+    return slash < 0 ? symbol : symbol.slice(slash + 1);
+}
+
 /** The subcommand, i.e. the first argument that is not a flag or its value. */
 const subcommand = argv.find((arg) => !arg.startsWith('-')) ?? 'api-daemon';
 
@@ -71,6 +119,10 @@ if (subcommand !== 'api-daemon') {
 
     /** How many `analyzeSource` calls this process has answered. */
     let analyzed = 0;
+    /** How many `indexProject` calls it has answered. */
+    let indexed = 0;
+    /** The params of the last real request, so a test can see what was sent. */
+    let lastParams: Record<string, unknown> = {};
 
     // The line the client has to skip before it sees any JSON.
     process.stdout.write('<error>Fake Phel daemon banner</error>\n');
@@ -105,13 +157,58 @@ if (subcommand !== 'api-daemon') {
             return;
         }
 
+        if (request.method !== '__stats') {
+            lastParams = params;
+        }
+
         switch (request.method) {
             case 'analyzeSource':
                 analyzed++;
                 respond({ id: request.id, result: diagnosticsFor(params) });
                 return;
+            case 'indexProject':
+                indexed++;
+                respond({
+                    id: request.id,
+                    result: {
+                        namespaces: 1,
+                        definitions: 1,
+                        symbols: { 'app.core/greet': greetDefinition() },
+                        references: { 'app.core/greet': greetReferences() },
+                        // The `app.core` in `(ns app.core)`, spanning the name.
+                        namespaceLocations: {
+                            'app.core': {
+                                uri: indexedFile(),
+                                line: 1,
+                                col: 5,
+                                endLine: 1,
+                                endCol: 13,
+                            },
+                        },
+                    },
+                });
+                return;
+            case 'resolveSymbol':
+                respond({
+                    id: request.id,
+                    result:
+                        shortName(String(params.symbol ?? '')) === 'greet'
+                            ? greetDefinition()
+                            : null,
+                });
+                return;
+            case 'findReferences':
+                respond({
+                    id: request.id,
+                    result:
+                        shortName(String(params.symbol ?? '')) === 'greet' ? greetReferences() : [],
+                });
+                return;
             case '__stats':
-                respond({ id: request.id, result: { analyzed, pid: process.pid } });
+                respond({
+                    id: request.id,
+                    result: { analyzed, indexed, lastParams, pid: process.pid },
+                });
                 return;
             default:
                 respond({

@@ -3,7 +3,8 @@
 // `{"id", "method", "params"}`; the answer is `{"id", "result"}` or
 // `{"id", "error": {code, message}}`. The methods we care about here are
 // `analyzeSource {source, uri}` - the analyzer diagnostics `phel analyze`
-// prints - but the transport is method-agnostic.
+// prints - and the three navigation ones (`indexProject`, `resolveSymbol`,
+// `findReferences`), but the transport is method-agnostic.
 //
 // Why a daemon: nearly all of `phel analyze`'s wall time is booting PHP and
 // preloading the file's dependencies. That is affordable once per save and
@@ -26,9 +27,24 @@ import * as readline from 'node:readline';
 import { LspRestartBudget } from './lspRestartBudget';
 import { isUnknownCommandError } from './phelDiagnostics';
 import { toInvocation } from './phelInvocation';
+import { normalizeNs } from './phelNsAnalyzer';
+import {
+    type PhelIndexDefinition,
+    type PhelIndexLocation,
+    type PhelProjectIndex,
+    toDefinition,
+    toLocations,
+    toProjectIndex,
+} from './phelProjectIndex';
 
 /** The daemon takes no arguments of its own. */
 const DEFAULT_ARGS = ['api-daemon'];
+
+/**
+ * Coalescing key for `indexProject`. Two saves in a row must cost one walk of
+ * the project, not two - and the second one is the answer both callers want.
+ */
+const INDEX_KEY = 'indexProject';
 
 // Same shape as the language client's budget: a daemon that dies immediately
 // and repeatedly must not respawn in a tight loop.
@@ -194,6 +210,53 @@ export class PhelApiDaemonClient {
             }
             this.pump();
         });
+    }
+
+    /**
+     * Walk `srcDirs` and cache the resulting index *in the daemon process*, so
+     * `resolveSymbol` and `findReferences` have something to answer from. The
+     * paths are resolved against the daemon's working directory, so the
+     * relative `src-dirs` a project config prints can be passed through.
+     *
+     * Resolves `undefined` when the answer is not an index - an older daemon
+     * without the method rejects instead, like every other request.
+     */
+    async indexProject(srcDirs: readonly string[]): Promise<PhelProjectIndex | undefined> {
+        return toProjectIndex(
+            await this.request<unknown>(
+                'indexProject',
+                { srcDirs: [...srcDirs] },
+                { key: INDEX_KEY }
+            )
+        );
+    }
+
+    /**
+     * The definition `symbol` names as seen from `namespace`, or `undefined`
+     * when the cached index has none. An unqualified symbol is looked up under
+     * `namespace/symbol` first and by bare name across the project after that,
+     * so the answer is namespace-aware where it can be.
+     */
+    async resolveSymbol(
+        namespace: string,
+        symbol: string
+    ): Promise<PhelIndexDefinition | undefined> {
+        return toDefinition(
+            await this.request<unknown>('resolveSymbol', {
+                namespace: normalizeNs(namespace),
+                symbol,
+            })
+        );
+    }
+
+    /** Every reference site the cached index holds for `namespace/symbol`. */
+    async findReferences(namespace: string, symbol: string): Promise<PhelIndexLocation[]> {
+        return toLocations(
+            await this.request<unknown>('findReferences', {
+                namespace: normalizeNs(namespace),
+                symbol,
+            })
+        );
     }
 
     /**

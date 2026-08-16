@@ -1,9 +1,18 @@
 // Find-all-references for `.phel` symbols. Walks every indexed file plus
 // the active document, looking for occurrences of the symbol under the
 // cursor (skipping strings / comments / char literals).
+//
+// When a daemon has indexed the project, its own reference sites are merged in.
+// They are worth having because the token scan structurally cannot see a
+// namespace-qualified use — `s/includes?` is one token, and its `includes?`
+// half has no delimiter in front of it — while the daemon indexed it under
+// exactly that spelling. What the daemon cannot do is read an unsaved buffer,
+// so its hits in a dirty file give way to what that buffer says now.
 
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
+import { parseNsForm } from './phelNsAnalyzer';
+import { mergeReferences, type PhelReferencePosition, toVscodePosition } from './phelProjectIndex';
 import { findOccurrences } from './phelReferences';
 import { resolveLocalAt, localOccurrences } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
@@ -36,8 +45,75 @@ export class PhelReferenceProvider implements vscode.ReferenceProvider {
             );
         }
         const word = document.getText(range);
-        return findReferenceLocations(word, document, this.indexer);
+        const [workspace, daemon] = await Promise.all([
+            findReferenceLocations(word, document, this.indexer),
+            this.daemonReferences(word, document, src),
+        ]);
+        return mergeReferences(daemon, workspace.map(toHit), dirtyPhelFiles()).map(
+            (hit) => hit.location
+        );
     }
+
+    /**
+     * What the daemon's index holds for the token under the cursor, spelled as
+     * it is written here: a qualified `alias/name` is the key the index uses,
+     * and a bare name is anchored to this file's own namespace.
+     */
+    private async daemonReferences(
+        word: string,
+        document: vscode.TextDocument,
+        src: string
+    ): Promise<Hit[]> {
+        const locations = await this.indexer.findReferences(
+            document.uri,
+            parseNsForm(src)?.name ?? '',
+            word
+        );
+        const out: Hit[] = [];
+        for (const location of locations) {
+            const position = toVscodePosition(location);
+            if (!position) {
+                continue;
+            }
+            const uri = vscode.Uri.file(location.uri);
+            const start = new vscode.Position(position.line, position.character);
+            out.push({
+                file: uri.toString(),
+                line: position.line,
+                character: position.character,
+                // The daemon reports where a reference starts, not how far it
+                // runs; the token is what was searched for, so it is as long.
+                location: new vscode.Location(
+                    uri,
+                    new vscode.Range(start, start.translate(0, word.length))
+                ),
+            });
+        }
+        return out;
+    }
+}
+
+/** A reference site, carrying the location the editor will show. */
+interface Hit extends PhelReferencePosition {
+    location: vscode.Location;
+}
+
+function toHit(location: vscode.Location): Hit {
+    return {
+        file: location.uri.toString(),
+        line: location.range.start.line,
+        character: location.range.start.character,
+        location,
+    };
+}
+
+/** Open documents with unsaved changes, keyed the way `Hit.file` is. */
+function dirtyPhelFiles(): Set<string> {
+    return new Set(
+        vscode.workspace.textDocuments
+            .filter((doc) => doc.isDirty && doc.languageId === 'phel')
+            .map((doc) => doc.uri.toString())
+    );
 }
 
 export async function findReferenceLocations(

@@ -15,6 +15,9 @@ const FAKE_DAEMON = join(__dirname, 'fakeApiDaemon.js');
 
 interface Stats {
     analyzed: number;
+    indexed: number;
+    /** The params of the last request that was not a `__stats` one. */
+    lastParams: Record<string, unknown>;
     pid: number;
 }
 
@@ -204,6 +207,72 @@ describe('PhelApiDaemonClient', function () {
         await assert.rejects(client.request('__stats'), /Phel analysis daemon/);
         await assert.rejects(client.request('__stats'), /Phel analysis daemon/);
         await assert.rejects(client.request('__stats'), /will not be restarted again/);
+    });
+
+    describe('the navigation methods', () => {
+        it('reads indexProject back as an index', async () => {
+            client = createClient({ spawnLog });
+
+            const index = await client.indexProject(['src', 'tests']);
+
+            assert.ok(index, 'the daemon answered with something that is not an index');
+            assert.equal(index.symbols['app.core/greet'].name, 'greet');
+            assert.equal(index.references['app.core/greet'].length, 2);
+            assert.ok(index.namespaceLocations['app.core'], 'no site for the indexed namespace');
+        });
+
+        it('coalesces two indexing requests into one walk of the project', async () => {
+            client = createClient();
+
+            // The first send goes out immediately; the second and third share
+            // the queue slot, since re-indexing twice in a row answers twice
+            // with the same thing.
+            const first = client.indexProject(['src']);
+            const queued = client.indexProject(['src']);
+            const newest = client.indexProject(['src', 'tests']);
+
+            await Promise.all([first, queued, newest]);
+            assert.equal((await client.request<Stats>('__stats')).indexed, 2);
+        });
+
+        it('reads resolveSymbol back as a definition, and a miss as nothing', async () => {
+            client = createClient();
+
+            const found = await client.resolveSymbol('app.core', 'greet');
+            const missing = await client.resolveSymbol('app.core', 'nope');
+
+            assert.equal(found?.namespace, 'app.core');
+            assert.equal(found?.line, 3);
+            assert.equal(found?.col, 7);
+            assert.equal(missing, undefined);
+        });
+
+        it('sends the namespace in the spelling the index is keyed by', async () => {
+            // A namespace written `app\core` reaches the real daemon's index as
+            // nothing at all: it keys them dotted. Both methods convert.
+            client = createClient();
+
+            await client.resolveSymbol('app\\core', 'greet');
+            assert.equal((await client.request<Stats>('__stats')).lastParams.namespace, 'app.core');
+
+            await client.findReferences('app\\core', 'greet');
+            assert.equal((await client.request<Stats>('__stats')).lastParams.namespace, 'app.core');
+        });
+
+        it('reads findReferences back as locations, and a miss as none', async () => {
+            client = createClient();
+
+            const hits = await client.findReferences('app.core', 'greet');
+
+            assert.deepEqual(
+                hits.map((hit) => [hit.line, hit.col]),
+                [
+                    [3, 7],
+                    [1, 1],
+                ]
+            );
+            assert.deepEqual(await client.findReferences('app.core', 'nope'), []);
+        });
     });
 
     it('rejects everything once disposed', async () => {

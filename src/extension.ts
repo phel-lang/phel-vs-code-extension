@@ -347,7 +347,13 @@ function registerLanguageProviders(
     }
     languageProvidersRegistered = true;
 
-    const workspaceIndexer = new PhelWorkspaceIndexer();
+    // The daemon owner comes first: the workspace indexer borrows its process
+    // per folder to build the project index navigation reads, and the on-save
+    // diagnostics pass (registered at the end) hands it every save.
+    const liveDiagnostics = new PhelDaemonDiagnostics();
+    context.subscriptions.push(liveDiagnostics);
+
+    const workspaceIndexer = new PhelWorkspaceIndexer(projectConfig, liveDiagnostics);
     context.subscriptions.push(workspaceIndexer);
     void workspaceIndexer.start();
 
@@ -446,10 +452,8 @@ function registerLanguageProviders(
         }
     });
 
-    // Live analysis first: the on-save pass hands it every save and asks it to
-    // serve the `analyze` engine, so it has to exist before that registers.
-    const liveDiagnostics = new PhelDaemonDiagnostics();
-    context.subscriptions.push(liveDiagnostics);
+    // The on-save pass hands the live one every save and asks it to serve the
+    // `analyze` engine, so it registers after everything it talks to exists.
     registerDiagnostics(context, liveDiagnostics);
 
     context.subscriptions.push(

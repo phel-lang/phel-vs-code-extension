@@ -55,7 +55,7 @@ Off by default. When enabled, completion, hover, signature help, definition, ref
 |---|---|---|---|
 | `phel.diagnostics.enabled` | boolean | `true` | Run the diagnostics engine on open/save and surface inline diagnostics. |
 | `phel.diagnostics.engine` | `auto` \| `lint` \| `analyze` | `auto` | Which CLI subcommand backs diagnostics. See [Diagnostics engine](#diagnostics-engine). |
-| `phel.diagnostics.live` | boolean | `true` | Also report analyzer diagnostics as you type, through a long-lived `phel api-daemon`. See [Live diagnostics](#live-diagnostics). |
+| `phel.diagnostics.live` | boolean | `true` | Also report analyzer diagnostics as you type, through a long-lived `phel api-daemon`. The same daemon indexes the project for namespace-aware go-to-definition and cross-file references, so this switch turns those off too. See [Live diagnostics](#live-diagnostics) and [what the daemon adds to navigation](refactoring.md#what-the-analysis-daemon-adds). |
 | `phel.format.enabled` | boolean | `true` | Use `phel format` as the document formatter. |
 | `phel.tests.codeLensEnabled` | boolean | `true` | Show inline `▶ Run test` CodeLens above each `deftest`, and `▶ Run benchmark` above each `defbench`. |
 | `phel.migration.enabled` | boolean | `true` | Flag what Phel 0.50 removed (core aliases, `#\| \|#`, bare `#` comments, `\|()` short fns, `foo$` gensyms, `,` unquote, `^:reference`) and deprecated (`php/new`, `php/->`, `php/::`, `set-var`, the `\` namespace separator), plus calls to your own `:deprecated` definitions, with a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50. Severity follows the project, see [below](#what-the-project-config-decides). See [Migrating to Phel 0.50](completion.md#migrating-to-phel-050). |
@@ -159,5 +159,7 @@ Both settings are independent switches — `phel.diagnostics.live: false` leaves
 **A Phel without `api-daemon`** (the command landed in 0.34) simply gets no live diagnostics: the extension notices the CLI rejecting the subcommand and stays quiet for the session, without a notification. Everything on save keeps working.
 
 **Staleness.** The daemon evaluates a file's dependencies once per process, so an edit you save in *another* file is not picked up by a process that already loaded the old version. The extension restarts the daemon the first time you ask about a different file after a save, which covers the usual edit-save-switch loop. If diagnostics still look stale, **Phel: Restart Analysis Daemon** (`phel.diagnostics.restartDaemon`) drops the process; see [troubleshooting](troubleshooting.md#diagnostics).
+
+**The same process also powers navigation.** Two seconds after each save it re-indexes the project, and go-to-definition and find-references read that index; see [what the analysis daemon adds](refactoring.md#what-the-analysis-daemon-adds).
 
 Every other command the extension contributes is listed in the [commands reference](commands.md).
