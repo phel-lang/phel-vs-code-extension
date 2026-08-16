@@ -1,5 +1,5 @@
 (ns app.main
-  (:require app.core :refer [greet]))
+  (:require app.core :refer [greet old-greet]))
 
 (defn welcome
   "Greets everyone in `people`, one line each."
@@ -10,3 +10,6 @@
 
 (defn add-item [xs item]
   (push xs item))
+
+(defn welcome-legacy [person]
+  (old-greet person))

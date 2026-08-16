@@ -232,6 +232,19 @@ describe('findMigrationIssues — backslash namespace separator', () => {
         assert.equal(applyFixes(src), '(ns my-app.core (:require phel.string :as s))');
     });
 
+    it('marks the separator as announced whether or not warn-deprecations is on', () => {
+        // ADR 0014: the one deprecation the compiler reports without the flag,
+        // because it is the one already scheduled for removal.
+        const issues = findMigrationIssues('(ns my-app\\core)\n(new \\phpDocumentor\\Reflection)');
+        assert.deepEqual(
+            issues.map((i) => i.announcedByDefault),
+            [true, true]
+        );
+        const [deprecatedCall] = findMigrationIssues('(php/new Foo)');
+        assert.equal(deprecatedCall.status, 'deprecated');
+        assert.equal(deprecatedCall.announcedByDefault, undefined);
+    });
+
     it('flags a fully-qualified call site, which the compiler does not detect', () => {
         const src = '(phel\\string/join "," xs)';
         assert.equal(applyFixes(src), '(phel.string/join "," xs)');

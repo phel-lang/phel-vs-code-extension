@@ -55,13 +55,25 @@ Off by default. When enabled, completion, hover, signature help, definition, ref
 | `phel.diagnostics.engine` | `auto` \| `lint` \| `analyze` | `auto` | Which CLI subcommand backs diagnostics. See [Diagnostics engine](#diagnostics-engine). |
 | `phel.format.enabled` | boolean | `true` | Use `phel format` as the document formatter. |
 | `phel.tests.codeLensEnabled` | boolean | `true` | Show inline `▶ Run test` CodeLens above each `deftest`, and `▶ Run benchmark` above each `defbench`. |
-| `phel.migration.enabled` | boolean | `true` | Flag what Phel 0.50 removed (core aliases, `#\| \|#`, bare `#` comments, `\|()` short fns, `foo$` gensyms, `,` unquote, `^:reference`) and deprecated (`php/new`, `php/->`, `php/::`, `set-var`, the `\` namespace separator), plus calls to your own `:deprecated` definitions, with a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50. See [Migrating to Phel 0.50](completion.md#migrating-to-phel-050). |
+| `phel.migration.enabled` | boolean | `true` | Flag what Phel 0.50 removed (core aliases, `#\| \|#`, bare `#` comments, `\|()` short fns, `foo$` gensyms, `,` unquote, `^:reference`) and deprecated (`php/new`, `php/->`, `php/::`, `set-var`, the `\` namespace separator), plus calls to your own `:deprecated` definitions, with a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50. Severity follows the project, see [below](#what-the-project-config-decides). See [Migrating to Phel 0.50](completion.md#migrating-to-phel-050). |
 | `phel.paredit.enabled` | boolean | `true` | Register paredit commands (slurp / barf / raise / wrap). |
 | `phel.repl.enabled` | boolean | `true` | Register REPL commands (start / eval form / eval selection / eval file). |
 | `phel.repl.history.enabled` | boolean | `true` | Append every form sent to the REPL to `.vscode/phel-repl-history.phel`. |
 | `phel.formHighlight.enabled` | boolean | `true` | Subtle background tint on the form enclosing the cursor. |
 | `phel.inlayHints.parameterNames` | boolean | `false` | Show the parameter name before each argument at a call site: `(assoc ds: m key: :k value: v)`. Functions only, and dropped wherever it would mislead. See [Parameter inlay hints](completion.md#parameter-inlay-hints). |
 | `phel.debug.enabled` | boolean | `true` | Enable the bundled Phel debug adapter. Disable to fall back to a raw PHP debug session. |
+
+## What the project config decides
+
+Some behaviour has no setting here on purpose: your `phel-config.php` already answers the question, and a second answer in VS Code could only disagree with it. The extension asks the CLI (`phel config --format=json`, which merges `phel-config-local.php` and applies the defaults) once per workspace folder, lazily and cached, and re-reads it when either config file is saved.
+
+| From `phel-config.php` | What follows it |
+|---|---|
+| `warn-deprecations` | Migration severity. On → a call to a deprecated form is a **warning**, exactly what `phel build` reports. Off (the default) → a struck-through **hint**. Removed names and syntax are always warnings, and so is the `\` namespace separator, which Phel announces whether or not the flag is set. |
+| `test-dirs` | What the Test Explorer scans. Without it, every `.phel` file in the folder except `vendor` and `node_modules`. |
+| `cache-dir` | The `cacheDir` a Phel debug session defaults to (`<cache-dir>/compiled`), unless the launch configuration sets one. |
+
+No Phel installed, or one too old to print its configuration? Every one of these falls back to what it did before, so a project without `vendor/bin/phel` behaves exactly as it always has.
 
 ## Other
 

@@ -2,13 +2,24 @@
 //
 // Mirrors `PhelUnusedLocals`: its own collection, refreshed debounced as the
 // document changes, so the hint arrives while typing rather than on save.
-// Removed names and syntax are warnings, since they no longer compile;
-// deprecated forms are hints carrying `DiagnosticTag.Deprecated`, which
-// renders as a strikethrough and stays out of the Problems panel's error count.
+//
+// Severity follows the compiler rather than a setting of our own. Removed names
+// and syntax are warnings, since they no longer compile. A deprecation is a
+// warning when the project's `warn-deprecations` is on, i.e. when `phel build`
+// would report it too, and otherwise a hint — which renders as a strikethrough
+// and stays out of the Problems panel's error count. The `\` separator is the
+// one deprecation announced whether or not the flag is set (ADR 0014), so it is
+// always a warning. Every deprecation keeps `DiagnosticTag.Deprecated`.
 
 import * as vscode from 'vscode';
-import { type DeprecatedDefinition, findMigrationIssues } from './phelMigration';
+import {
+    type DeprecatedDefinition,
+    type MigrationIssue,
+    findMigrationIssues,
+} from './phelMigration';
 import { PHEL_DOCS } from './phelCoreDocs';
+import type { PhelProjectConfigProvider } from './phelProjectConfigProvider';
+import { folderForDocument } from './phelWorkspace';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
 const MAX_CHARS = 200_000;
@@ -63,13 +74,23 @@ export function deprecatedDefinitionsFor(
     return map;
 }
 
+/** Warning for anything the compiler reports; hint for a silent deprecation. */
+function severityFor(issue: MigrationIssue, warnDeprecations: boolean): vscode.DiagnosticSeverity {
+    const reported =
+        issue.status === 'removed' || issue.announcedByDefault === true || warnDeprecations;
+    return reported ? vscode.DiagnosticSeverity.Warning : vscode.DiagnosticSeverity.Hint;
+}
+
 /** Owns a diagnostic collection updated (debounced) as `.phel` buffers change. */
 export class PhelMigrationDiagnostics implements vscode.Disposable {
     private readonly collection = vscode.languages.createDiagnosticCollection('phel-migration');
     private readonly subs: vscode.Disposable[] = [];
     private readonly timers = new Map<string, NodeJS.Timeout>();
 
-    constructor(private readonly indexer?: PhelWorkspaceIndexer) {
+    constructor(
+        private readonly indexer?: PhelWorkspaceIndexer,
+        private readonly projectConfig?: PhelProjectConfigProvider
+    ) {
         this.subs.push(
             vscode.workspace.onDidOpenTextDocument((d) => this.schedule(d)),
             vscode.workspace.onDidChangeTextDocument((e) => this.schedule(e.document)),
@@ -87,6 +108,11 @@ export class PhelMigrationDiagnostics implements vscode.Disposable {
             // A `:deprecated` added to a definition elsewhere changes every
             // call site's diagnostics.
             this.subs.push(indexer.onDidChange(() => this.refreshAll()));
+        }
+        if (projectConfig) {
+            // `warn-deprecations` decides the severity of every deprecation,
+            // and arrives asynchronously the first time it is asked for.
+            this.subs.push(projectConfig.onDidChange(() => this.refreshAll()));
         }
         this.refreshAll();
     }
@@ -137,14 +163,13 @@ export class PhelMigrationDiagnostics implements vscode.Disposable {
         const issues = findMigrationIssues(src, {
             deprecatedDefinitions: deprecatedDefinitionsFor(this.indexer, doc.uri.fsPath),
         });
+        const warnDeprecations = this.warnsDeprecations(doc);
         const diags = issues.map((issue) => {
             const range = new vscode.Range(doc.positionAt(issue.start), doc.positionAt(issue.end));
             const diag = new vscode.Diagnostic(
                 range,
                 issue.message,
-                issue.status === 'removed'
-                    ? vscode.DiagnosticSeverity.Warning
-                    : vscode.DiagnosticSeverity.Hint
+                severityFor(issue, warnDeprecations)
             );
             diag.source = MIGRATION_SOURCE;
             diag.code = MIGRATION_CODE;
@@ -154,6 +179,25 @@ export class PhelMigrationDiagnostics implements vscode.Disposable {
             return diag;
         });
         this.collection.set(doc.uri, diags);
+    }
+
+    /**
+     * Whether `phel build` would report a deprecated call in this document's
+     * project. The answer comes from the CLI, so the first document of a folder
+     * is rendered without it; the provider's change event brings us back once
+     * it arrives.
+     */
+    private warnsDeprecations(doc: vscode.TextDocument): boolean {
+        const folder = this.projectConfig && folderForDocument(doc);
+        if (!folder) {
+            return false;
+        }
+        const known = this.projectConfig?.peek(folder);
+        if (known === undefined) {
+            void this.projectConfig?.get(folder);
+            return false;
+        }
+        return known?.warnDeprecations === true;
     }
 
     dispose(): void {

@@ -37,6 +37,7 @@ import { registerSelectionCommands } from './phelSelectionProvider';
 import { PhelFormHighlight } from './phelFormHighlight';
 import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
 import { PhelStatusBar } from './phelStatusBar';
+import { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 import { PhelTestController } from './phelTestController';
 import { affectsPhelExecutable } from './phelExecutable';
 
@@ -81,6 +82,12 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
+    // The effective `phel config` of each folder, shared by every feature that
+    // has to follow the project rather than a setting of ours. Lazy: nothing is
+    // spawned until the first feature asks.
+    const projectConfig = new PhelProjectConfigProvider();
+    context.subscriptions.push(projectConfig);
+
     // Register the debug adapter (honoring the `phel.debug.enabled` toggle).
     if (vscode.workspace.getConfiguration('phel').get<boolean>('debug.enabled', true)) {
         const factory = new PhelDebugAdapterFactory();
@@ -88,7 +95,7 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.debug.registerDebugAdapterDescriptorFactory('phel', factory)
         );
 
-        const configProvider = new PhelDebugConfigurationProvider();
+        const configProvider = new PhelDebugConfigurationProvider(projectConfig);
         context.subscriptions.push(
             vscode.debug.registerDebugConfigurationProvider('phel', configProvider)
         );
@@ -199,7 +206,7 @@ export function activate(context: vscode.ExtensionContext) {
         // The fallback can be triggered either at startup (client bundle missing
         // or server can't launch) or later (server proves unusable); register
         // the providers at most once.
-        const fallBack = (): void => registerLanguageProviders(context);
+        const fallBack = (): void => registerLanguageProviders(context, projectConfig);
         void (async () => {
             try {
                 const lsp = await loadLanguageClient();
@@ -218,7 +225,7 @@ export function activate(context: vscode.ExtensionContext) {
             fallBack();
         })();
     } else {
-        registerLanguageProviders(context);
+        registerLanguageProviders(context, projectConfig);
     }
 
     context.subscriptions.push(
@@ -254,7 +261,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     void new PhelStatusBar().start(context);
 
-    context.subscriptions.push(new PhelTestController());
+    context.subscriptions.push(new PhelTestController(projectConfig));
     context.subscriptions.push(new PhelFormHighlight());
 
     context.subscriptions.push(
@@ -315,7 +322,10 @@ async function promptReloadForLspToggle(): Promise<void> {
  * the Phel language server is disabled or fails to start; otherwise `phel lsp`
  * serves these features (with PHP-interop intelligence the TS providers lack).
  */
-function registerLanguageProviders(context: vscode.ExtensionContext): void {
+function registerLanguageProviders(
+    context: vscode.ExtensionContext,
+    projectConfig: PhelProjectConfigProvider
+): void {
     if (languageProvidersRegistered) {
         return;
     }
@@ -389,7 +399,7 @@ function registerLanguageProviders(context: vscode.ExtensionContext): void {
     );
 
     context.subscriptions.push(new PhelUnusedLocals());
-    context.subscriptions.push(new PhelMigrationDiagnostics(workspaceIndexer));
+    context.subscriptions.push(new PhelMigrationDiagnostics(workspaceIndexer, projectConfig));
 
     context.subscriptions.push(
         vscode.languages.registerCodeActionsProvider(
@@ -559,11 +569,13 @@ function parsePhelConfig(configPath: string): { tempDir?: string } | null {
  * Debug configuration provider for Phel.
  */
 class PhelDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-    resolveDebugConfiguration(
+    constructor(private readonly projectConfig: PhelProjectConfigProvider) {}
+
+    async resolveDebugConfiguration(
         folder: vscode.WorkspaceFolder | undefined,
         config: vscode.DebugConfiguration,
         _token?: vscode.CancellationToken
-    ): vscode.ProviderResult<vscode.DebugConfiguration> {
+    ): Promise<vscode.DebugConfiguration | undefined> {
         // If no configuration is provided, create a default one
         if (!config.type && !config.request && !config.name) {
             const editor = vscode.window.activeTextEditor;
@@ -583,18 +595,30 @@ class PhelDebugConfigurationProvider implements vscode.DebugConfigurationProvide
         // Set defaults
         config.phpDebugPort = config.phpDebugPort || 9003;
 
-        // Try to auto-detect cache directory from phel-config.php
+        // Try to auto-detect cache directory from the project configuration
         if (!config.cacheDir && folder) {
-            const configPath = path.join(folder.uri.fsPath, 'phel-config.php');
-            const phelConfig = parsePhelConfig(configPath);
-
-            if (phelConfig?.tempDir) {
-                // Phel stores compiled files in {tempDir}/cache/compiled
-                config.cacheDir = path.join(phelConfig.tempDir, 'cache', 'compiled');
+            const cacheDir = await this.detectCacheDir(folder);
+            if (cacheDir) {
+                config.cacheDir = cacheDir;
             }
         }
 
         return config;
+    }
+
+    /**
+     * Where `phel build` writes the compiled PHP. The CLI knows it exactly
+     * (`cache-dir`, relative to the project root unless absolute); the regex
+     * over `phel-config.php` stays as the fallback for a project with no
+     * installed Phel, where it is all we can do.
+     */
+    private async detectCacheDir(folder: vscode.WorkspaceFolder): Promise<string | undefined> {
+        const project = await this.projectConfig.get(folder);
+        if (project?.cacheDir) {
+            return path.resolve(folder.uri.fsPath, project.cacheDir, 'compiled');
+        }
+        const phelConfig = parsePhelConfig(path.join(folder.uri.fsPath, 'phel-config.php'));
+        return phelConfig?.tempDir ? path.join(phelConfig.tempDir, 'cache', 'compiled') : undefined;
     }
 
     provideDebugConfigurations(

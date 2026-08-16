@@ -30,11 +30,23 @@ describe('diagnostics', function () {
 
     it('warns about a core name Phel 0.50 removed', async function () {
         const diagnostic = await waitFor('the migration warning', () =>
-            vscode.languages.getDiagnostics(main.uri).find((d) => d.code === 'phel-migration')
+            migrationDiagnosticOn(main, 'push')
         );
         assert.equal(diagnostic.severity, vscode.DiagnosticSeverity.Warning);
         assert.equal(diagnostic.source, 'phel');
-        assert.equal(main.getText(diagnostic.range), 'push');
+    });
+
+    it('keeps a call to a :deprecated definition a hint when the CLI cannot be asked', async function () {
+        // Severity follows the project's `warn-deprecations`, which is read
+        // from the Phel CLI — absent here, so the pre-existing hint stands.
+        const diagnostic = await waitFor('the deprecated-call hint', () =>
+            migrationDiagnosticOn(main, 'old-greet')
+        );
+        assert.equal(diagnostic.severity, vscode.DiagnosticSeverity.Hint);
+        assert.ok(
+            diagnostic.tags?.includes(vscode.DiagnosticTag.Deprecated),
+            'the deprecated call is not struck through'
+        );
     });
 
     it('says nothing about a clean file when there is no Phel CLI', async function () {
@@ -57,3 +69,13 @@ describe('diagnostics', function () {
         }
     });
 });
+
+/** The migration diagnostic covering `text`, addressed by what it flagged. */
+function migrationDiagnosticOn(
+    doc: vscode.TextDocument,
+    text: string
+): vscode.Diagnostic | undefined {
+    return vscode.languages
+        .getDiagnostics(doc.uri)
+        .find((d) => d.code === 'phel-migration' && doc.getText(d.range) === text);
+}

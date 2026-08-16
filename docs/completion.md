@@ -148,8 +148,8 @@ offers the rename as a quick fix:
 | `phel.test/print-summary` | react to the `:summary` event |
 
 **Deprecated as source** — still legal for every `1.x`, and still what the
-Clojure-style spelling compiles to, so these are hints rather than warnings.
-They appear struck through in completion and sort last:
+Clojure-style spelling compiles to, so these are hints by default. They appear
+struck through in completion and sort last:
 
 | Deprecated | Write instead |
 |---|---|
@@ -185,7 +185,9 @@ a gensym inside a syntax-quote — `$` stays the `:post` return value and an
 ordinary character in a name everywhere else.
 
 **Backslash namespace separator** — `\` still parses and is scheduled for
-removal at the next major, so it is a hint with a quick fix that writes the
+removal at the next major, which is why Phel announces it whether or not
+`warn-deprecations` is on, and why it is a warning here for the same reason. It
+comes with a quick fix that writes the
 dotted form: `(ns my-app\core (:require phel\string))` → `my-app.core`,
 `phel.string`; `\Phel\Lang\Keyword` → `Phel.Lang.Keyword` (the leading marker
 retires with the separator); and a fully-qualified call site such as
@@ -203,6 +205,13 @@ hint (`` `old-parse` is deprecated (since 1.4.0). Use `parse-config` instead. ``
 the symbol is struck through in completion, and hover leads with the note. No
 quick fix, since `:superseded-by` names a replacement without promising the
 same arguments.
+
+**Severity follows your project.** A deprecation is a hint until the project
+turns `warn-deprecations` on in `phel-config.php`, at which point it becomes the
+warning `phel build` already prints; removals, and the `\` separator Phel
+announces without the flag, are warnings either way. The flag is read from the
+Phel CLI, so a project without one keeps the hints. See
+[what the project config decides](settings.md#what-the-project-config-decides).
 
 Turn the whole check off with `phel.migration.enabled` when targeting a Phel
 older than 0.50.
