@@ -5,13 +5,25 @@
 The extension ships a static `CompletionItemProvider` for the `phel` language. It suggests every public symbol from `phel.core`:
 
 - **51 special forms** - `def`, `defonce`, `defenum*`, `fn`, `let`, `loop`, `recur`, `break`, `try` / `catch` / `finally`, `ns`, `quote`, `var`, `deref`, all `php/*` interop forms (incl. `php/ref`), etc. (kind: `Keyword`)
-- **85 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `defenum`, `cond`, `when-some`, `while`, `with-redefs`, `with-open`, `dbg`, `deftrace`, `prefer-method`, `match`, `set!`, `defbench`, threading variants, etc. (kind: `Keyword`)
-- **435 functions** - `assoc`, `map`, `mapv`, `filterv`, `reduce`, `reduce-kv`, `trampoline`, `swap!`, `re-find`, `parse-uuid`, `hydrate`, `bean`, `iterator-seq`, `php-invoke`, the full numeric tower (`+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`, `quot`, `rem`, `mod`, `gcd`, `lcm`, `floor`, `ceil`, `round`, `sqrt`, …), and the rest of `phel.core`. (kind: `Function`)
+- **89 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `defenum`, `cond`, `when-some`, `while`, `with-redefs`, `with-open`, `dbg`, `deftrace`, `prefer-method`, `match`, `set!`, `defbench`, threading variants, etc. (kind: `Keyword`)
+- **442 functions** - `assoc`, `map`, `mapv`, `filterv`, `reduce`, `reduce-kv`, `trampoline`, `swap!`, `re-find`, `parse-uuid`, `hydrate`, `bean`, `iterator-seq`, `php-invoke`, the full numeric tower (`+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`, `quot`, `rem`, `mod`, `gcd`, `lcm`, `floor`, `ceil`, `round`, `sqrt`, …), and the rest of `phel.core`. (kind: `Function`)
+- **6 core values** - the dynamic vars `*ns*`, `*file*`, `*argv*`, `*program*`, `*assert*`, and the constant `NAN`. (kind: `Variable`)
 - **9 PHP superglobals** - `php/$_SERVER`, `php/$_GET`, `php/$_POST`, `php/$_FILES`, `php/$_COOKIE`, `php/$_SESSION`, `php/$_REQUEST`, `php/$_ENV`, `php/$GLOBALS`. Like the special forms these exist only in PHP, so no `.phel` file declares them; hover describes each one. (kind: `Variable`)
 
-The function count dropped from 444 in 0.49 because Phel 0.50 removed eleven
-long-deprecated `phel.core` aliases. Calls to them are flagged in the editor with
-the replacement to write — see [Migrating to Phel 0.50](#migrating-to-phel-050).
+Eleven long-deprecated `phel.core` aliases went away in Phel 0.50. Calls to them
+are flagged in the editor with the replacement to write — see
+[Migrating to Phel 0.50](#migrating-to-phel-050).
+
+`phel.core` bootstraps itself, and the macro, function and value counts have to
+account for that: `defn`, `defmacro`, `declare` and `meta` are macros installed as
+`(def defn {:macro true} (fn …))`, and the functions core needs before `defn`
+exists (`first`, `next`, `with-meta`, …) are written the same way. The corpus
+records `kind` from the defining operator, so all of them arrive as plain
+`def`s, indistinguishable from a constant like `NAN` or from the fifteen
+internal helpers core marks `:private` in a meta-map the corpus does not carry.
+`CORE_DEF_FORMS` in `src/phelCoreSymbols.ts` restores that split by hand, the
+way `SPECIAL_FORMS` is hand-kept, and `src/test/phelCoreSymbols.test.ts` fails
+when a corpus regen brings a bootstrap `def` the table does not classify.
 
 The provider respects the word range so `defn|` completes correctly without duplicating the prefix.
 
@@ -79,7 +91,7 @@ The macro and function lists are projections of the symbol corpus in `assets/phe
 npm run regen-docs -- /path/to/phel-lang --phel-version v0.50.0
 ```
 
-`MACROS` and `CORE_FNS` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` is hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source) - add new entries there by hand. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full procedure.
+`MACROS`, `CORE_FNS` and `CORE_VALUES` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` and `CORE_DEF_FORMS` are hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source; the bootstrap `def`s are the ones described above) - add new entries there by hand. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full procedure.
 
 ## Parameter inlay hints
 
