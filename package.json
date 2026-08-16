@@ -626,7 +626,7 @@
                 "phel.migration.enabled": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Flag calls to core functions Phel 0.50 removed (push, put, values, …) and to the forms it deprecated as source (php/new, php/->, php/::, set-var), and offer a quick fix where the replacement is a plain rename. Turn off when targeting a Phel older than 0.50."
+                    "description": "Flag what Phel 0.50 removed (the core aliases push, put, values, …; the reader syntax #| |#, bare # comments, |() short fns, foo$ gensyms, `,` unquote, ^:reference) and deprecated (php/new, php/->, php/::, set-var, the \\ namespace separator), plus calls to your own :deprecated definitions, and offer a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50."
                 }
             }
         }

@@ -2,12 +2,14 @@
 //
 // Mirrors `PhelUnusedLocals`: its own collection, refreshed debounced as the
 // document changes, so the hint arrives while typing rather than on save.
-// Removed names are warnings, since they no longer compile; deprecated forms
-// are hints carrying `DiagnosticTag.Deprecated`, which renders as a
-// strikethrough and stays out of the Problems panel's error count.
+// Removed names and syntax are warnings, since they no longer compile;
+// deprecated forms are hints carrying `DiagnosticTag.Deprecated`, which
+// renders as a strikethrough and stays out of the Problems panel's error count.
 
 import * as vscode from 'vscode';
-import { findMigrationIssues } from './phelMigration';
+import { type DeprecatedDefinition, findMigrationIssues } from './phelMigration';
+import { PHEL_DOCS } from './phelCoreDocs';
+import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 
 const MAX_CHARS = 200_000;
 const DEBOUNCE_MS = 250;
@@ -21,13 +23,53 @@ export function migrationEnabled(): boolean {
     return vscode.workspace.getConfiguration('phel').get<boolean>('migration.enabled', true);
 }
 
+/**
+ * Every definition the workspace marks `:deprecated`, keyed by bare name, as
+ * seen from `file`. A name the file defines itself is read from that file
+ * alone: its own `parse` is not another namespace's deprecated `parse`, and
+ * its own deprecated `parse` is still deprecated when it calls itself.
+ */
+export function deprecatedDefinitionsFor(
+    indexer: PhelWorkspaceIndexer | undefined,
+    file: string
+): ReadonlyMap<string, DeprecatedDefinition> {
+    const map = new Map<string, DeprecatedDefinition>();
+    const record = (name: string, deprecated: string, supersededBy: string | undefined): void => {
+        map.set(name, supersededBy === undefined ? { deprecated } : { deprecated, supersededBy });
+    };
+    for (const doc of PHEL_DOCS) {
+        if (doc.deprecated !== undefined) {
+            record(doc.name, doc.deprecated, doc.supersededBy);
+        }
+    }
+    if (!indexer) {
+        return map;
+    }
+    const own = [];
+    for (const doc of indexer.index.allDocs()) {
+        if (doc.sourceFile === file) {
+            own.push(doc);
+        } else if (doc.deprecated !== undefined) {
+            record(doc.name, doc.deprecated, doc.supersededBy);
+        }
+    }
+    for (const doc of own) {
+        if (doc.deprecated !== undefined) {
+            record(doc.name, doc.deprecated, doc.supersededBy);
+        } else {
+            map.delete(doc.name);
+        }
+    }
+    return map;
+}
+
 /** Owns a diagnostic collection updated (debounced) as `.phel` buffers change. */
 export class PhelMigrationDiagnostics implements vscode.Disposable {
     private readonly collection = vscode.languages.createDiagnosticCollection('phel-migration');
     private readonly subs: vscode.Disposable[] = [];
     private readonly timers = new Map<string, NodeJS.Timeout>();
 
-    constructor() {
+    constructor(private readonly indexer?: PhelWorkspaceIndexer) {
         this.subs.push(
             vscode.workspace.onDidOpenTextDocument((d) => this.schedule(d)),
             vscode.workspace.onDidChangeTextDocument((e) => this.schedule(e.document)),
@@ -41,6 +83,11 @@ export class PhelMigrationDiagnostics implements vscode.Disposable {
                 }
             })
         );
+        if (indexer) {
+            // A `:deprecated` added to a definition elsewhere changes every
+            // call site's diagnostics.
+            this.subs.push(indexer.onDidChange(() => this.refreshAll()));
+        }
         this.refreshAll();
     }
 
@@ -87,7 +134,10 @@ export class PhelMigrationDiagnostics implements vscode.Disposable {
             this.collection.delete(doc.uri);
             return;
         }
-        const diags = findMigrationIssues(src).map((issue) => {
+        const issues = findMigrationIssues(src, {
+            deprecatedDefinitions: deprecatedDefinitionsFor(this.indexer, doc.uri.fsPath),
+        });
+        const diags = issues.map((issue) => {
             const range = new vscode.Range(doc.positionAt(issue.start), doc.positionAt(issue.end));
             const diag = new vscode.Diagnostic(
                 range,

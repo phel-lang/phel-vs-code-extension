@@ -45,6 +45,13 @@ export interface PhelDoc {
     example?: string;
     /** `:see-also` values pulled from the meta-map, if any. */
     seeAlso?: string[];
+    /**
+     * `:deprecated` from the meta-map, as text: a version (`"1.4.0"`), a
+     * reason, or `"true"` for a bare `true`. Absent when not deprecated.
+     */
+    deprecated?: string;
+    /** `:superseded-by` from the meta-map: the replacement's name. */
+    supersededBy?: string;
     /** GitHub blob URL pointing at the file the form lives in. */
     sourceUrl?: string;
     /** 0-based line number where the form starts (when known). */
@@ -209,6 +216,14 @@ function parseDefiningForm(
             if (seeAlso.length > 0) {
                 doc.seeAlso = seeAlso;
             }
+            const deprecated = extractDeprecated(mapBody);
+            if (deprecated !== undefined) {
+                doc.deprecated = deprecated;
+                const supersededBy = extractMetaValue(mapBody, ':superseded-by');
+                if (supersededBy) {
+                    doc.supersededBy = supersededBy;
+                }
+            }
             pos = skipTrivia(source, mapEnd + 1);
         }
     }
@@ -282,6 +297,24 @@ function extractMetaValue(map: string, key: string): string | undefined {
         return undefined;
     }
     return decodePhelString(map.slice(pos + 1, end));
+}
+
+/**
+ * `:deprecated` accepts a version string, any other string as the reason, or
+ * `true`; `false` and a missing key both mean "not deprecated". Returned as
+ * text so a caller can tell the three apart the way the compiler does.
+ */
+function extractDeprecated(map: string): string | undefined {
+    const key = ':deprecated';
+    const idx = map.indexOf(key);
+    if (idx < 0 || /[\w-]/.test(map[idx + key.length] ?? '')) {
+        return undefined; // absent, or a longer key such as `:deprecated-since`
+    }
+    const pos = skipTrivia(map, idx + key.length);
+    if (pos < map.length && map[pos] === '"') {
+        return extractMetaValue(map, key);
+    }
+    return map.startsWith('true', pos) && !/[\w-]/.test(map[pos + 4] ?? '') ? 'true' : undefined;
 }
 
 function extractSeeAlso(map: string): string[] {

@@ -1,6 +1,6 @@
 # Syntax highlighting
 
-Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) **v0.50.0**: the full PHP interop surface — the Clojure-style shorthands, `php/callable`, `php/ref`, named args via `:&`, the `:php/*` metadata tags, `defenum`/`defstruct` `:php` blocks — plus the 0.48–0.50 additions (`break` stepping debugger, `while`, `with-open`, `dbg`, the `phel.trace` macros `deftrace`/`dotrace`, `set!`, and `defbench` from the new `phel.bench`). Legacy forms are still recognised so older codebases keep highlighting.
+Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) **v0.50.0**: the full PHP interop surface — the Clojure-style shorthands, `php/callable`, `php/ref`, named args via `:&`, the `:php/*` metadata tags, `defenum`/`defstruct` `:php` blocks — plus the 0.48–0.50 additions (`break` stepping debugger, `while`, `with-open`, `dbg`, the `phel.trace` macros `deftrace`/`dotrace`, `set!`, and `defbench` from the new `phel.bench`). Legacy forms are still recognised so older codebases keep highlighting; the reader syntax 0.50 removed is flagged by the [migration diagnostics](completion.md#migrating-to-phel-050) with a quick fix.
 
 ## Special forms
 
@@ -83,7 +83,7 @@ The rest:
 #(* % %)          ;; % is shorthand for %1
 #(apply str %&)   ;; %& captures rest
 
-|(+ $1 $2)        ;; legacy - deprecated upstream, still highlighted
+|(+ $1 $2)        ;; removed in Phel 0.50 - still highlighted, flagged with a quick fix
 ```
 
 ## Comments
@@ -91,10 +91,10 @@ The rest:
 ```phel
 ;; preferred line comment
 ; also a line comment
-# legacy line comment - deprecated, still highlighted
+# legacy line comment - removed in Phel 0.50, still highlighted, flagged with a quick fix
 
 #| legacy block comment |#
-;; (deprecated, still highlighted)
+;; (removed in Phel 0.50, still highlighted, flagged with a quick fix)
 
 (println 1 #_ skipped 3)   ;; #_ comments out the next form
 ```

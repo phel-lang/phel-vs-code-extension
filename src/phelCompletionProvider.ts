@@ -152,6 +152,11 @@ function buildItem(
     } else if (doc) {
         const md = plainMarkdown(renderDocMarkdown(doc));
         item.documentation = md;
+        if (doc.deprecated !== undefined) {
+            // A definition marked `:deprecated` in its meta-map: shown struck
+            // through, the way the deprecated interop forms are.
+            item.tags = [vscode.CompletionItemTag.Deprecated];
+        }
         if (callee) {
             const snippet = buildCallSnippet(spec.label, doc.signature);
             if (snippet) {

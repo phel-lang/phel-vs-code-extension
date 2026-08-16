@@ -90,9 +90,10 @@ Add or refine entries when a form is fiddly enough that scaffolding helps. Keep 
 
 ## Migrating to Phel 0.50
 
-Phel 0.50 removed eleven long-deprecated `phel.core` aliases and deprecated four
-forms as *source*. The extension flags both as you type, so the change surfaces
-before a compile.
+Phel 0.50 removed eleven long-deprecated `phel.core` aliases and five pieces of
+reader syntax, and deprecated four forms as *source* plus the `\` namespace
+separator. The extension flags all of it as you type, so the change surfaces
+before a compile — and in one case where the compiler never would.
 
 **Removed** — these no longer resolve. The compiler reports an unresolvable
 symbol, which cannot tell you what the name used to mean; the editor can, and
@@ -129,6 +130,46 @@ local binding shadows is left alone — `(defn f [values] (values))` is silent.
 `php/new` and the eleven removals are plain head swaps, so they carry a quick
 fix; `php/->`, `php/::` and `set-var` rearrange the call or depend on intent, so
 they explain rather than rewrite.
+
+**Removed reader syntax** — the grammar still highlights these so an old file
+stays readable, but on 0.50 they no longer lex, and one of them fails silently:
+
+| Removed | Write instead | Quick fix |
+|---|---|---|
+| `#\| … \|#` block comment | `;;` lines, or `#_` to skip one form | rewrites as `;;` lines when nothing follows the closer on its line |
+| `# comment` (bare `#`) | `; comment` | `#` → `;` |
+| `\|(+ $1 $2)` short function | `#(+ %1 %2)` | `\|(` → `#(` and every `$`, `$1`, `$&` → `%`, `%1`, `%&` (strings untouched) |
+| `` `(let [v$ ,x] …) `` gensym `v$` | `v#` | `$` → `#` |
+| `` `(f ,x ,@xs) `` unquote `,` | `` `(f ~x ~@xs) `` | `,` → `~` |
+| `^:reference` parameter | `^:by-ref` | rename |
+
+The comma is the one worth reading twice: `,` became plain whitespace, so
+`` `(f ,x) `` still parses and quietly *quotes* `x` instead of unquoting it. No
+error anywhere, only a wrong expansion. The extension flags a `,` immediately
+followed by a form inside a syntax-quote; a `,` followed by a space, as in
+`{:a 1, :b 2}`, is idiomatic and never reported. Likewise a trailing `$` is only
+a gensym inside a syntax-quote — `$` stays the `:post` return value and an
+ordinary character in a name everywhere else.
+
+**Backslash namespace separator** — `\` still parses and is scheduled for
+removal at the next major, so it is a hint with a quick fix that writes the
+dotted form: `(ns my-app\core (:require phel\string))` → `my-app.core`,
+`phel.string`; `\Phel\Lang\Keyword` → `Phel.Lang.Keyword` (the leading marker
+retires with the separator); and a fully-qualified call site such as
+`(phel\string/join "," xs)`, which the compiler does not detect. A lower-case
+PHP namespace (`\phpDocumentor\Reflection\DocBlock`) cannot be spelled dotted
+in place — that reads as a Phel namespace — so it is reported without a fix and
+told to import the class with `(:use …)`. A root class (`\DateTime`) and char
+literals (`\newline`, `\\`) are left alone.
+
+**Your own `:deprecated` definitions** — a `def`/`defn` whose meta-map carries
+`:deprecated` (a version string, a reason, or `true`) and optionally
+`:superseded-by` gets the same treatment the compiler gives it under
+`--warn-deprecations`: every call site in the workspace is a struck-through
+hint (`` `old-parse` is deprecated (since 1.4.0). Use `parse-config` instead. ``),
+the symbol is struck through in completion, and hover leads with the note. No
+quick fix, since `:superseded-by` names a replacement without promising the
+same arguments.
 
 Turn the whole check off with `phel.migration.enabled` when targeting a Phel
 older than 0.50.

@@ -15,7 +15,7 @@ import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 import { mergedDocs } from './phelProviderSupport';
 import { findMigrationIssues } from './phelMigration';
-import { migrationEnabled } from './phelMigrationProvider';
+import { deprecatedDefinitionsFor, migrationEnabled } from './phelMigrationProvider';
 
 export class PhelCodeActionProvider implements vscode.CodeActionProvider {
     static readonly kinds = [vscode.CodeActionKind.RefactorRewrite, vscode.CodeActionKind.QuickFix];
@@ -53,7 +53,7 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
         if (req) {
             actions.push(req);
         }
-        actions.push(...migrationActions(document, src, offset));
+        actions.push(...migrationActions(document, src, offset, this.indexer));
         return actions;
     }
 
@@ -97,40 +97,45 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
 }
 
 /**
- * Offer the rename for a removed-or-deprecated call under the cursor.
+ * Offer the rewrite for a removed-or-deprecated use under the cursor.
  *
  * Re-derives the issues from the source rather than reading them back off
  * `CodeActionContext.diagnostics`: the analyzer is pure and cheap, and it keeps
  * the fix working when the diagnostics are switched off or have not yet been
  * recomputed after an edit.
  *
- * Only entries carrying a `replacement` produce an action. `php/->` and
- * `set-var` deliberately do not: their replacements rearrange the arguments or
- * depend on the intent, so a head swap would silently write the wrong code.
+ * Only issues carrying a `fix` produce an action. `php/->` and `set-var`
+ * deliberately do not: their replacements rearrange the arguments or depend on
+ * the intent, so a head swap would silently write the wrong code. Nor does a
+ * call to a workspace definition marked `:deprecated`: `:superseded-by` names
+ * the replacement without promising the same arguments.
  */
 function migrationActions(
     document: vscode.TextDocument,
     src: string,
-    offset: number
+    offset: number,
+    indexer: PhelWorkspaceIndexer
 ): vscode.CodeAction[] {
     if (!migrationEnabled()) {
         return [];
     }
     const actions: vscode.CodeAction[] = [];
-    for (const issue of findMigrationIssues(src)) {
-        if (!issue.replacement || offset < issue.start || offset > issue.end) {
+    const issues = findMigrationIssues(src, {
+        deprecatedDefinitions: deprecatedDefinitionsFor(indexer, document.uri.fsPath),
+    });
+    for (const issue of issues) {
+        if (!issue.fix || offset < issue.start || offset > issue.end) {
             continue;
         }
-        const action = new vscode.CodeAction(
-            `Replace '${issue.name}' with '${issue.replacement}'`,
-            vscode.CodeActionKind.QuickFix
-        );
+        const action = new vscode.CodeAction(issue.fix.title, vscode.CodeActionKind.QuickFix);
         action.edit = new vscode.WorkspaceEdit();
-        action.edit.replace(
-            document.uri,
-            new vscode.Range(document.positionAt(issue.start), document.positionAt(issue.end)),
-            issue.replacement
-        );
+        for (const edit of issue.fix.edits) {
+            action.edit.replace(
+                document.uri,
+                new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)),
+                edit.text
+            );
+        }
         action.isPreferred = true;
         actions.push(action);
     }

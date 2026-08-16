@@ -4,6 +4,7 @@
 // without booting the editor.
 
 import type { PhelDoc } from './phelDocs';
+import { deprecatedDefinitionMessage } from './phelMigration';
 
 /**
  * Find the best `PhelDoc` for a typed symbol.
@@ -73,6 +74,15 @@ export function renderDocMarkdown(doc: PhelDoc): string {
     const kindLabel = describeKind(doc);
     lines.push(`**\`${doc.qualifiedName}\`** _${kindLabel}_`);
     lines.push('');
+
+    if (doc.deprecated !== undefined) {
+        const def = {
+            deprecated: doc.deprecated,
+            ...(doc.supersededBy === undefined ? {} : { supersededBy: doc.supersededBy }),
+        };
+        lines.push(`⚠ ${deprecatedDefinitionMessage(doc.name, def)}`);
+        lines.push('');
+    }
 
     if (doc.signature) {
         lines.push('```phel');

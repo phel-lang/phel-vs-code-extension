@@ -361,7 +361,7 @@ function registerLanguageProviders(context: vscode.ExtensionContext): void {
     );
 
     context.subscriptions.push(new PhelUnusedLocals());
-    context.subscriptions.push(new PhelMigrationDiagnostics());
+    context.subscriptions.push(new PhelMigrationDiagnostics(workspaceIndexer));
 
     context.subscriptions.push(
         vscode.languages.registerCodeActionsProvider(
