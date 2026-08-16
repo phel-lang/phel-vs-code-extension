@@ -14,25 +14,21 @@
 // Unlike the terminal REPL, results come back as structured frames, so we can
 // show the value, captured stdout, and errors distinctly. A connection is
 // started lazily per workspace folder and reused. When `phel.nrepl.reloadOnSave`
-// is enabled, saving a `.phel` file triggers a reload of changed namespaces.
+// is enabled, saving a `.phel` file triggers a reload of changed namespaces,
+// and while a connection is live hovering a symbol shows its current value
+// (see phelNreplHoverProvider.ts). Neither opens a connection on its own.
 
 import * as vscode from 'vscode';
-import { type OpResult, PhelNreplConnection } from './phelNreplClient';
+import { isErrorResult, type OpResult, PhelNreplConnection } from './phelNreplClient';
 import { parseNsForm } from './phelNsAnalyzer';
 import { topLevelFormAt } from './phelRepl';
 import { folderForDocument as folderForDoc } from './phelWorkspace';
 import { PhelInlineEval } from './phelInlineEval';
 import { formatInlineResult } from './phelInlineFormat';
+import { resolvePhelExecutable } from './phelExecutable';
+import { PhelNreplHoverProvider } from './phelNreplHoverProvider';
 
 let inlineEval: PhelInlineEval | undefined;
-
-function isErrorResult(result: OpResult): boolean {
-    return (
-        result.status.includes('error') ||
-        result.status.includes('eval-error') ||
-        result.err.trim() !== ''
-    );
-}
 
 const OUTPUT_CHANNEL_NAME = 'Phel nREPL';
 const DEFTEST_HEAD_RE = /^\(deftest\s+(?:\^\S+\s+)*([^\s()[\]{}]+)/;
@@ -44,6 +40,16 @@ const connecting = new Map<string, Promise<PhelNreplConnection>>();
 function channel(): vscode.OutputChannel {
     output ??= vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
     return output;
+}
+
+/**
+ * The live connection for `folder`, or undefined when there is none. Never
+ * starts a server: the passive features (hover evaluation) may only use a
+ * connection the user already asked for.
+ */
+export function peekConnection(folder: vscode.WorkspaceFolder): PhelNreplConnection | undefined {
+    const existing = connections.get(folder.uri.toString());
+    return existing?.connected ? existing : undefined;
 }
 
 async function getConnection(
@@ -67,7 +73,11 @@ async function getConnection(
     if (inflight) {
         return inflight;
     }
-    const promise = PhelNreplConnection.connect(folder, channel())
+    const promise = PhelNreplConnection.connect(
+        folder,
+        channel(),
+        resolvePhelExecutable('repl.command', folder)
+    )
         .then((conn) => {
             connections.set(key, conn);
             connecting.delete(key);
@@ -125,10 +135,7 @@ function reportResult(label: string, result: OpResult): void {
     for (const value of result.values) {
         ch.appendLine(`=> ${value}`);
     }
-    const hasError =
-        result.status.includes('error') ||
-        result.status.includes('eval-error') ||
-        result.err.trim() !== '';
+    const hasError = isErrorResult(result);
     if (result.err.trim()) {
         ch.appendLine(result.err.trim());
     }
@@ -312,6 +319,9 @@ export function registerNreplCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         inlineEval,
         channel(),
+        // Hover evaluation only ever uses a connection that already exists, so
+        // it is registered up front and stays inert until one does.
+        vscode.languages.registerHoverProvider('phel', new PhelNreplHoverProvider(peekConnection)),
         vscode.commands.registerCommand('phel.nrepl.connect', connect),
         vscode.commands.registerCommand('phel.nrepl.disconnect', disconnect),
         vscode.commands.registerCommand('phel.nrepl.eval', evalForm),

@@ -46,6 +46,23 @@ describe('language features', function () {
         assert.match(hoverText(hovers), /phel\.core\/map/);
     });
 
+    it('evaluates nothing on hover while no nREPL connection exists', async function () {
+        // The nREPL hover provider is registered from activation but must stay
+        // inert until the user connects: no `=> value` block, and the doc hover
+        // it sits under is untouched.
+        const position = positionOf(main, '(map (fn', 1);
+        const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
+            'vscode.executeHoverProvider',
+            main.uri,
+            position
+        );
+        const text = hoverText(hovers);
+        assert.match(text, /phel\.core\/map/);
+        // The evaluated block is a line of its own; `=>` also appears inside
+        // the doc's own examples (`(map inc [1 2 3]) ; => (2 3 4)`).
+        assert.doesNotMatch(text, /^=> /m, `hover evaluated without a connection: ${text}`);
+    });
+
     it('hovers a workspace definition with the doc from its own file', async function () {
         const position = positionOf(main, '(greet person)', 1);
         const text = await waitFor('the workspace index to reach hover', async () => {

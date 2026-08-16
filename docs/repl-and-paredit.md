@@ -20,6 +20,25 @@ a dimmed `=> …` decoration at the end of the form's line (errors in the error
 colour). The decoration clears as soon as you edit the buffer. The full value,
 captured stdout, and stack traces still go to the **Phel nREPL** output channel.
 
+### Hover evaluation (nREPL)
+
+While a connection is live for the folder, hovering a **symbol** also shows what
+it evaluates to right now, as a `=> value` block under its documentation. It is
+deliberately narrow:
+
+- Only symbols, never the form around them — pointing at `(delete-everything!)`
+  must not call it, while reading a var cannot have side effects.
+- Locals, keywords, numbers, strings, literals, special forms and `php/…` names
+  are skipped: the runtime has nothing to add to what you are already reading.
+- It never opens a connection. Until you run `Phel: Connect to nREPL Server`
+  (or another nREPL command does), hovering behaves exactly as before.
+- An evaluation slower than 2 s is abandoned, the session is sent `interrupt`,
+  and nothing is shown. Errors show nothing either — the value is the point.
+
+Values longer than 300 characters are clipped; the full one is an eval away, in
+the **Phel nREPL** output channel. Turn the whole thing off with
+`phel.nrepl.hoverEval`.
+
 ### Which server the nREPL commands talk to
 
 The first nREPL command in a workspace folder looks for a `.nrepl-port` file at
@@ -50,6 +69,9 @@ Every form sent to the REPL is appended to `.vscode/phel-repl-history.phel` in t
 | `phel.repl.command` | `vendor/bin/phel` | CLI path (relative to the workspace folder) |
 | `phel.repl.args` | `["repl"]` | Args passed to the CLI |
 | `phel.repl.history.enabled` | `true` | Append sent forms to the history file |
+| `phel.nrepl.enabled` | `true` | Register the nREPL commands |
+| `phel.nrepl.reloadOnSave` | `false` | Reload changed namespaces on every save, when connected |
+| `phel.nrepl.hoverEval` | `true` | Show `=> value` when hovering a symbol, when connected |
 
 ## Paredit
 

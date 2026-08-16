@@ -14,14 +14,17 @@
 // TCP socket and `clone` a session. Ops are bencoded dicts correlated by an
 // `id` we generate; the server streams one or more response frames per op,
 // terminated by a `status` containing `done`.
+//
+// `vscode` is imported for types only and the CLI path is passed in, so the
+// whole client can be driven from a plain mocha test against a fake bencode
+// server (see `src/test/phelNreplClient.test.ts`).
 
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as net from 'node:net';
 import * as path from 'node:path';
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import { asString, asStringList, type BencodeValue, decode, encode } from './bencode';
-import { resolvePhelExecutable } from './phelExecutable';
 import { type PhelInvocation, toInvocation } from './phelInvocation';
 import { NREPL_PORT_FILE, parseNreplPortFile } from './phelNreplPort';
 import { StringDecoder } from 'node:string_decoder';
@@ -29,6 +32,8 @@ import { StringDecoder } from 'node:string_decoder';
 const BANNER_RE = /nREPL server started on (\d{1,3}(?:\.\d{1,3}){3}):(\d+)/;
 const STARTUP_TIMEOUT_MS = 15000;
 const OP_TIMEOUT_MS = 60000;
+/** `interrupt` only acknowledges, so it answers at once or not at all. */
+const INTERRUPT_TIMEOUT_MS = 2000;
 /** How long a `.nrepl-port` server gets to accept before the file is treated as stale. */
 const PROBE_TIMEOUT_MS = 2000;
 
@@ -75,6 +80,21 @@ export interface OpResult {
     status: string[];
 }
 
+/** True when the server reported an error status or wrote anything to `err`. */
+export function isErrorResult(result: OpResult): boolean {
+    return (
+        result.status.includes('error') ||
+        result.status.includes('eval-error') ||
+        result.err.trim() !== ''
+    );
+}
+
+/** The slice of `vscode.OutputChannel` this client writes to. */
+export interface NreplOutput {
+    append(text: string): void;
+    appendLine(line: string): void;
+}
+
 interface PendingOp {
     resolve: (result: OpResult) => void;
     reject: (err: Error) => void;
@@ -98,14 +118,20 @@ export class PhelNreplConnection {
 
     private constructor(
         readonly folder: vscode.WorkspaceFolder,
-        private readonly output: vscode.OutputChannel
+        private readonly output: NreplOutput,
+        private readonly command: string
     ) {}
 
+    /**
+     * `command` is the resolved Phel CLI, passed in rather than read from the
+     * configuration here, so this module needs `vscode` for types only.
+     */
     static async connect(
         folder: vscode.WorkspaceFolder,
-        output: vscode.OutputChannel
+        output: NreplOutput,
+        command: string
     ): Promise<PhelNreplConnection> {
-        const conn = new PhelNreplConnection(folder, output);
+        const conn = new PhelNreplConnection(folder, output, command);
         await conn.startServerAndConnect();
         return conn;
     }
@@ -152,8 +178,7 @@ export class PhelNreplConnection {
     }
 
     private async startServer(cwd: string): Promise<number> {
-        const command = resolvePhelExecutable('repl.command', this.folder);
-        const inv = toInvocation(command, ['nrepl', '--port=0']);
+        const inv = toInvocation(this.command, ['nrepl', '--port=0']);
         this.output.appendLine(
             `Starting nREPL server: ${inv.file} ${inv.args.join(' ')} (cwd ${cwd})`
         );
@@ -299,8 +324,8 @@ export class PhelNreplConnection {
         }
     }
 
-    private send(op: { [key: string]: BencodeValue }): Promise<OpResult> {
-        const { promise } = this.sendTracked(op);
+    private send(op: { [key: string]: BencodeValue }, timeoutMs?: number): Promise<OpResult> {
+        const { promise } = this.sendTracked(op, timeoutMs);
         return promise;
     }
 
@@ -309,7 +334,10 @@ export class PhelNreplConnection {
      * callers that need response fields outside `OpResult` (e.g. `clone`'s
      * `new-session`) can read them once the promise resolves.
      */
-    private sendTracked(op: { [key: string]: BencodeValue }): {
+    private sendTracked(
+        op: { [key: string]: BencodeValue },
+        timeoutMs = OP_TIMEOUT_MS
+    ): {
         promise: Promise<OpResult>;
         getNewSession: () => string | undefined;
     } {
@@ -327,7 +355,7 @@ export class PhelNreplConnection {
             const timer = setTimeout(() => {
                 this.pending.delete(id);
                 reject(new Error(`nREPL op "${asString(op['op'])}" timed out.`));
-            }, OP_TIMEOUT_MS);
+            }, timeoutMs);
             timer.unref(); // a pending timeout must not keep the host process alive
             const pending: PendingOp = {
                 resolve,
@@ -348,13 +376,29 @@ export class PhelNreplConnection {
         return getNewSession() ?? '';
     }
 
-    eval(code: string, ns?: string): Promise<OpResult> {
+    /**
+     * `timeoutMs` bounds this op alone; without it the shared 60 s applies.
+     * Callers that run on their own (hover evaluation) want to give up long
+     * before that.
+     */
+    eval(code: string, ns?: string, timeoutMs?: number): Promise<OpResult> {
         // The server evaluates in the session's current namespace and has no
         // `ns` op param, so switch the session first with an in-ns form when a
         // namespace is requested. (`*ns*` tracking across evals lives in the
         // session, so this persists for follow-up evals in the same file.)
         const source = ns ? `(in-ns '${ns})\n${code}` : code;
-        return this.send({ op: 'eval', code: source });
+        return this.send({ op: 'eval', code: source }, timeoutMs);
+    }
+
+    /**
+     * Ask the server to abandon what this session is running. Phel's handler
+     * (`InterruptOp`) only acknowledges — it evaluates synchronously, so there
+     * is nothing to cancel — but sending it keeps the session's frame flow
+     * honest and costs one round trip. What actually bounds a runaway op is the
+     * caller's `timeoutMs`.
+     */
+    interrupt(): Promise<OpResult> {
+        return this.send({ op: 'interrupt' }, INTERRUPT_TIMEOUT_MS);
     }
 
     loadFile(content: string, filePath: string): Promise<OpResult> {

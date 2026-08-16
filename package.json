@@ -887,6 +887,11 @@
                     "default": false,
                     "markdownDescription": "When an nREPL connection is active, reload changed namespaces automatically every time a `.phel` file is saved. Does not start a connection on its own."
                 },
+                "phel.nrepl.hoverEval": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "While an nREPL connection is active, hovering a symbol also shows what it currently evaluates to in the running program. Only symbols are evaluated (never the form around them), locals and literals are skipped, and an evaluation slower than 2 s is abandoned. Does not start a connection on its own."
+                },
                 "phel.inlayHints.parameterNames": {
                     "type": "boolean",
                     "default": false,
