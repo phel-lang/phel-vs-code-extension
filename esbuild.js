@@ -52,17 +52,55 @@ const copyAssetsPlugin = {
     },
 };
 
+/** The file an entry point is emitted as (`src/foo.ts` -> `foo.js`). */
+const outputName = (entry) => `${path.basename(entry, '.ts')}.js`;
+
+/** Windows spells the same absolute path with either drive-letter case. */
+function isSameFile(a, b) {
+    const [x, y] = [path.resolve(a), path.resolve(b)];
+    return process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y;
+}
+
 // Keep the lazily loaded subsystems out of the main bundle. Only the main
 // entry defers them: anything else importing them (including the entries
 // themselves) resolves normally, so each secondary bundle stays self-contained.
+//
+// Failing to match would not break the build — esbuild would just inline them
+// again, quietly putting 400 KB back on the activation path — so the emitted
+// main bundle is checked for the runtime imports before the build is called done.
 const lazyEntriesPlugin = {
     name: 'lazy-entries',
     setup(build) {
+        const out = build.initialOptions.outdir;
+
         build.onResolve({ filter: /^\.\/phel(LanguageClient|DebugAdapter)\.js$/ }, (args) => {
-            if (path.resolve(args.importer) !== path.resolve(MAIN_ENTRY)) {
+            if (!isSameFile(args.importer, MAIN_ENTRY)) {
                 return null;
             }
             return { path: args.path, external: true };
+        });
+
+        build.onEnd((result) => {
+            const main = path.join(out, outputName(MAIN_ENTRY));
+            if (result.errors.length > 0 || !fs.existsSync(main)) {
+                return;
+            }
+            const code = fs.readFileSync(main, 'utf-8');
+            const inlined = LAZY_ENTRIES.map((e) => `./${outputName(e)}`).filter(
+                (specifier) => !code.includes(specifier)
+            );
+            if (inlined.length > 0) {
+                return {
+                    errors: [
+                        {
+                            text:
+                                `${main} inlined ${inlined.join(', ')}: the lazy-entries ` +
+                                'resolver did not match, so a deferred bundle is back on ' +
+                                'the activation path.',
+                        },
+                    ],
+                };
+            }
         });
     },
 };

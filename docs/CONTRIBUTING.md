@@ -47,8 +47,10 @@ are duplicated rather than shared; none of them holds module-level state, and th
 whole duplication costs ~10 KB.
 
 Two rules follow. Do not import `./phelLanguageClient` or `./phelDebugAdapter`
-statically from `src/extension.ts` — that silently puts them back on the
-activation path. And when adding a heavy dependency, run:
+statically from `src/extension.ts` — that puts them back on the activation path.
+Nothing about that would fail on its own, so the build checks the emitted
+`extension.js` for both runtime imports and errors out when one is missing. And
+when adding a heavy dependency, run:
 
 ```bash
 npm run bundle:report
