@@ -114,6 +114,8 @@ Both are contributed in `package.json` and can be used from any task, including 
 - **`$phel-lint`** reads the human-readable `phel lint` format — `path:line:col [severity] code message` — so `[error]` / `[warning]` / `[info]` / `[hint]` land as the matching VS Code severity and the rule name (`phel/unused-binding`) becomes the problem code. Do **not** pass `--format=json` to a task using it; the JSON goes to the **Phel: Lint Workspace** command instead ([diagnostics](settings.md#diagnostics-engine)).
 - **`$phel-test-watch`** is a background matcher keyed to the watch loop's own lines: it starts collecting at `Change detected, re-running tests...` and reports at `Watching for file changes...`, and it is active from the start because the first run happens before either is printed. It parses the reporter's failure headlines — `FAIL <name> ['<message>'] (<file>.phel:<line>)` and the `ERROR` equivalent — with `FAIL`/`ERROR` as the problem code. The reporter prints the file's basename, so the matcher searches the workspace folder (minus `vendor/`) for it.
 
+Both file their problems under the marker owner `phel-tasks` rather than `phel` — a task run replaces every marker its owner holds, so sharing an owner with the extension's own diagnostics would clear the squiggles the on-save pass put there — while `source` stays `phel`, which is the label the Problems panel shows.
+
 ## REPL
 
 Registered by [`src/phelReplProvider.ts`](../src/phelReplProvider.ts) when `phel.repl.enabled` is on (the default). Every entry opens the **Phel REPL** terminal if it isn't already running, so none of them needs a separate connect step. The terminal remembers its namespace and gets an `(in-ns 'this.ns)` first when the form comes from another file.

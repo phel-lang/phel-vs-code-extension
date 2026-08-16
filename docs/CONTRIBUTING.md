@@ -162,10 +162,11 @@ PHEL_REAL_CLI_WORKSPACE=$FIXTURE \
 Without `PHEL_REAL_CLI_WORKSPACE` the launcher prints one line and runs the
 first two hosts only. `scripts/make-real-cli-fixture.sh` writes a throwaway
 project (mktemp by default) holding one instance of every case the suites need —
-a lint warning and a lint error, a passing and a failing `deftest`, a `defbench`,
-a removed and a deprecated form, a `:deprecated` definition with a caller, and
-two namespaces where one requires the other — plus a `.vscode/settings.json`
-pointing `phel.executablePath` at a wrapper around the checkout's `bin/phel`.
+a lint warning and a lint error, a file only the linter objects to, a passing and
+a failing `deftest`, a `defbench`, a removed and a deprecated form, a
+`:deprecated` definition with a caller, and two namespaces where one requires the
+other — plus a `.vscode/settings.json` pointing `phel.executablePath` at a
+wrapper around the checkout's `bin/phel`.
 The suites edit that project (they save files and rewrite `phel-config.php`), so
 re-run the script for a clean one rather than reusing it across days.
 

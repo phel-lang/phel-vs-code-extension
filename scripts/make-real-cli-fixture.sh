@@ -7,9 +7,10 @@
 # CLI-backed feature there is only ever verified against a fake. This makes the
 # other half of that picture: a real `phel init` project, with a real Phel
 # pointed at it, holding one instance of every case the suites assert on -
-# a lint warning, a lint error, a failing and a passing `deftest`, a `defbench`,
-# a removed and a deprecated form, a `:deprecated` definition with a caller, and
-# two namespaces where one requires the other.
+# a lint warning, a lint error, a file only the linter objects to, a failing and
+# a passing `deftest`, a `defbench`, a removed and a deprecated form, a
+# `:deprecated` definition with a caller, and two namespaces where one requires
+# the other.
 #
 # It is written outside the repo (mktemp by default) because it is a scratch
 # project: the suites save files in it, rewrite its `phel-config.php`, and leave
@@ -31,7 +32,7 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         -h|--help)
-            sed -n '2,19p' "$0"
+            sed -n '2,21p' "$0"
             exit 0
             ;;
         *)
@@ -114,6 +115,18 @@ cat >"$target/src/lint_me.phel" <<'EOF'
   (let [used 1
         unused 2]
     used))
+EOF
+
+# A file nothing but `phel lint` has anything to say about: a standalone `;` is
+# a `phel/comment-style` warning, while the analyzers the extension runs itself -
+# unused locals, migration, the api-daemon - all find it clean. The tasks suite
+# needs one to watch what a task run does to the markers the on-save pass filed,
+# which the editor only reports back once none of the extension's own are left.
+cat >"$target/src/lint_only.phel" <<'EOF'
+(ns demo.lint-only)
+
+; A standalone comment, which the linter wants to see written as `;;`.
+(defn forty-two [] 42)
 EOF
 
 # A lint *error*: `phel/unresolved-symbol`, which `phel lint` exits 1 for.
