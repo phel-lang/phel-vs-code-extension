@@ -14,7 +14,10 @@
 // saved copy and drops the live one, so nothing is squiggled twice.
 //
 // The same daemon also answers the on-save pass when the effective engine is
-// `analyze`, which is what `analyzeSaved` is for.
+// `analyze`, which is what `analyzeSaved` is for, and the workspace indexer's
+// project index behind go-to-definition and find-references, which is what
+// `daemonFor` is for. `phel.diagnostics.live` is therefore the one switch for
+// every feature that needs a warm PHP process.
 
 import * as vscode from 'vscode';
 import { PhelApiDaemonClient } from './phelApiDaemonClient';
@@ -102,6 +105,32 @@ export class PhelDaemonDiagnostics implements vscode.Disposable {
         if (this.live.has(uri.toString())) {
             this.apply(uri);
         }
+    }
+
+    /**
+     * The daemon for `folder`, started on first use, or `undefined` when live
+     * analysis is off or this Phel has no `api-daemon`.
+     *
+     * Public because the workspace indexer drives go-to-definition and
+     * find-references through the same process: one daemon per folder is
+     * already a PHP interpreter's worth of memory, and a second one would
+     * index a project the first one has indexed.
+     */
+    daemonFor(folder: vscode.WorkspaceFolder): PhelApiDaemonClient | undefined {
+        if (!isLiveEnabled()) {
+            return undefined;
+        }
+        const key = folder.uri.toString();
+        let client = this.clients.get(key);
+        if (!client) {
+            client = new PhelApiDaemonClient({
+                command: resolvePhelExecutable('diagnostics.command', folder),
+                cwd: folder.uri.fsPath,
+                log: (message) => this.log(message),
+            });
+            this.clients.set(key, client);
+        }
+        return client.unavailable ? undefined : client;
     }
 
     dispose(): void {
@@ -205,7 +234,7 @@ export class PhelDaemonDiagnostics implements vscode.Disposable {
      * `undefined` when live analysis cannot apply to the document at all.
      */
     private clientFor(document: vscode.TextDocument): PhelApiDaemonClient | undefined {
-        if (!isLiveEnabled() || document.languageId !== 'phel') {
+        if (document.languageId !== 'phel') {
             return undefined;
         }
         // The daemon's preload stage resolves the namespace by reading the uri
@@ -215,21 +244,8 @@ export class PhelDaemonDiagnostics implements vscode.Disposable {
             return undefined;
         }
         const folder = vscode.workspace.getWorkspaceFolder(document.uri);
-        if (!folder) {
-            return undefined; // no project root means no phel-config.php
-        }
-
-        const key = folder.uri.toString();
-        let client = this.clients.get(key);
-        if (!client) {
-            client = new PhelApiDaemonClient({
-                command: resolvePhelExecutable('diagnostics.command', folder),
-                cwd: folder.uri.fsPath,
-                log: (message) => this.log(message),
-            });
-            this.clients.set(key, client);
-        }
-        return client.unavailable ? undefined : client;
+        // No project root means no phel-config.php.
+        return folder ? this.daemonFor(folder) : undefined;
     }
 
     private log(message: string): void {
