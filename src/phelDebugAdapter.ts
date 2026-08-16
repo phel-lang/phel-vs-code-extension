@@ -2,6 +2,7 @@ import {
     LoggingDebugSession,
     InitializedEvent,
     StoppedEvent,
+    TerminatedEvent,
     BreakpointEvent,
     OutputEvent,
     Thread,
@@ -619,6 +620,10 @@ export class PhelDebugSession extends LoggingDebugSession {
     ): void {
         this.cleanup();
         this.sendResponse(response);
+        // `terminate` is the graceful stop, so the editor waits for the adapter
+        // to say the debuggee is gone. Once the listener is closed there is
+        // nothing left to wait for; without this the session lingers in the UI.
+        this.sendEvent(new TerminatedEvent());
     }
 
     // ==================== Path Mapping ====================
