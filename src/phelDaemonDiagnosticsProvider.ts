@@ -29,6 +29,7 @@ import {
 } from './phelDiagnostics';
 import { savedPhelDiagnostics, toVscodeDiagnostics } from './phelDiagnosticsProvider';
 import { affectsPhelExecutable, resolvePhelExecutable } from './phelExecutable';
+import { phelRuntimeState } from './phelRuntimeState';
 
 const COLLECTION_NAME = 'phel-live';
 const OUTPUT_CHANNEL_NAME = 'Phel Analysis';
@@ -36,13 +37,26 @@ const OUTPUT_CHANNEL_NAME = 'Phel Analysis';
 const DEBOUNCE_MS = 500;
 const MAX_CHARS = 200_000;
 
+let output: vscode.OutputChannel | undefined;
+
+/**
+ * The **Phel Analysis** channel, created on first use. A module singleton
+ * because the status bar offers to reveal it from its action list, and it
+ * exists from activation - long before (and possibly without) the daemon owner
+ * that writes to it.
+ */
+export function phelAnalysisOutput(): vscode.OutputChannel {
+    output ??= vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
+    return output;
+}
+
 /**
  * Owns the `phel-live` collection, the daemon clients behind it, and the
  * **Phel: Restart Analysis Daemon** command.
  */
 export class PhelDaemonDiagnostics implements vscode.Disposable {
     private readonly collection = vscode.languages.createDiagnosticCollection(COLLECTION_NAME);
-    private readonly output = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
+    private readonly output = phelAnalysisOutput();
     private readonly subs: vscode.Disposable[] = [];
     private readonly timers = new Map<string, NodeJS.Timeout>();
     /** One daemon per workspace folder, keyed by the folder uri. */
@@ -127,8 +141,12 @@ export class PhelDaemonDiagnostics implements vscode.Disposable {
                 command: resolvePhelExecutable('diagnostics.command', folder),
                 cwd: folder.uri.fsPath,
                 log: (message) => this.log(message),
+                onStateChange: (state) => phelRuntimeState.set('daemon', key, state),
             });
             this.clients.set(key, client);
+            // A folder with a daemon of its own belongs in the status bar even
+            // before the first request tells us anything about it.
+            phelRuntimeState.set('daemon', key, 'off');
         }
         return client.unavailable ? undefined : client;
     }
@@ -137,6 +155,8 @@ export class PhelDaemonDiagnostics implements vscode.Disposable {
         this.restart();
         this.collection.dispose();
         this.output.dispose();
+        // Forget the disposed channel, so a later reveal makes a fresh one.
+        output = undefined;
         for (const sub of this.subs) {
             sub.dispose();
         }
@@ -149,8 +169,11 @@ export class PhelDaemonDiagnostics implements vscode.Disposable {
             clearTimeout(timer);
         }
         this.timers.clear();
-        for (const client of this.clients.values()) {
+        for (const [key, client] of this.clients) {
             client.dispose();
+            // A client that never got a process reports no change of its own,
+            // and the command has to be honest about the folder either way.
+            phelRuntimeState.set('daemon', key, 'off');
         }
         this.clients.clear();
         this.live.clear();

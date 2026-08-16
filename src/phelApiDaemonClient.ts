@@ -36,6 +36,7 @@ import {
     toLocations,
     toProjectIndex,
 } from './phelProjectIndex';
+import type { DaemonState } from './phelRuntimeState';
 
 /** The daemon takes no arguments of its own. */
 const DEFAULT_ARGS = ['api-daemon'];
@@ -74,6 +75,13 @@ export interface PhelApiDaemonOptions {
     budget?: LspRestartBudget;
     timeouts?: PhelApiDaemonTimeouts;
     log?: (message: string) => void;
+    /**
+     * Called whenever the process behind this client changes what it can do:
+     * `running` while a request is out, `idle` once it is answered, `off` when
+     * the process is gone, and the two terminal ones. Only on a change, so a
+     * keystroke storm is not an event storm.
+     */
+    onStateChange?: (state: DaemonState) => void;
 }
 
 export interface PhelApiDaemonRequestOptions {
@@ -127,6 +135,7 @@ export class PhelApiDaemonClient {
     private readonly budget: LspRestartBudget;
     private readonly timeouts: PhelApiDaemonTimeouts;
     private readonly log: (message: string) => void;
+    private readonly onStateChange: (state: DaemonState) => void;
 
     private proc?: DaemonProcess;
     private queue: QueuedRequest[] = [];
@@ -141,6 +150,8 @@ export class PhelApiDaemonClient {
     private unavailableFlag = false;
     private exhausted = false;
     private disposed = false;
+    /** Last state reported to `onStateChange`. */
+    private state: DaemonState = 'off';
 
     constructor(options: PhelApiDaemonOptions) {
         this.command = options.command;
@@ -152,6 +163,7 @@ export class PhelApiDaemonClient {
             next: NEXT_REQUEST_TIMEOUT_MS,
         };
         this.log = options.log ?? (() => undefined);
+        this.onStateChange = options.onStateChange ?? (() => undefined);
     }
 
     /** True once the CLI rejected the subcommand. Stays true for the session. */
@@ -304,6 +316,7 @@ export class PhelApiDaemonClient {
         proc.child.stdin.write(
             `${JSON.stringify({ id, method: next.method, params: next.params })}\n`
         );
+        this.setState('running');
     }
 
     private ensureProcess(): DaemonProcess | undefined {
@@ -409,6 +422,10 @@ export class PhelApiDaemonClient {
             }
         }
         this.pump();
+        if (!this.inFlight) {
+            // Nothing was queued behind it: a warm process with nothing to do.
+            this.setState('idle');
+        }
     }
 
     private onStderr(text: string): void {
@@ -423,6 +440,7 @@ export class PhelApiDaemonClient {
         this.log('This Phel CLI has no `api-daemon` command; live analysis stays off.');
         // Not a crash to recover from, so the restart budget is untouched.
         this.stopProcess();
+        this.setState('unavailable');
         this.failAll(
             new PhelApiDaemonUnavailableError('This Phel CLI has no `api-daemon` command.')
         );
@@ -452,6 +470,7 @@ export class PhelApiDaemonClient {
     private onProcessGone(detail: string): void {
         this.proc?.reader.close();
         this.proc = undefined;
+        this.setState('off');
         if (this.disposed) {
             return;
         }
@@ -462,6 +481,7 @@ export class PhelApiDaemonClient {
     private handleProcessLoss(detail: string): void {
         if (!this.budget.shouldRestart()) {
             this.exhausted = true;
+            this.setState('exhausted');
             this.log(
                 `The analysis daemon failed ${this.budget.count} times within ` +
                     `${Math.round(RESTART_WINDOW_MS / 1000)}s (${detail}); not starting it again. ` +
@@ -490,6 +510,16 @@ export class PhelApiDaemonClient {
         if (!proc.child.killed) {
             proc.child.kill();
         }
+        this.setState('off');
+    }
+
+    /** Report a change in what this client can do; identical sets are dropped. */
+    private setState(state: DaemonState): void {
+        if (this.state === state) {
+            return;
+        }
+        this.state = state;
+        this.onStateChange(state);
     }
 
     private failAll(err: Error): void {

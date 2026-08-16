@@ -53,6 +53,17 @@ closes the socket either way, and only stops a server the extension started.
 
 Add `.nrepl-port` to `.gitignore`; it is a per-machine, per-run file.
 
+### The status bar
+
+The item on the right of the status bar shows the namespace of the file you are
+in (or `Phel` in a project without one open), followed by one icon per Phel
+process that is up: `$(pulse)` the analysis daemon, `$(plug)` an nREPL
+connection, `$(server)` the language server. The tooltip names all three with
+their state, so `nREPL: attached` tells you the connection joined a server you
+started. Clicking it opens **Phel: Status Actions** — start a REPL, connect or
+disconnect the nREPL server, restart the analysis daemon or the language
+server, show the **Phel Analysis** output, run doctor.
+
 ### Namespace tracking
 
 Each REPL terminal remembers which namespace it last switched into. When you eval from a different file, the extension first sends `(in-ns 'that.ns)` so cross-file evals don't silently land in the previous namespace.
