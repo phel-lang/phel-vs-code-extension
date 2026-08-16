@@ -55,6 +55,61 @@ Sources: [`phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.ts) (buil
 
 Formatting has no command of its own: `phel format` runs through VS Code's own **Format Document**, gated by `phel.format.enabled` and pointed by `phel.format.command`. Per-file diagnostics run on open and save, not on demand.
 
+## Tasks
+
+The commands above open a terminal and leave you to read it. The `phel` **task** type ([`src/phelTaskProvider.ts`](../src/phelTaskProvider.ts)) runs the same CLI through VS Code's task system instead, which buys two things a terminal cannot: a task can be bound to **Run Build Task** / **Run Test Task**, and its output can be parsed into the Problems panel while it runs.
+
+**Terminal → Run Task… → phel** lists one set per workspace folder, each running in that folder's root and resolving the binary from that folder's settings:
+
+| Task | Runs | Problem matcher | Executable setting |
+|---|---|---|---|
+| `phel: test` | `phel test` | — | `phel.test.command` |
+| `phel: test --watch` | `phel test --watch` | `$phel-test-watch` | `phel.test.command` |
+| `phel: lint` | `phel lint` | `$phel-lint` | `phel.diagnostics.command` |
+| `phel: build` | `phel build` | — | `phel.executablePath` |
+| `phel: format` | `phel format` | — | `phel.format.command` |
+| `phel: bench` | `phel bench` | — | `phel.executablePath` |
+
+`test` and `test --watch` are in the **test** group, `build` in the **build** group, so <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> and **Run Test Task** find them without any configuration.
+
+### Writing your own
+
+`command` is any `phel` subcommand out of `test`, `watch`, `build`, `bench`, `lint`, `format`, `run`; `args` is appended after it verbatim. In `.vscode/tasks.json`:
+
+```jsonc
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "phel",
+      "command": "test",
+      "args": ["--watch", "--filter=greet"],
+      "label": "phel: watch the greet tests",
+      "isBackground": true,
+      "problemMatcher": "$phel-test-watch",
+      "presentation": { "reveal": "silent" }
+    },
+    {
+      "type": "phel",
+      "command": "lint",
+      "args": ["src"],
+      "label": "phel: lint src",
+      "problemMatcher": "$phel-lint",
+      "group": "build"
+    }
+  ]
+}
+```
+
+The extension only fills in the executable and the cwd; `problemMatcher`, `isBackground`, `presentation` and `group` are yours, exactly as written above — which is why a hand-written task has to name its matcher even when the default task with the same command already has one.
+
+### The two problem matchers
+
+Both are contributed in `package.json` and can be used from any task, including a `shell` one:
+
+- **`$phel-lint`** reads the human-readable `phel lint` format — `path:line:col [severity] code message` — so `[error]` / `[warning]` / `[info]` / `[hint]` land as the matching VS Code severity and the rule name (`phel/unused-binding`) becomes the problem code. Do **not** pass `--format=json` to a task using it; the JSON goes to the **Phel: Lint Workspace** command instead ([diagnostics](settings.md#diagnostics-engine)).
+- **`$phel-test-watch`** is a background matcher keyed to the watch loop's own lines: it starts collecting at `Change detected, re-running tests...` and reports at `Watching for file changes...`, and it is active from the start because the first run happens before either is printed. It parses the reporter's failure headlines — `FAIL <name> ['<message>'] (<file>.phel:<line>)` and the `ERROR` equivalent — with `FAIL`/`ERROR` as the problem code. The reporter prints the file's basename, so the matcher searches the workspace folder (minus `vendor/`) for it.
+
 ## REPL
 
 Registered by [`src/phelReplProvider.ts`](../src/phelReplProvider.ts) when `phel.repl.enabled` is on (the default). Every entry opens the **Phel REPL** terminal if it isn't already running, so none of them needs a separate connect step. The terminal remembers its namespace and gets an `(in-ns 'this.ns)` first when the form comes from another file.

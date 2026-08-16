@@ -1,0 +1,12 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "phel",
+            "command": "run",
+            "args": ["src/app/main.phel"],
+            "label": "run main",
+            "problemMatcher": []
+        }
+    ]
+}
