@@ -14,6 +14,7 @@
 
 ### Fixed
 
+- Every Phel CLI invocation now works on Windows. `vendor/bin/phel` is a PHP script Windows cannot execute, and Node refuses to spawn Composer's `vendor/bin/phel.bat` proxy without a shell, so diagnostics, formatting, the test/benchmark runs, the REPL and nREPL terminals and the language server all failed there. A single resolver (`src/phelInvocation.ts`) now does what the `.bat` does — run `php vendor/bin/phel …`, argv array intact, no quoting — and falls back to a shelled-out batch file when there is no PHP proxy. Find All References also matches open editors by URI rather than path, since the same file can be spelled with either drive-letter case. CI builds on macOS and Windows too.
 - `npm test` no longer risks silently skipping the top-level unit tests. The glob was unquoted, and `sh` expands `**` as a single `*`, so the moment any subdirectory of `out/test/` held a `*.test.js` the shell would have resolved the pattern to that subdirectory alone.
 
 ### Docs

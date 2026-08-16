@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { buildFormatEdits } from './phelFormat';
 import { resolvePhelExecutable } from './phelExecutable';
+import { toInvocation } from './phelInvocation';
 
 export class PhelFormatProvider implements vscode.DocumentFormattingEditProvider {
     async provideDocumentFormattingEdits(
@@ -55,8 +56,10 @@ async function formatViaCli(command: string, source: string): Promise<string> {
     const tmp = path.join(os.tmpdir(), `phel-fmt-${process.pid}-${Date.now()}.phel`);
     await fs.writeFile(tmp, source, 'utf-8');
     try {
+        const inv = toInvocation(command, ['format', tmp]);
+        const opts = { maxBuffer: 8 * 1024 * 1024, shell: inv.shell };
         await new Promise<void>((resolve, reject) => {
-            execFile(command, ['format', tmp], { maxBuffer: 8 * 1024 * 1024 }, (err) => {
+            execFile(inv.file, inv.args, opts, (err) => {
                 if (err) {
                     reject(err);
                 } else {

@@ -22,6 +22,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { asString, asStringList, type BencodeValue, decode, encode } from './bencode';
 import { resolvePhelExecutable } from './phelExecutable';
+import { type PhelInvocation, toInvocation } from './phelInvocation';
 import { NREPL_PORT_FILE, parseNreplPortFile } from './phelNreplPort';
 import { StringDecoder } from 'node:string_decoder';
 
@@ -152,13 +153,16 @@ export class PhelNreplConnection {
 
     private async startServer(cwd: string): Promise<number> {
         const command = resolvePhelExecutable('repl.command', this.folder);
-        this.output.appendLine(`Starting nREPL server: ${command} nrepl --port=0 (cwd ${cwd})`);
-        return this.spawnAndAwaitPort(command, cwd);
+        const inv = toInvocation(command, ['nrepl', '--port=0']);
+        this.output.appendLine(
+            `Starting nREPL server: ${inv.file} ${inv.args.join(' ')} (cwd ${cwd})`
+        );
+        return this.spawnAndAwaitPort(inv, cwd);
     }
 
-    private spawnAndAwaitPort(command: string, cwd: string): Promise<number> {
+    private spawnAndAwaitPort(inv: PhelInvocation, cwd: string): Promise<number> {
         return new Promise((resolve, reject) => {
-            const proc = spawn(command, ['nrepl', '--port=0'], { cwd });
+            const proc = spawn(inv.file, inv.args, { cwd, shell: inv.shell });
             this.proc = proc;
             let settled = false;
             let stderr = '';

@@ -43,6 +43,19 @@ Set `skipPhelInternals: true` (the default) and add additional globs to `skipFil
 **Container debugging hangs.**
 Missing `pathMappings`, or `xdebug.client_host` isn't set to the host's address from inside the container. On macOS / Windows use `host.docker.internal`. On Linux, the bridge IP (often `172.17.0.1`).
 
+## Windows
+
+**Nothing CLI-backed works: no diagnostics, no formatting, the REPL terminal closes at once.**
+Every one of those runs the Phel CLI, and on Windows that needs `php` on the `PATH`. Check with `php -v` in a fresh terminal; if it isn't found, add your PHP directory to the user `PATH` and restart VS Code so it inherits the new environment.
+
+Why `php`: `composer require phel-lang/phel` writes two proxies into `vendor\bin`. `vendor\bin\phel` is a PHP script - Windows cannot execute it directly - and `vendor\bin\phel.bat` is a batch file whose whole body is `php "%~dp0/phel" %*`. Node refuses to spawn a `.bat` or `.cmd` outright unless it is told to go through `cmd.exe`. So the extension does what the batch file does: it resolves `vendor\bin\phel`, and when that PHP proxy is on disk it runs `php vendor\bin\phel <args>` (see `src/phelInvocation.ts`). Arguments stay an argv array, so a workspace path with spaces needs no quoting.
+
+**`phel.executablePath` points at a `.bat` / `.cmd`, or at `phel` on the `PATH`.**
+Supported. A `.bat` whose extension-less PHP proxy sits next to it is run through `php` as above; anything else is started via `cmd.exe`, which is the only way to launch a batch file. A path with spaces is safest as the extension-less proxy or as an `.exe`.
+
+**Find All References shows the saved text of a file I have open and edited.**
+Open editors used to be matched by path, and the same file can be spelled with either drive-letter case (`C:\...` / `c:\...`), so a buffer could be missed and its file re-read from disk instead. Matching is by URI now - update the extension.
+
 ## Reporting issues
 
 When filing a bug, include:

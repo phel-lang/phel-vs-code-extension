@@ -14,6 +14,7 @@
 
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
+import { toInvocation } from './phelInvocation';
 import { parseNsForm } from './phelNsAnalyzer';
 import { flattenForTerminal, nextTopLevelFormAfter, topLevelFormAt } from './phelRepl';
 import { folderForDocument as workspaceFolderForDoc } from './phelWorkspace';
@@ -47,11 +48,13 @@ function ensureTerminal(folder: vscode.WorkspaceFolder | undefined): vscode.Term
         return existing;
     }
     const cfg = resolveCommand(folder);
+    // On Windows this becomes `php vendor/bin/phel repl`; see `phelInvocation`.
+    const inv = toInvocation(cfg.command, cfg.args);
     const term = vscode.window.createTerminal({
         name: REPL_TERMINAL_NAME,
         cwd: cfg.cwd,
-        shellPath: cfg.command,
-        shellArgs: [...cfg.args],
+        shellPath: inv.file,
+        shellArgs: inv.args,
     });
     term.show(true);
     return term;

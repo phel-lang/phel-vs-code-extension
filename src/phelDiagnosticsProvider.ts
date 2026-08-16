@@ -8,6 +8,7 @@ import {
     PhelDiagnostic,
 } from './phelDiagnostics';
 import { affectsPhelExecutable, resolvePhelExecutable } from './phelExecutable';
+import { toInvocation } from './phelInvocation';
 
 const COLLECTION_NAME = 'phel';
 
@@ -201,7 +202,9 @@ function runPhel(
     cwd: string | undefined
 ): Promise<PhelDiagnostic[]> {
     return new Promise((resolve, reject) => {
-        execFile(command, args, { maxBuffer: 8 * 1024 * 1024, cwd }, (err, stdout, stderr) => {
+        const inv = toInvocation(command, args);
+        const opts = { maxBuffer: 8 * 1024 * 1024, cwd, shell: inv.shell };
+        execFile(inv.file, inv.args, opts, (err, stdout, stderr) => {
             // A non-zero exit is normal: both subcommands exit 1 when they
             // found errors, and still print the diagnostics on stdout.
             if (err && !stdout) {

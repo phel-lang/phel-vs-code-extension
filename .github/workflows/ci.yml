@@ -14,12 +14,27 @@ concurrency:
 
 jobs:
   build:
-    name: build (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
+    name: build (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22]
+        # Both supported Node versions on Linux; one each on the other two,
+        # where a runner minute costs 2x (macOS) / 10x (Windows) and what we
+        # are checking is the platform, not the runtime.
+        include:
+          - os: ubuntu-latest
+            node: 20
+          - os: ubuntu-latest
+            node: 22
+          - os: macos-latest
+            node: 22
+          - os: windows-latest
+            node: 22
+    defaults:
+      run:
+        # Same shell everywhere, so a step reads the same on all three runners.
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,8 +51,12 @@ jobs:
       - run: npm run tokenize
       - run: npm run bundle:prod
       - name: vsce package (sanity)
-        run: npx --yes @vscode/vsce package --out /tmp/phel-lang.vsix
+        # `runner.temp` rather than /tmp: on the Windows runner that is a bash
+        # path Node would resolve against the wrong drive.
+        run: npx --yes @vscode/vsce package --out "${{ runner.temp }}/phel-lang.vsix"
 
+  # Electron-in-CI stays on Linux: the other two runners have no display server
+  # and each download of VS Code is ~300 MB.
   integration:
     name: integration (real VS Code host)
     runs-on: ubuntu-latest

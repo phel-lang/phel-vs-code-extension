@@ -3,6 +3,7 @@
 // build, init).
 
 import * as vscode from 'vscode';
+import { toInvocation } from './phelInvocation';
 
 /**
  * Open a terminal that runs `command args` directly as its shell process and
@@ -10,8 +11,9 @@ import * as vscode from 'vscode';
  *
  * Passing the command via `shellPath`/`shellArgs` makes VS Code spawn the
  * process itself (argv array, no intermediate shell), so arguments with spaces
- * or shell metacharacters are passed verbatim and the behaviour is identical on
- * POSIX and Windows. (This is the same mechanism the REPL terminal uses.)
+ * or shell metacharacters are passed verbatim. (This is the same mechanism the
+ * REPL terminal uses.) `toInvocation` is what makes that spawnable on Windows:
+ * there the terminal runs `php vendor/bin/phel …`, as the `.bat` proxy would.
  */
 export function runInTerminal(
     name: string,
@@ -19,11 +21,12 @@ export function runInTerminal(
     args: readonly string[],
     cwd: string
 ): void {
+    const inv = toInvocation(command, args);
     const terminal = vscode.window.createTerminal({
         name,
         cwd,
-        shellPath: command,
-        shellArgs: [...args],
+        shellPath: inv.file,
+        shellArgs: inv.args,
     });
     terminal.show(true);
 }

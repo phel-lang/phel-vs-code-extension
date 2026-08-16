@@ -57,14 +57,18 @@ export async function findReferenceLocations(
             continue;
         }
         seen.add(file);
-        const opened = vscode.workspace.textDocuments.find((d) => d.uri.fsPath === file);
+        // Compare URIs, not `fsPath`: on Windows the same file can be spelled
+        // with either drive-letter case, and only the URI form is normalised.
+        const uri = vscode.Uri.file(file);
+        const key = uri.toString();
+        const opened = vscode.workspace.textDocuments.find((d) => d.uri.toString() === key);
         if (opened) {
             addOccurrencesFromDoc(name, opened, out);
             continue;
         }
         try {
             const text = await fs.readFile(file, 'utf-8');
-            addOccurrencesFromText(name, vscode.Uri.file(file), text, out);
+            addOccurrencesFromText(name, uri, text, out);
         } catch {
             // File disappeared between indexing and the request.
         }
