@@ -44,6 +44,7 @@ import { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 import { PhelTestController } from './phelTestController';
 import { PhelBenchController } from './phelBenchController';
 import { affectsPhelExecutable } from './phelExecutable';
+import { watchWorkspaceFolderPaths } from './phelWorkspace';
 
 let sourceMapManager: SourceMapManager;
 /** Guards against registering the bundled providers twice (startup + later fallback). */
@@ -75,6 +76,11 @@ function isLanguageServerEnabled(): boolean {
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Phel extension activated');
+
+    // Every path the CLI and the daemon report comes back with its symlinks
+    // resolved; mapping one back to the folder's own spelling needs that
+    // folder resolved once, and forgotten when it leaves the workspace.
+    context.subscriptions.push(watchWorkspaceFolderPaths());
 
     // Initialize source map manager
     sourceMapManager = new SourceMapManager();
