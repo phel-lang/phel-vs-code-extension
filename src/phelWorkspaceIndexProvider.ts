@@ -271,7 +271,7 @@ export class PhelWorkspaceIndexer implements vscode.Disposable {
         this.projectIndexes.delete(key);
 
         const prefix = folder.uri.fsPath + path.sep;
-        for (const file of [...this.indexedFiles()]) {
+        for (const file of this.index.files()) {
             if (file.startsWith(prefix)) {
                 this.index.removeFile(file);
             }
@@ -292,12 +292,6 @@ export class PhelWorkspaceIndexer implements vscode.Disposable {
         const ns = detectNamespace(text) || namespaceForFile(file);
         const docs = parsePhelFile(text, ns);
         this.index.setFile(file, docs);
-    }
-
-    private *indexedFiles(): IterableIterator<string> {
-        for (const doc of this.index.allDocs()) {
-            yield doc.sourceFile;
-        }
     }
 }
 

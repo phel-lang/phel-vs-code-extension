@@ -20,16 +20,22 @@ export interface WorkspaceDoc extends PhelDoc {
 export class PhelWorkspaceIndex {
     private readonly perFile = new Map<string, WorkspaceDoc[]>();
 
-    /** Replace the docs known for `file`. Pass `[]` to clear. */
+    /**
+     * Replace the docs known for `file`. A file that defines nothing stays in
+     * the index with no docs rather than dropping out of it: find-references
+     * scans the files this index knows, and a benchmark file or a script uses
+     * plenty of symbols while defining none. `removeFile` is what forgets one.
+     */
     setFile(file: string, docs: PhelDoc[]): void {
-        if (docs.length === 0) {
-            this.perFile.delete(file);
-            return;
-        }
         this.perFile.set(
             file,
             docs.map((d) => ({ ...d, sourceFile: file }))
         );
+    }
+
+    /** Every file that has been indexed, including those that define nothing. */
+    files(): string[] {
+        return [...this.perFile.keys()];
     }
 
     /** Forget every doc that came from `file`. */
@@ -53,7 +59,7 @@ export class PhelWorkspaceIndex {
         return out;
     }
 
-    /** Number of indexed files. */
+    /** Number of indexed files, whether or not they define anything. */
     fileCount(): number {
         return this.perFile.size;
     }

@@ -127,8 +127,9 @@ export async function findReferenceLocations(
     addOccurrencesFromDoc(name, activeDoc, out);
     seen.add(activeDoc.uri.fsPath);
 
-    const indexedFiles = new Set<string>(indexer.index.allDocs().map((d) => d.sourceFile));
-    for (const file of indexedFiles) {
+    // Every indexed file, not only the ones that define something: a file can
+    // use a name without defining any of its own (a `defbench`, a script).
+    for (const file of new Set(indexer.index.files())) {
         if (seen.has(file)) {
             continue;
         }
