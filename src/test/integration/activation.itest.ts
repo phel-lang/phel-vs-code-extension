@@ -6,6 +6,11 @@ interface ContributedCommand {
     command: string;
 }
 
+interface Walkthrough {
+    id: string;
+    steps: unknown[];
+}
+
 describe('activation', function () {
     let extension: vscode.Extension<unknown>;
 
@@ -24,5 +29,13 @@ describe('activation', function () {
         const registered = new Set(await vscode.commands.getCommands(true));
         const missing = contributed.map((c) => c.command).filter((id) => !registered.has(id));
         assert.deepEqual(missing, [], `contributed but never registered: ${missing.join(', ')}`);
+    });
+
+    it('ships the Getting Started walkthrough', function () {
+        // `Help: Get Started` looks the walkthrough up by id, and a step list the
+        // host rejected would just come back short.
+        const walkthroughs: Walkthrough[] = extension.packageJSON.contributes?.walkthroughs ?? [];
+        assert.equal(walkthroughs[0]?.id, 'phel.gettingStarted');
+        assert.equal(walkthroughs[0].steps.length, 7);
     });
 });
