@@ -240,6 +240,8 @@ describe('package.json configuration scopes', () => {
         'phel.repl.history.enabled',
         'phel.nrepl.reloadOnSave',
         'phel.nrepl.hoverEval',
+        'phel.tests.preferNrepl',
+        'phel.tests.runOnSave',
     ]);
 
     /**

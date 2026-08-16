@@ -1,11 +1,23 @@
 // VS Code Test Explorer integration for Phel.
 //
 // Each `.phel` file with at least one `deftest` becomes a TestItem; each
-// `deftest` becomes a child item. Running items shells out to
-// `phel test --reporter=junit-xml -o <tmp>` and parses the JUnit report, so
-// individual tests get pass / fail status plus the failing assertion message
-// and (for the failing form) detail. Tests not present in the report are
-// marked skipped.
+// `deftest` becomes a child item. There are two ways to run them:
+//
+//   * over a live nREPL connection, when there is one and `phel.tests.preferNrepl`
+//     is on. One `reload` per run brings the session up to date with the files,
+//     then one `run-tests` op per `deftest` (`var` set) gives an exact per-test
+//     verdict from the `{:pass :fail :error}` map the op returns, with the
+//     detail read out of what the reporter printed. Warm, so each op is
+//     milliseconds — there is no PHP to boot.
+//   * otherwise `phel test --reporter=junit-xml -o <tmp>`, one subprocess per
+//     file, parsed back through `junitParser`. This is also the only path a
+//     coverage run takes, since `run-tests` collects none.
+//
+// Tests the run could not account for are marked skipped either way.
+//
+// `phel.tests.runOnSave` closes the loop: saving a `.phel` file while a
+// connection is live reloads and re-runs the tests that saved file affects —
+// its own, the test file it maps to, or every test file that requires it.
 //
 // The item tree itself — discovery, the watcher that keeps it current, and the
 // grouping of a run request — is shared with the benchmark controller and lives
@@ -18,6 +30,16 @@ import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { runPhelCli } from './phelCli';
 import { coverageEnv } from './phelInvocation';
+import { normalizeNs, parseNsForm, requireEntries } from './phelNsAnalyzer';
+import { layoutOf, pathToNs, testFileFor, type PhelFile } from './phelNsPaths';
+import {
+    hasLiveNreplConnection,
+    reloadViaNrepl,
+    runTestsViaNrepl,
+    type NreplTestRun,
+} from './phelNreplProvider';
+import type { PhelTestFailure } from './phelNreplTestReport';
+import { phelRuntimeState, type PhelTestRunSummary } from './phelRuntimeState';
 import type { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 import { findDeftests } from './phelTestScanner';
 import { PhelTestItemTree, groupQueue, nameForLeaf } from './phelTestItems';
@@ -33,9 +55,27 @@ const COVERAGE_API_AVAILABLE =
 
 const NO_COVERAGE_DRIVER_RE = /--coverage requires the pcov or xdebug extension/i;
 
+/** The verdicts one file's run produced, for the runtime-state hub. */
+interface Tally {
+    pass: number;
+    fail: number;
+    error: number;
+}
+
 interface ResolvedCommand {
     command: string;
     cwd: string;
+}
+
+/** True unless the user asked for the subprocess runner in this folder. */
+function preferNrepl(folder: vscode.WorkspaceFolder): boolean {
+    return vscode.workspace
+        .getConfiguration('phel', folder)
+        .get<boolean>('tests.preferNrepl', true);
+}
+
+function runOnSave(folder: vscode.WorkspaceFolder): boolean {
+    return vscode.workspace.getConfiguration('phel', folder).get<boolean>('tests.runOnSave', false);
 }
 
 function resolveTestCommand(folder: vscode.WorkspaceFolder): ResolvedCommand {
@@ -183,8 +223,10 @@ export class PhelTestController implements vscode.Disposable {
     private readonly disposables: vscode.Disposable[] = [];
     /** Per-run cache of detailed line coverage, keyed by file URI string. */
     private coverageDetails = new Map<string, vscode.StatementCoverage[]>();
+    /** The run-on-save chain per folder, so saves queue rather than overlap. */
+    private readonly saveRuns = new Map<string, Promise<void>>();
 
-    constructor(projectConfig?: PhelProjectConfigProvider) {
+    constructor(private readonly projectConfig?: PhelProjectConfigProvider) {
         this.controller = vscode.tests.createTestController('phel-tests', 'Phel');
         this.tree = new PhelTestItemTree(this.controller, findDeftests, projectConfig);
         this.disposables.push(this.controller, this.tree);
@@ -194,7 +236,8 @@ export class PhelTestController implements vscode.Disposable {
                 vscode.TestRunProfileKind.Run,
                 (request, token) => this.run(request, token, false),
                 true
-            )
+            ),
+            vscode.workspace.onDidSaveTextDocument((doc) => this.queueSaveRun(doc))
         );
         if (COVERAGE_API_AVAILABLE) {
             const coverageProfile = this.controller.createRunProfile(
@@ -223,6 +266,9 @@ export class PhelTestController implements vscode.Disposable {
         // files yields one merged FileCoverage rather than duplicate entries.
         const coverageByUri = new Map<string, CloverFile[]>();
         let warnedNoDriver = false;
+        // One `reload` brings a session up to date with every file that changed,
+        // so it is worth exactly once per run and per folder.
+        const reloaded = new Set<string>();
 
         try {
             for (const [fileItem, leaves] of byFile) {
@@ -240,6 +286,25 @@ export class PhelTestController implements vscode.Disposable {
                     continue;
                 }
                 leaves.forEach((l) => run.started(l));
+
+                // A coverage run has to be the subprocess: `run-tests` collects none.
+                const ns =
+                    !withCoverage && preferNrepl(folder) && hasLiveNreplConnection(folder)
+                        ? await nsOfFile(fileItem.uri)
+                        : undefined;
+                if (ns) {
+                    const tally = await this.runOverNrepl(
+                        run,
+                        folder,
+                        fileItem.uri,
+                        ns,
+                        leaves,
+                        token,
+                        reloaded
+                    );
+                    publishRun(ns, leaves.length, tally, 'nrepl');
+                    continue;
+                }
 
                 const outcome = await runPhelTestFile(folder, fileItem.uri, token, withCoverage);
 
@@ -266,6 +331,7 @@ export class PhelTestController implements vscode.Disposable {
                     }
                 }
 
+                const tally: Tally = { pass: 0, fail: 0, error: 0 };
                 for (const leaf of leaves) {
                     const name = nameForLeaf(leaf);
                     // A leaf only knows the deftest name, not its namespace, so we
@@ -283,15 +349,26 @@ export class PhelTestController implements vscode.Disposable {
                                     outcome.output.trim() || `phel test exited ${outcome.code}`
                                 )
                             );
+                            tally.error += 1;
                         }
                         continue;
                     }
                     if (result.passed) {
                         run.passed(leaf);
+                        tally.pass += 1;
                     } else {
                         run.failed(leaf, messageFor(result));
+                        tally.fail += 1;
                     }
                 }
+                publishRun(
+                    [...outcome.byName.values()][0]?.suite ||
+                        (await nsOfFile(fileItem.uri)) ||
+                        path.basename(fileItem.uri.fsPath),
+                    leaves.length,
+                    tally,
+                    'cli'
+                );
             }
 
             if (withCoverage) {
@@ -304,6 +381,184 @@ export class PhelTestController implements vscode.Disposable {
         } finally {
             run.end();
         }
+    }
+
+    /**
+     * Run one file's leaves over the folder's live connection, one `run-tests`
+     * op per `deftest`. Per test rather than per file because the op's only
+     * structured answer is the summary of what it ran: a whole namespace in one
+     * op would say how many assertions failed, not which test they were in.
+     */
+    private async runOverNrepl(
+        run: vscode.TestRun,
+        folder: vscode.WorkspaceFolder,
+        fileUri: vscode.Uri,
+        ns: string,
+        leaves: readonly vscode.TestItem[],
+        token: vscode.CancellationToken,
+        reloaded: Set<string>
+    ): Promise<Tally> {
+        const tally: Tally = { pass: 0, fail: 0, error: 0 };
+        const key = folder.uri.toString();
+        if (!reloaded.has(key)) {
+            reloaded.add(key);
+            try {
+                await reloadViaNrepl(folder);
+            } catch (err) {
+                // A reload that fails leaves the session on the code it had, so
+                // the run is still worth doing — with a note about what it ran.
+                run.appendOutput(asTerminal(`reload failed: ${messageOf(err)}\n`));
+            }
+        }
+
+        for (const leaf of leaves) {
+            if (token.isCancellationRequested) {
+                run.skipped(leaf);
+                continue;
+            }
+            const name = nameForLeaf(leaf);
+            const started = Date.now();
+            let outcome: NreplTestRun | undefined;
+            try {
+                outcome = await runTestsViaNrepl(folder, ns, name);
+            } catch (err) {
+                run.errored(leaf, new vscode.TestMessage(messageOf(err)));
+                tally.error += 1;
+                continue;
+            }
+            if (!outcome) {
+                // The connection went away between the check above and this op.
+                run.errored(
+                    leaf,
+                    new vscode.TestMessage('The nREPL connection closed during the run.')
+                );
+                tally.error += 1;
+                continue;
+            }
+            const duration = Date.now() - started;
+            if (outcome.out.trim()) {
+                run.appendOutput(asTerminal(outcome.out), undefined, leaf);
+            }
+            const messages = messagesFor(failuresOf(outcome, name), fileUri);
+            const summary = outcome.summary;
+            if (!summary) {
+                run.errored(
+                    leaf,
+                    new vscode.TestMessage(
+                        outcome.err.trim() ||
+                            outcome.out.trim() ||
+                            `run-tests ${ns}/${name} answered no summary`
+                    ),
+                    duration
+                );
+                tally.error += 1;
+            } else if (summary.error > 0) {
+                run.errored(leaf, fallbackMessages(messages, `${name} errored`), duration);
+                tally.error += 1;
+            } else if (summary.fail > 0) {
+                run.failed(leaf, fallbackMessages(messages, `${name} failed`), duration);
+                tally.fail += 1;
+            } else if (summary.pass > 0) {
+                run.passed(leaf, duration);
+                tally.pass += 1;
+            } else {
+                // The namespace loaded but nothing ran: the `deftest` the item
+                // stands for is not in the session (renamed, or never saved).
+                run.skipped(leaf);
+            }
+        }
+        return tally;
+    }
+
+    /**
+     * Saving a `.phel` file re-runs the tests it affects, over the connection
+     * that is already open. Runs are chained per folder so two quick saves
+     * queue instead of racing each other through the same session.
+     */
+    private queueSaveRun(doc: vscode.TextDocument): void {
+        if (doc.languageId !== 'phel' || doc.uri.scheme !== 'file') {
+            return;
+        }
+        const folder = vscode.workspace.getWorkspaceFolder(doc.uri);
+        if (!folder || !runOnSave(folder) || !hasLiveNreplConnection(folder)) {
+            return;
+        }
+        const key = folder.uri.toString();
+        const previous = this.saveRuns.get(key) ?? Promise.resolve();
+        const next = previous.then(() => this.runAfterSave(folder, doc)).catch(() => undefined);
+        this.saveRuns.set(key, next);
+    }
+
+    private async runAfterSave(
+        folder: vscode.WorkspaceFolder,
+        doc: vscode.TextDocument
+    ): Promise<void> {
+        // The tree is normally built by the Explorer's `resolveHandler`; on save
+        // there may be no Testing view open to have asked for it.
+        await this.tree.ensureLoaded();
+        const items = await this.itemsAffectedBy(folder, doc);
+        if (items.length === 0) {
+            return;
+        }
+        const source = new vscode.CancellationTokenSource();
+        try {
+            await this.run(new vscode.TestRunRequest(items), source.token, false);
+        } finally {
+            source.dispose();
+        }
+    }
+
+    /**
+     * Which test items a save should re-run, in order of how directly they
+     * answer for the file: the file's own `deftest`s, else the test file its
+     * namespace maps to, else every test file that requires that namespace.
+     */
+    private async itemsAffectedBy(
+        folder: vscode.WorkspaceFolder,
+        doc: vscode.TextDocument
+    ): Promise<vscode.TestItem[]> {
+        const own = this.tree.itemFor(doc.uri);
+        if (own) {
+            return [own];
+        }
+        const relPath = relativeTo(folder, doc.uri);
+        const here: PhelFile = {
+            relPath,
+            ns: parseNsForm(doc.getText())?.name || pathToNs(relPath),
+        };
+        const layout = layoutOf(this.projectConfig ? await this.projectConfig.get(folder) : null);
+        const counterpart = testFileFor(here, layout.srcDirs, layout.testDirs);
+        if (counterpart) {
+            const item = this.tree.itemFor(
+                vscode.Uri.joinPath(folder.uri, ...counterpart.relPath.split('/'))
+            );
+            if (item) {
+                return [item];
+            }
+        }
+        return here.ns ? await this.itemsRequiring(here.ns) : [];
+    }
+
+    /** Every file item whose `(ns …)` form requires `ns`. */
+    private async itemsRequiring(ns: string): Promise<vscode.TestItem[]> {
+        const wanted = normalizeNs(ns);
+        const matches: vscode.TestItem[] = [];
+        for (const item of this.tree.roots()) {
+            if (!item.uri) {
+                continue;
+            }
+            let text: string;
+            try {
+                text = await fs.readFile(item.uri.fsPath, 'utf-8');
+            } catch {
+                continue; // deleted since the tree was built
+            }
+            const requires = requireEntries(parseNsForm(text));
+            if (requires.some((entry) => normalizeNs(entry.ns) === wanted)) {
+                matches.push(item);
+            }
+        }
+        return matches;
     }
 
     dispose(): void {
@@ -320,4 +575,81 @@ function findByName(byName: Map<string, AggregatedCase>, name: string): Aggregat
         }
     }
     return undefined;
+}
+
+/**
+ * The namespace a test file declares, read off disk — which is the copy the
+ * runtime will load, whatever an unsaved buffer says. Undefined when the file
+ * has no `(ns …)` form, which `run-tests` has no way to name.
+ */
+async function nsOfFile(uri: vscode.Uri): Promise<string | undefined> {
+    try {
+        return parseNsForm(await fs.readFile(uri.fsPath, 'utf-8'))?.name || undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * The failures in one op's report that belong to `name`. One op runs one
+ * `deftest`, so this is normally all of them; the filter is what keeps a
+ * reporter that ever printed more from being attributed to the wrong item.
+ */
+function failuresOf(outcome: NreplTestRun, name: string): PhelTestFailure[] {
+    const mine = outcome.failures.filter((failure) => failure.testName === name);
+    return mine.length > 0 ? mine : outcome.failures;
+}
+
+/**
+ * One TestMessage per failing assertion: the verbatim block the reporter
+ * printed, as a diff when the failure carries both sides of one, anchored at
+ * the location the headline named when that names this file.
+ */
+function messagesFor(
+    failures: readonly PhelTestFailure[],
+    fileUri: vscode.Uri
+): vscode.TestMessage[] {
+    const basename = path.basename(fileUri.fsPath);
+    return failures.map((failure) => {
+        const text = [failure.message, failure.detail].filter(Boolean).join('\n');
+        const message =
+            failure.expected !== undefined && failure.actual !== undefined
+                ? vscode.TestMessage.diff(text, failure.expected, failure.actual)
+                : new vscode.TestMessage(text);
+        if (failure.line !== undefined && failure.file === basename) {
+            // The reporter's line is 1-based, and points at the enclosing
+            // `(deftest …)` rather than the assertion (see phelNreplTestReport).
+            message.location = new vscode.Location(
+                fileUri,
+                new vscode.Position(Math.max(0, failure.line - 1), 0)
+            );
+        }
+        return message;
+    });
+}
+
+/** A verdict needs a message even when the reporter printed no block for it. */
+function fallbackMessages(
+    messages: vscode.TestMessage[],
+    text: string
+): vscode.TestMessage[] | vscode.TestMessage {
+    return messages.length > 0 ? messages : new vscode.TestMessage(text);
+}
+
+/** `appendOutput` writes into a terminal, where a bare LF does not return. */
+function asTerminal(text: string): string {
+    return text.replace(/\r?\n/g, '\r\n');
+}
+
+function messageOf(err: unknown): string {
+    return err instanceof Error ? err.message : String(err);
+}
+
+function relativeTo(folder: vscode.WorkspaceFolder, uri: vscode.Uri): string {
+    return path.relative(folder.uri.fsPath, uri.fsPath).split(path.sep).join('/');
+}
+
+/** Leave the run where `phel.status.describe` can report it. */
+function publishRun(ns: string, count: number, tally: Tally, via: PhelTestRunSummary['via']): void {
+    phelRuntimeState.setLastTestRun({ ns, count, ...tally, via });
 }

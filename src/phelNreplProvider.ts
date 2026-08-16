@@ -19,7 +19,9 @@
 // started lazily per workspace folder and reused. When `phel.nrepl.reloadOnSave`
 // is enabled, saving a `.phel` file triggers a reload of changed namespaces,
 // and while a connection is live hovering a symbol shows its current value
-// (see phelNreplHoverProvider.ts). Neither opens a connection on its own.
+// (see phelNreplHoverProvider.ts). The Test Explorer borrows a live connection
+// the same way, through `runTestsViaNrepl` / `reloadViaNrepl`. None of the three
+// opens a connection on its own.
 
 import * as vscode from 'vscode';
 import { type EvalEdit, commentResultEdit, replaceFormEdit } from './phelEvalEdits';
@@ -31,6 +33,12 @@ import { PhelInlineEval } from './phelInlineEval';
 import { formatInlineResult } from './phelInlineFormat';
 import { resolvePhelExecutable } from './phelExecutable';
 import { PhelNreplHoverProvider } from './phelNreplHoverProvider';
+import {
+    parseRunTestsSummary,
+    parseTestReport,
+    type PhelTestFailure,
+    type PhelTestSummary,
+} from './phelNreplTestReport';
 import { phelRuntimeState } from './phelRuntimeState';
 
 let inlineEval: PhelInlineEval | undefined;
@@ -240,6 +248,67 @@ export async function evalOverLiveConnection(
     reportResult('eval (history)', result);
     rememberResult(result);
     return true;
+}
+
+/** What one `run-tests` op said, parsed. */
+export interface NreplTestRun {
+    /** The `{:pass :fail :error}` map the op returned, null when it errored. */
+    summary: PhelTestSummary | null;
+    /** Every failing assertion the reporter printed. */
+    failures: PhelTestFailure[];
+    /** Everything the reporter printed, verbatim, for the run's output pane. */
+    out: string;
+    /** What the server reported as an error, if anything. */
+    err: string;
+}
+
+/** True when `folder` has a connection the Test Explorer may borrow. */
+export function hasLiveNreplConnection(folder: vscode.WorkspaceFolder): boolean {
+    return peekConnection(folder) !== undefined;
+}
+
+/**
+ * Reload changed namespaces over a connection that already exists. Answers
+ * false when there is none.
+ *
+ * The Explorer runs this once per run: `run-tests` loads a namespace it does
+ * not have yet, but it never re-reads one it does, so without a reload a REPL
+ * run would keep testing the code as it was when the session first saw it.
+ */
+export async function reloadViaNrepl(folder: vscode.WorkspaceFolder): Promise<boolean> {
+    const conn = peekConnection(folder);
+    if (!conn) {
+        return false;
+    }
+    await conn.reload(false);
+    return true;
+}
+
+/**
+ * Run `ns` (or the single `testName` in it) over a connection that already
+ * exists, and answer with the summary and the failures the reporter printed.
+ * Undefined when nothing is connected: like hover evaluation, the Explorer may
+ * only borrow a connection the user asked for, never start a server behind one.
+ *
+ * Nothing is written to the output channel — an Explorer run has a pane of its
+ * own, and one line per test there would bury what the eval commands report.
+ */
+export async function runTestsViaNrepl(
+    folder: vscode.WorkspaceFolder,
+    ns: string,
+    testName?: string
+): Promise<NreplTestRun | undefined> {
+    const conn = peekConnection(folder);
+    if (!conn) {
+        return undefined;
+    }
+    const result = await conn.runTests(ns, testName);
+    return {
+        summary: parseRunTestsSummary(result.values.join('\n')),
+        failures: parseTestReport(result.out),
+        out: result.out,
+        err: result.err,
+    };
 }
 
 function nsFor(doc: vscode.TextDocument): string | undefined {

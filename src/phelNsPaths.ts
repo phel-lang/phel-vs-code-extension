@@ -23,6 +23,24 @@ const PHEL_EXT = '.phel';
 export const DEFAULT_SRC_DIRS: readonly string[] = ['src'];
 export const DEFAULT_TEST_DIRS: readonly string[] = ['tests'];
 
+/** The directories a project keeps its two halves in. */
+export interface PhelLayout {
+    srcDirs: readonly string[];
+    testDirs: readonly string[];
+}
+
+/**
+ * The layout to work with, given whatever `phel config` could say. A CLI that
+ * is missing or too old answers `null`, and every rule here then falls back to
+ * the layout `phel init` scaffolds.
+ */
+export function layoutOf(config: PhelLayout | null | undefined): PhelLayout {
+    return {
+        srcDirs: config?.srcDirs.length ? config.srcDirs : DEFAULT_SRC_DIRS,
+        testDirs: config?.testDirs.length ? config.testDirs : DEFAULT_TEST_DIRS,
+    };
+}
+
 /** A `.phel` file and the namespace its `(ns ...)` form declares. */
 export interface PhelFile {
     /** Path relative to the workspace folder, `/`-separated. */

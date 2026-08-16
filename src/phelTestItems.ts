@@ -113,6 +113,24 @@ export class PhelTestItemTree implements vscode.Disposable {
         return items;
     }
 
+    /** The file item for `uri`, when the tree holds one. */
+    itemFor(uri: vscode.Uri): vscode.TestItem | undefined {
+        return this.controller.items.get(uri.toString());
+    }
+
+    /**
+     * Build the tree if nothing asked for it yet. The Explorer's own
+     * `resolveHandler` is the usual trigger, but running tests on save has to
+     * work in a window where the Testing view was never opened.
+     */
+    async ensureLoaded(): Promise<void> {
+        if (this.loaded) {
+            return;
+        }
+        this.loaded = true;
+        await this.reload();
+    }
+
     /** Rescan the workspace and replace the tree with what is there now. */
     async reload(): Promise<void> {
         const uris = await findCandidateFiles(this.projectConfig);
