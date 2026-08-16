@@ -12,12 +12,17 @@
 
 ### Changed
 
+- The extension now loads on 118 KB of JavaScript instead of 507 KB. The language client (`vscode-languageclient` and friends, 68% of the old bundle, opt-in and off by default) and the Xdebug debug adapter ship as sibling bundles that `extension.js` loads only when `phel.lsp.enabled` is on, respectively when a debug session starts. `npm run bundle:report` prints what each bundle is made of.
+
 - Every analyzer now reads one shared parse cache (`src/phelParseCache.ts`) instead of re-parsing the buffer per feature. Folding, ns, migration, refactor, selection, completion-context, REPL, form-highlight and scope all hit the same tree, and `Form` is immutable so sharing it is safe. Keyed by the source text, so a stale buffer can never be served.
 
 ### Fixed
 
 - Every Phel CLI invocation now works on Windows. `vendor/bin/phel` is a PHP script Windows cannot execute, and Node refuses to spawn Composer's `vendor/bin/phel.bat` proxy without a shell, so diagnostics, formatting, the test/benchmark runs, the REPL and nREPL terminals and the language server all failed there. A single resolver (`src/phelInvocation.ts`) now does what the `.bat` does — run `php vendor/bin/phel …`, argv array intact, no quoting — and falls back to a shelled-out batch file when there is no PHP proxy. Find All References also matches open editors by URI rather than path, since the same file can be spelled with either drive-letter case. CI builds on macOS and Windows too.
 - Commands in a multi-root workspace now run in the right folder. `Phel: Run Benchmarks in Current File` and the `▶ Run benchmark` lens follow the file they were invoked on — with the path passed relative to its folder, as the test runner already did — instead of whatever the active editor happened to be; watch, build, init, balance, doctor, show-config and lint-workspace use the active file's folder and ask which one to use when that is ambiguous, rather than silently taking the first folder. The language server is still one instance rooted at the first folder, which is now documented in `docs/settings.md`.
+
+- Stopping a Phel debug session no longer leaves it hanging in the editor. The adapter answered the graceful `terminate` request but never reported the debuggee as gone, so the session stayed in the UI until Stop was pressed a second time.
+
 - `npm test` no longer risks silently skipping the top-level unit tests. The glob was unquoted, and `sh` expands `**` as a single `*`, so the moment any subdirectory of `out/test/` held a `*.test.js` the shell would have resolved the pattern to that subdirectory alone.
 
 ### Docs

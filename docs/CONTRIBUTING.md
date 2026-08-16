@@ -20,12 +20,46 @@ Useful scripts:
 | `npm run format` / `npm run format:check` | Prettier |
 | `npm test` | Mocha unit suite |
 | `npm run test:integration` | Mocha suite inside a real VS Code (see below) |
+| `npm run bundle:report` | What each shipped bundle is made of (see below) |
 
 `npm run compile && npm run lint && npm test` is the gate every PR has to pass.
 
 ## Running the extension locally
 
 Open the repo in VS Code and press <kbd>F5</kbd>. That starts an Extension Development Host with this extension loaded and source-mapped - set breakpoints in `src/*.ts`, then exercise the extension by opening a `.phel` file in the Host window.
+
+## What ships: three bundles
+
+`npm run bundle` (esbuild, `esbuild.js`) emits three files into `dist/`, not one:
+
+| Bundle | Loaded | Size (minified) |
+|--------|--------|-----------------|
+| `extension.js` | on activation | ~118 KB, 99% our own code |
+| `phelLanguageClient.js` | only when `phel.lsp.enabled` is on | ~348 KB, almost all `vscode-languageclient` |
+| `phelDebugAdapter.js` | only once a debug session starts | ~51 KB, half `@vscode/debugadapter` |
+
+`src/extension.ts` reaches both siblings through `await import('./phelXxx.js')`, and
+a plugin in `esbuild.js` marks exactly those two specifiers external so the main
+bundle keeps the runtime import instead of inlining them. The compiled names are
+the same under `out/` (tsc, F5) as under `dist/` (esbuild), so both trees load
+the same way. Modules both bundles need (`phelExecutable`, `sourceMapManager`, …)
+are duplicated rather than shared; none of them holds module-level state, and the
+whole duplication costs ~10 KB.
+
+Two rules follow. Do not import `./phelLanguageClient` or `./phelDebugAdapter`
+statically from `src/extension.ts` — that puts them back on the activation path.
+Nothing about that would fail on its own, so the build checks the emitted
+`extension.js` for both runtime imports and errors out when one is missing. And
+when adding a heavy dependency, run:
+
+```bash
+npm run bundle:report
+```
+
+which bundles for production and prints each bundle broken down by package,
+read from the metafile esbuild writes to `dist/meta.json` (kept out of the vsix).
+`bundle.itest.ts` asserts the split from the same metafile and loads both
+siblings in a real host, so a regression fails the integration run.
 
 ## Integration tests
 

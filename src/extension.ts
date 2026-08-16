@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as net from 'net';
 import { SourceMapManager } from './sourceMapManager';
-import { PhelDebugSession } from './phelDebugAdapter';
 import { PhelCompletionProvider } from './phelCompletionProvider';
 import { PhelHoverProvider } from './phelHoverProvider';
 import { PhelSignatureHelpProvider } from './phelSignatureHelpProvider';
@@ -39,18 +38,35 @@ import { PhelFormHighlight } from './phelFormHighlight';
 import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
 import { PhelStatusBar } from './phelStatusBar';
 import { PhelTestController } from './phelTestController';
-import {
-    isLanguageServerEnabled,
-    isLanguageServerRunning,
-    restartLanguageClient,
-    startLanguageClient,
-    stopLanguageClient,
-} from './phelLanguageClient';
 import { affectsPhelExecutable } from './phelExecutable';
 
 let sourceMapManager: SourceMapManager;
 /** Guards against registering the bundled providers twice (startup + later fallback). */
 let languageProvidersRegistered = false;
+
+/**
+ * The language client ships as its own bundle: `vscode-languageclient` is by
+ * far the heaviest dependency we have, and the server it drives is opt-in and
+ * off by default. Loaded on first use, then remembered — the handlers below
+ * read this directly so that a session with the server disabled never touches
+ * the module (and never pays for loading it).
+ */
+type PhelLanguageClient = typeof import('./phelLanguageClient.js');
+let languageClient: PhelLanguageClient | undefined;
+
+async function loadLanguageClient(): Promise<PhelLanguageClient> {
+    languageClient ??= await import('./phelLanguageClient.js');
+    return languageClient;
+}
+
+/**
+ * Whether to use the Phel language server. Read here rather than in
+ * `phelLanguageClient` so that answering "no" — the default — does not load
+ * the client bundle just to find that out.
+ */
+function isLanguageServerEnabled(): boolean {
+    return vscode.workspace.getConfiguration('phel').get<boolean>('lsp.enabled', false);
+}
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Phel extension activated');
@@ -151,17 +167,18 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Toggling the server on/off swaps the entire provider stack, which
             // can't be done safely in place — ask for a reload.
+            const lsp = languageClient;
             if (e.affectsConfiguration('phel.lsp.enabled')) {
                 void promptReloadForLspToggle();
             } else if (
-                isLanguageServerRunning() &&
+                lsp?.isLanguageServerRunning() &&
                 (e.affectsConfiguration('phel.lsp.command') ||
                     e.affectsConfiguration('phel.lsp.args') ||
                     affectsPhelExecutable(e))
             ) {
                 // Path/args changed while the server is up — restart it so the
                 // change takes effect without a reload.
-                void restartLanguageClient(context);
+                void lsp.restartLanguageClient(context);
             }
         })
     );
@@ -179,17 +196,27 @@ export function activate(context: vscode.ExtensionContext) {
     // TypeScript providers (the default). We never run both, to avoid duplicate
     // completions and conflicting results.
     if (isLanguageServerEnabled()) {
-        // The fallback can be triggered either at startup (server can't launch)
-        // or later (server proves unusable); register the providers at most once.
+        // The fallback can be triggered either at startup (client bundle missing
+        // or server can't launch) or later (server proves unusable); register
+        // the providers at most once.
         const fallBack = (): void => registerLanguageProviders(context);
-        void startLanguageClient(context, { onUnrecoverable: fallBack }).then((started) => {
-            if (!started) {
+        void (async () => {
+            try {
+                const lsp = await loadLanguageClient();
+                if (await lsp.startLanguageClient(context, { onUnrecoverable: fallBack })) {
+                    return;
+                }
                 console.warn(
                     'Phel language server could not start; using bundled language providers.'
                 );
-                fallBack();
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                console.warn(
+                    `Phel language client could not be loaded (${message}); using bundled language providers.`
+                );
             }
-        });
+            fallBack();
+        })();
     } else {
         registerLanguageProviders(context);
     }
@@ -266,7 +293,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate(): Thenable<void> | undefined {
-    return stopLanguageClient();
+    return languageClient?.stopLanguageClient();
 }
 
 /**
@@ -480,11 +507,13 @@ async function pickSymbol(): Promise<string | undefined> {
 class PhelDebugAdapterFactory implements vscode.DebugAdapterDescriptorFactory {
     private server?: net.Server;
 
-    createDebugAdapterDescriptor(
+    async createDebugAdapterDescriptor(
         _session: vscode.DebugSession,
         _executable: vscode.DebugAdapterExecutable | undefined
-    ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-        // Create an inline debug adapter
+    ): Promise<vscode.DebugAdapterDescriptor> {
+        // The adapter and the Xdebug/source-map machinery behind it ship as
+        // their own bundle; nothing needs them until a session actually starts.
+        const { PhelDebugSession } = await import('./phelDebugAdapter.js');
         return new vscode.DebugAdapterInlineImplementation(new PhelDebugSession());
     }
 

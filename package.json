@@ -914,6 +914,7 @@
         "bundle": "node esbuild.js",
         "bundle:prod": "node esbuild.js --production",
         "bundle:watch": "node esbuild.js --watch",
+        "bundle:report": "npm run bundle:prod && node scripts/bundle-report.cjs",
         "compile": "tsc -p ./",
         "typecheck": "tsc --noEmit -p ./",
         "watch": "tsc -watch -p ./",

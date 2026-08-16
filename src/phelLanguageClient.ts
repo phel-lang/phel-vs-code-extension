@@ -2,16 +2,21 @@
 //
 // phel-lang ships a full LSP v3.17 server (`phel lsp`, stdio, JSON-RPC 2.0
 // with Content-Length framing) backed by the same semantic analyzer the
-// compiler uses. When enabled (the default), we spawn it and delegate
-// completion, hover, signature help, go-to-definition, find-references,
-// rename, document/workspace symbols, formatting, and diagnostics to it —
-// gaining PHP-interop intelligence (reflection over `php/->`, `php/::`,
-// `php/new`) and semantically scoped rename/references that the bundled
-// TypeScript providers cannot match.
+// compiler uses. When `phel.lsp.enabled` is on (it is opt-in), we spawn it and
+// delegate completion, hover, signature help, go-to-definition,
+// find-references, rename, document/workspace symbols, formatting, and
+// diagnostics to it — gaining PHP-interop intelligence (reflection over
+// `php/->`, `php/::`, `php/new`) and semantically scoped rename/references
+// that the bundled TypeScript providers cannot match.
 //
 // The client probes whether `phel lsp` is runnable; if the installed Phel is
 // too old to know the command (or the spawn fails), it reports failure so the
 // caller can fall back to the in-TypeScript providers.
+//
+// `vscode-languageclient` is the heaviest dependency in the extension, so this
+// module is its own bundle (see esbuild.js) and `src/extension.ts` imports it
+// lazily — a session with the server off never loads it. Keep the setting check
+// out of here for that reason: it lives in `extension.ts`.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -49,11 +54,6 @@ let outputChannel: vscode.OutputChannel | undefined;
 /** Invoked once when the server proves unusable, so the caller can fall back. */
 let onUnrecoverable: (() => void) | undefined;
 let gaveUp = false;
-
-export function isLanguageServerEnabled(): boolean {
-    // Opt-in: current `phel lsp` builds can exit on idle, so default off until upstream is stable.
-    return vscode.workspace.getConfiguration('phel').get<boolean>('lsp.enabled', false);
-}
 
 export function isLanguageServerRunning(): boolean {
     return client !== undefined && client.state === State.Running;
