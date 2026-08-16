@@ -140,6 +140,74 @@ describe('parsePhelFile', function () {
         });
     });
 
+    describe('metadata', function () {
+        it('reads :doc from the meta-map after the name', function () {
+            const d = single(`(def next {:doc "Returns the rest."} (fn [xs] xs))`);
+            assert.strictEqual(d.doc, 'Returns the rest.');
+        });
+
+        it('keeps a docstring literal over a :doc key', function () {
+            const d = single(`(defn f "The literal." {:doc "The key."} [x] x)`);
+            assert.strictEqual(d.doc, 'The literal.');
+        });
+
+        it('marks :private true in the meta-map as private', function () {
+            const d = single(`(def concat1 {:private true :doc "Internal."} (fn [a b] a))`);
+            assert.strictEqual(d.private, true);
+            assert.strictEqual(d.doc, 'Internal.');
+        });
+
+        it('marks ^:private before the name as private', function () {
+            const d = single(`(def ^:private symbol-munge (php/array))`);
+            assert.strictEqual(d.name, 'symbol-munge');
+            assert.strictEqual(d.private, true);
+        });
+
+        it('makes :macro true a macro, keeping the operator as the form', function () {
+            const d = single(`
+(def defn
+  {:macro true
+   :doc "Define a new global function."}
+  (fn [name & fdecl] fdecl))
+`);
+            assert.strictEqual(d.kind, 'macro');
+            assert.strictEqual(d.form, 'def');
+            assert.strictEqual(d.doc, 'Define a new global function.');
+            assert.strictEqual(d.signature, undefined);
+        });
+
+        it('reads a ^{…} map before the name, and lets the trailing map win', function () {
+            assert.strictEqual(single(`(def ^{:doc "From the tag."} x 1)`).doc, 'From the tag.');
+            assert.strictEqual(single(`(def ^{:private true} y 1)`).private, true);
+            assert.strictEqual(
+                single(`(def ^{:doc "Tag."} z {:doc "Map."} 1)`).doc,
+                'Map.',
+                'the meta-map after the name is the later word'
+            );
+        });
+
+        it('steps over type hints without reading anything from them', function () {
+            const d = single(`(defn- ^string to-str [x] x)`);
+            assert.strictEqual(d.name, 'to-str');
+            assert.strictEqual(d.private, true);
+            assert.strictEqual(d.signature, '(to-str x)');
+        });
+
+        it('ignores :private and :macro spelled inside a docstring', function () {
+            const d = single(
+                `(defn f {:doc "Pass {:private true} to hide it. :macro true"} [x] x)`
+            );
+            assert.strictEqual(d.private, false);
+            assert.strictEqual(d.kind, 'fn');
+        });
+
+        it('ignores a false or absent flag, and a longer key', function () {
+            assert.strictEqual(single(`(def a {:private false} 1)`).private, false);
+            assert.strictEqual(single(`(def b {:private-ish true} 1)`).private, false);
+            assert.strictEqual(single(`(def c {:macro false} 1)`).kind, 'def');
+        });
+    });
+
     describe('type, protocol and test forms', function () {
         it('indexes a defstruct with its positional constructor signature', function () {
             const doc = single('(defstruct Point [x y])', 'my.app');

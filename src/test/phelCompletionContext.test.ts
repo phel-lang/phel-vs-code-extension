@@ -6,7 +6,7 @@ import {
     referableNames,
     requirableNamespaces,
 } from '../phelCompletionContext';
-import type { PhelDoc } from '../phelDocs';
+import { parsePhelFile, type PhelDoc } from '../phelDocs';
 
 const DOCS: PhelDoc[] = [
     { name: 'blank?', ns: 'phel.string', qualifiedName: 'phel.string/blank?', kind: 'fn' },
@@ -176,6 +176,21 @@ describe('phelCompletionContext.referableNames', () => {
     it('skips private names and other namespaces', () => {
         assert.ok(!referableNames('phel.string', DOCS).includes('hidden'));
         assert.deepEqual(referableNames('phel.test', DOCS), ['is']);
+    });
+
+    it('skips the names a workspace file hides with metadata rather than `-`', () => {
+        // The indexer feeds these straight from `parsePhelFile`, so a `def`
+        // made private with `^:private` or `{:private true}` has to arrive
+        // private or it is offered to every other namespace in the project.
+        const indexed = parsePhelFile(
+            `(ns my.app)
+(defn public-one [] 1)
+(defn- hidden [] 1)
+(def ^:private secret 2)
+(def token {:private true} 3)`,
+            'my.app'
+        );
+        assert.deepEqual(referableNames('my.app', indexed), ['public-one']);
     });
 });
 
