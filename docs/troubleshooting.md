@@ -40,6 +40,9 @@ The daemon evaluates each dependency once per process; re-evaluating a namespace
 **The same problem is listed twice.**
 Shouldn't happen: the live pass drops any finding the on-save run already reports at the same position with the same message. If you do see a pair, one of them is a rule finding (`phel/…`) and the other is not, which means they are genuinely two findings. `phel.diagnostics.live: false` turns the live pass off.
 
+**Problems from the `phel` task type point at a different copy of the file.**
+Phel resolves symlinks in every path it prints, so on a workspace opened through one (`/var/…`, which is `/private/var/…` on macOS, or a symlinked `~/Code`) the CLI names a file differently than the editor does. Everything the extension reports itself — on-save and live diagnostics, go to definition, find all references, test coverage — is mapped back to the path you opened. A task's problems are not ours to map: VS Code builds those markers from the task's output before the extension ever sees them, so they show under the resolved path and open a second copy of the file. Opening the workspace at its resolved path avoids it entirely.
+
 **Analysis stops after a while.**
 A daemon that dies or hangs is restarted, up to five times a minute; past that the extension gives up for the session rather than spin up processes forever. The output channel logs each restart and the moment it gives up. Changing `phel.executablePath` (or the `phel.diagnostics.*` settings), or running the restart command, starts over with a clean budget.
 

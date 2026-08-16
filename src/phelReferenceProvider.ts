@@ -17,6 +17,7 @@ import { findOccurrences } from './phelReferences';
 import { resolveLocalAt, localOccurrences } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PHEL_SYMBOL_RE } from './phelSymbolToken';
+import { folderForUri, uriFromCli } from './phelWorkspace';
 
 export class PhelReferenceProvider implements vscode.ReferenceProvider {
     constructor(private readonly indexer: PhelWorkspaceIndexer) {}
@@ -69,13 +70,17 @@ export class PhelReferenceProvider implements vscode.ReferenceProvider {
             parseNsForm(src)?.name ?? '',
             word
         );
+        const folder = folderForUri(document.uri);
         const out: Hit[] = [];
         for (const location of locations) {
             const position = toVscodePosition(location);
             if (!position) {
                 continue;
             }
-            const uri = vscode.Uri.file(location.uri);
+            // The daemon indexes resolved paths; keyed that way a hit would
+            // neither dedupe against the token scan's nor give way to a dirty
+            // buffer, and it would point at a file the editor shows twice.
+            const uri = uriFromCli(location.uri, folder);
             const start = new vscode.Position(position.line, position.character);
             out.push({
                 file: uri.toString(),

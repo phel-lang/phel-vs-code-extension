@@ -21,6 +21,7 @@ import { coverageEnv } from './phelInvocation';
 import type { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 import { findDeftests } from './phelTestScanner';
 import { PhelTestItemTree, groupQueue, nameForLeaf } from './phelTestItems';
+import { pathFromCli } from './phelWorkspace';
 import { type AggregatedCase, groupByName, parseJUnit } from './junitParser';
 import { type CloverFile, parseClover } from './cloverParser';
 
@@ -140,16 +141,16 @@ function messageFor(aggregated: AggregatedCase): vscode.TestMessage[] {
 }
 
 /**
- * Build one FileCoverage (and cache its per-line detail) for a source file
- * from all Clover entries that referenced it during the run. A line is covered
- * if it was executed in any entry; the summary counts come from the merged set.
+ * Build one FileCoverage (and cache its per-line detail) for the source file
+ * `uri` names, from all Clover entries that referenced it during the run. A
+ * line is covered if it was executed in any entry; the summary counts come
+ * from the merged set.
  */
 function mergeCoverage(
+    uri: vscode.Uri,
     entries: readonly CloverFile[],
     detailStore: Map<string, vscode.StatementCoverage[]>
 ): vscode.FileCoverage {
-    const uri = vscode.Uri.file(entries[0].file);
-
     const coveredByLine = new Map<number, boolean>();
     for (const entry of entries) {
         for (const l of entry.lines) {
@@ -249,9 +250,13 @@ export class PhelTestController implements vscode.Disposable {
 
                 if (withCoverage) {
                     for (const entry of outcome.coverage) {
-                        const list = coverageByUri.get(entry.file) ?? [];
+                        // Clover names every file by its resolved path; keyed
+                        // that way the coverage would decorate a document the
+                        // editor considers a different file.
+                        const file = pathFromCli(entry.file, folder);
+                        const list = coverageByUri.get(file) ?? [];
                         list.push(entry);
-                        coverageByUri.set(entry.file, list);
+                        coverageByUri.set(file, list);
                     }
                     if (outcome.coverageDriverMissing && !warnedNoDriver) {
                         warnedNoDriver = true;
@@ -290,8 +295,10 @@ export class PhelTestController implements vscode.Disposable {
             }
 
             if (withCoverage) {
-                for (const [, entries] of coverageByUri) {
-                    run.addCoverage(mergeCoverage(entries, this.coverageDetails));
+                for (const [file, entries] of coverageByUri) {
+                    run.addCoverage(
+                        mergeCoverage(vscode.Uri.file(file), entries, this.coverageDetails)
+                    );
                 }
             }
         } finally {

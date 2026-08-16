@@ -10,7 +10,7 @@ import {
 } from './phelDiagnostics';
 import { affectsPhelExecutable, resolvePhelExecutable } from './phelExecutable';
 import { toInvocation } from './phelInvocation';
-import { pickWorkspaceFolder } from './phelWorkspace';
+import { pathFromCli, pickWorkspaceFolder, uriFromCli } from './phelWorkspace';
 
 const COLLECTION_NAME = 'phel';
 
@@ -105,8 +105,13 @@ export function registerDiagnostics(
                     return;
                 }
                 // `phel lint` may report on files the linted one requires, so
-                // only the entries for this document belong to it.
-                const byUri = groupDiagnosticsByUri(diagnostics, document.uri.fsPath);
+                // only the entries for this document belong to it — and it
+                // names each of them by its resolved path, which is not how
+                // the editor spells one under a symlinked folder.
+                const byUri = groupDiagnosticsByUri(
+                    withWorkspacePaths(diagnostics, folder),
+                    document.uri.fsPath
+                );
                 setDiagnostics(document.uri, byUri.get(document.uri.fsPath) ?? []);
             })
             .catch((err) => {
@@ -146,7 +151,7 @@ export function registerDiagnostics(
                     clearAllDiagnostics(collection, live);
                     let files = 0;
                     for (const [fsPath, forFile] of groupDiagnosticsByUri(diagnostics)) {
-                        setDiagnostics(vscode.Uri.file(fsPath), forFile);
+                        setDiagnostics(uriFromCli(fsPath, folder), forFile);
                         files++;
                     }
                     void vscode.window.showInformationMessage(
@@ -269,6 +274,19 @@ function runPhel(
             resolve(parsePhelAnalyzeOutput(stdout));
         });
     });
+}
+
+/**
+ * The same findings with every path `phel lint` printed spelled the way the
+ * editor spells it, so grouping them by uri can hit an open document.
+ */
+function withWorkspacePaths(
+    diagnostics: readonly PhelDiagnostic[],
+    folder: vscode.WorkspaceFolder | undefined
+): PhelDiagnostic[] {
+    return diagnostics.map((diag) =>
+        diag.uri ? { ...diag, uri: pathFromCli(diag.uri, folder) } : diag
+    );
 }
 
 /** Map phel diagnostics onto the editor's, shared with the live provider. */

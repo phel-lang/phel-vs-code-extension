@@ -22,6 +22,7 @@ import {
 import { resolveLocalAt } from './phelScope';
 import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 import { mergedDocs } from './phelProviderSupport';
+import { folderForUri, uriFromCli } from './phelWorkspace';
 
 export class PhelDefinitionProvider implements vscode.DefinitionProvider {
     constructor(private readonly indexer: PhelWorkspaceIndexer) {}
@@ -83,7 +84,9 @@ export class PhelDefinitionProvider implements vscode.DefinitionProvider {
         }
         const end = toVscodePosition({ line: location.endLine, col: location.endCol });
         return new vscode.Location(
-            vscode.Uri.file(location.uri),
+            // The daemon indexes resolved paths; a location spelled that way
+            // opens a second copy of a file the editor may already have open.
+            uriFromCli(location.uri, folderForUri(document.uri)),
             new vscode.Range(
                 new vscode.Position(start.line, start.character),
                 new vscode.Position(end?.line ?? start.line, end?.character ?? start.character)
@@ -116,7 +119,7 @@ export class PhelDefinitionProvider implements vscode.DefinitionProvider {
         const location = definitionLocation(definition);
         return location
             ? new vscode.Location(
-                  vscode.Uri.file(location.uri),
+                  uriFromCli(location.uri, folderForUri(document.uri)),
                   new vscode.Position(location.line, location.character)
               )
             : null;
