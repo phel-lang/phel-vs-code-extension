@@ -1,10 +1,14 @@
-// Pure helpers for the diagnostics-on-save provider:
+// Pure helpers for the diagnostics providers:
 //
 // `phel analyze <file>` prints a JSON array of diagnostic objects on stdout.
 // `parsePhelAnalyzeOutput` turns that into a typed list, tolerating noise
 // (banner / trailing newline / non-JSON pre-amble) by walking forward to the
 // first `[` that opens a valid JSON array. Each entry is normalised so the
 // VS Code provider can map it to `vscode.Diagnostic` without further parsing.
+//
+// `phel api-daemon` answers `analyzeSource` with the same objects, already
+// decoded from JSON, so the entry normalisation is shared with it through
+// `normaliseDiagnostics`.
 //
 // Kept free of `vscode` imports to make unit testing straightforward.
 
@@ -58,14 +62,47 @@ export function parsePhelAnalyzeOutput(stdout: string): PhelDiagnostic[] {
         return [];
     }
 
+    return normaliseDiagnostics(parsed);
+}
+
+/**
+ * Normalise already-decoded diagnostic objects (a `phel analyze` payload, or
+ * the `result` of an `analyzeSource` daemon call). Entries without a message
+ * or a numeric start position are dropped rather than guessed at.
+ */
+export function normaliseDiagnostics(raw: readonly unknown[]): PhelDiagnostic[] {
     const out: PhelDiagnostic[] = [];
-    for (const raw of parsed) {
-        const diag = normaliseEntry(raw);
+    for (const entry of raw) {
+        const diag = normaliseEntry(entry);
         if (diag) {
             out.push(diag);
         }
     }
     return out;
+}
+
+/**
+ * Drop the live (on-type) entries the on-save pass already reports, so a
+ * finding both engines make is squiggled once.
+ *
+ * Matching is on position + message, never on the code: `phel lint` promotes
+ * the analyzer's own findings verbatim - same message, same range - under its
+ * own rule codes (`PHEL001` becomes `phel/unresolved-symbol`, `PHEL002`
+ * becomes `phel/arity-mismatch`), so comparing codes would dedupe nothing.
+ */
+export function dedupeLiveDiagnostics(
+    live: readonly PhelDiagnostic[],
+    saved: readonly PhelDiagnostic[]
+): PhelDiagnostic[] {
+    if (saved.length === 0) {
+        return [...live];
+    }
+    const reported = new Set(saved.map(fingerprint));
+    return live.filter((diag) => !reported.has(fingerprint(diag)));
+}
+
+function fingerprint(diag: PhelDiagnostic): string {
+    return `${diag.startLine}:${diag.startCol}:${diag.message}`;
 }
 
 /**

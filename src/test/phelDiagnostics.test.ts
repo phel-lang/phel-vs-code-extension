@@ -1,7 +1,9 @@
 import * as assert from 'assert';
 import {
+    dedupeLiveDiagnostics,
     groupDiagnosticsByUri,
     isUnknownCommandError,
+    normaliseDiagnostics,
     parsePhelAnalyzeOutput,
     toZeroBasedRange,
     PhelDiagnostic,
@@ -171,6 +173,61 @@ describe('groupDiagnosticsByUri', function () {
 
     it('returns an empty map for an empty run', function () {
         assert.strictEqual(groupDiagnosticsByUri([]).size, 0);
+    });
+});
+
+describe('normaliseDiagnostics', function () {
+    it('normalises the already-decoded objects a daemon call returns', function () {
+        const out = normaliseDiagnostics([
+            {
+                code: 'PHEL001',
+                severity: 'error',
+                message: "Cannot resolve symbol 'foo'.",
+                uri: '/tmp/file.phel',
+                startLine: 3,
+                startCol: 4,
+                endLine: 3,
+                endCol: 7,
+            },
+            { message: 'no position' },
+            'not an object',
+        ]);
+        assert.strictEqual(out.length, 1);
+        assert.strictEqual(out[0].code, 'PHEL001');
+        assert.strictEqual(out[0].endCol, 7);
+    });
+});
+
+describe('dedupeLiveDiagnostics', function () {
+    const diag = (message: string, startLine = 1, startCol = 0): PhelDiagnostic => ({
+        message,
+        severity: 'error',
+        startLine,
+        startCol,
+        endLine: startLine,
+        endCol: startCol + 3,
+    });
+
+    it('drops a live entry the on-save run already reports', function () {
+        // What `phel lint` does to an analyzer finding: same message, same
+        // position, its own rule code. Matching on the code would miss it.
+        const live = [{ ...diag("Cannot resolve symbol 'foo'."), code: 'PHEL001' }];
+        const saved = [
+            { ...diag("Cannot resolve symbol 'foo'."), code: 'phel/unresolved-symbol' },
+            { ...diag("'x' is never used", 9), code: 'phel/unused-binding' },
+        ];
+        assert.deepStrictEqual(dedupeLiveDiagnostics(live, saved), []);
+    });
+
+    it('keeps a live entry the saved run reports elsewhere', function () {
+        const live = [diag('same message', 4)];
+        const saved = [diag('same message', 9)];
+        assert.deepStrictEqual(dedupeLiveDiagnostics(live, saved), live);
+    });
+
+    it('keeps everything when nothing was saved', function () {
+        const live = [diag('one'), diag('two', 2)];
+        assert.deepStrictEqual(dedupeLiveDiagnostics(live, []), live);
     });
 });
 

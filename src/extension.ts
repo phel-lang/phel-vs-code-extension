@@ -12,6 +12,7 @@ import { PHEL_DOCS } from './phelCoreDocs';
 import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
 import { buildQuickPickEntries } from './phelShowDoc';
 import { registerDiagnostics } from './phelDiagnosticsProvider';
+import { PhelDaemonDiagnostics } from './phelDaemonDiagnosticsProvider';
 import { resolvePhelExecutable } from './phelExecutable';
 import { PhelFormatProvider } from './phelFormatProvider';
 import { PhelTestCodeLensProvider } from './phelTestCodeLensProvider';
@@ -445,7 +446,11 @@ function registerLanguageProviders(
         }
     });
 
-    registerDiagnostics(context);
+    // Live analysis first: the on-save pass hands it every save and asks it to
+    // serve the `analyze` engine, so it has to exist before that registers.
+    const liveDiagnostics = new PhelDaemonDiagnostics();
+    context.subscriptions.push(liveDiagnostics);
+    registerDiagnostics(context, liveDiagnostics);
 
     context.subscriptions.push(
         vscode.languages.registerDocumentFormattingEditProvider('phel', new PhelFormatProvider())

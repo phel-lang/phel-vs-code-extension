@@ -68,6 +68,25 @@ describe('diagnostics', function () {
             await delay(150);
         }
     });
+
+    it('stays silent while typing, with no daemon to analyse with either', async function () {
+        // The live pass fires 500 ms after a change and spawns `phel
+        // api-daemon`. There is no `phel` here, so the spawn fails - and has
+        // to fail into nothing: no squiggle, no notification, no throw.
+        const core = await openFixture('src', 'app', 'core.phel');
+        const edit = new vscode.WorkspaceEdit();
+        edit.insert(core.uri, new vscode.Position(core.lineCount, 0), '\n; typed\n');
+        assert.ok(await vscode.workspace.applyEdit(edit), 'the edit must apply');
+
+        try {
+            for (let i = 0; i < 10; i++) {
+                assert.deepEqual(vscode.languages.getDiagnostics(core.uri), []);
+                await delay(150);
+            }
+        } finally {
+            await vscode.commands.executeCommand('workbench.action.files.revert');
+        }
+    });
 });
 
 /** The migration diagnostic covering `text`, addressed by what it flagged. */
