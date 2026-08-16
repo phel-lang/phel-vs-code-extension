@@ -1,10 +1,11 @@
-// Guards the menu / submenu / keybinding wiring in `package.json`. VS Code
-// silently drops a menu item whose `command` it cannot resolve and a submenu
-// reference whose id was never declared, so a typo here costs a whole context
-// menu with nothing in the logs. Nothing but this test reads those tables.
+// Guards the menu / submenu / keybinding / walkthrough wiring in `package.json`.
+// VS Code silently drops a menu item whose `command` it cannot resolve and a
+// submenu reference whose id was never declared, so a typo here costs a whole
+// context menu with nothing in the logs. Nothing but this test reads those
+// tables.
 
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 interface ContributedCommand {
@@ -31,16 +32,40 @@ interface Keybinding {
     when?: string;
 }
 
+interface WalkthroughStep {
+    id: string;
+    title: string;
+    description: string;
+    media: { markdown?: string; image?: string };
+    completionEvents?: string[];
+}
+
+interface Walkthrough {
+    id: string;
+    title: string;
+    description: string;
+    steps: WalkthroughStep[];
+}
+
+const repoRoot = join(__dirname, '..', '..');
+
 const manifest: {
     contributes: {
         commands: ContributedCommand[];
         submenus?: Submenu[];
         menus?: Record<string, MenuItem[]>;
         keybindings?: Keybinding[];
+        walkthroughs?: Walkthrough[];
     };
-} = JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf-8'));
+} = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8'));
 
-const { commands, submenus = [], menus = {}, keybindings = [] } = manifest.contributes;
+const {
+    commands,
+    submenus = [],
+    menus = {},
+    keybindings = [],
+    walkthroughs = [],
+} = manifest.contributes;
 
 const commandIds = new Set(commands.map((c) => c.command));
 const submenuIds = new Set(submenus.map((s) => s.id));
@@ -52,6 +77,23 @@ const menuItems: [string, MenuItem][] = Object.entries(menus).flatMap(([menu, it
 
 /** Codicon reference, e.g. `$(play)`. Icons may also be a light/dark path pair. */
 const CODICON = /^\$\([a-z0-9-]+\)$/;
+
+/** Every `[walkthrough id, step]` pair across `contributes.walkthroughs`. */
+const walkthroughSteps: [string, WalkthroughStep][] = walkthroughs.flatMap((walkthrough) =>
+    walkthrough.steps.map((step): [string, WalkthroughStep] => [walkthrough.id, step])
+);
+
+/** A `command:` link in a step description, with the args query stripped. */
+const COMMAND_LINK = /\]\(command:([^?)\s]+)/g;
+
+/**
+ * Built-in commands a step button is allowed to invoke. Deliberately tiny: a
+ * built-in that gets renamed or removed leaves a dead button with no error.
+ */
+const BUILT_IN_COMMANDS = new Set([
+    'workbench.action.openSettings',
+    'workbench.view.testing.focus',
+]);
 
 describe('package.json contributions', () => {
     it('references only declared commands from its menus', () => {
@@ -125,6 +167,42 @@ describe('package.json contributions', () => {
         for (const item of menus['editor/title/run'] ?? []) {
             const command = commands.find((c) => c.command === item.command);
             assert.ok(command?.icon, `${item.command} appears in editor/title/run without an icon`);
+        }
+    });
+});
+
+// The Getting Started walkthrough fails just as quietly: a button whose command
+// does not exist does nothing when clicked, a missing markdown file renders as
+// an empty pane, and a step without a completion event never ticks off.
+describe('package.json walkthrough', () => {
+    it('names a resolvable command in every step button', () => {
+        for (const [walkthrough, step] of walkthroughSteps) {
+            for (const [, command] of step.description.matchAll(COMMAND_LINK)) {
+                assert.ok(
+                    commandIds.has(command) || BUILT_IN_COMMANDS.has(command),
+                    `${walkthrough}/${step.id}: no such command ${command}`
+                );
+            }
+        }
+    });
+
+    it('points every step at markdown that exists', () => {
+        for (const [walkthrough, step] of walkthroughSteps) {
+            const markdown = step.media.markdown;
+            assert.equal(typeof markdown, 'string', `${walkthrough}/${step.id}: no markdown media`);
+            assert.ok(
+                existsSync(join(repoRoot, markdown as string)),
+                `${walkthrough}/${step.id}: missing ${markdown}`
+            );
+        }
+    });
+
+    it('gives every step a way to complete itself', () => {
+        for (const [walkthrough, step] of walkthroughSteps) {
+            assert.ok(
+                step.completionEvents?.length,
+                `${walkthrough}/${step.id} has no completionEvents`
+            );
         }
     });
 });

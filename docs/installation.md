@@ -62,3 +62,5 @@ Open any `.phel` file. You should see:
 - Hovering over a breakpoint gutter on a `.phel` line shows the compiled-PHP location (after a Phel build).
 
 If any of those are missing, see [Troubleshooting](troubleshooting.md).
+
+For a guided tour of the rest — CLI path, doctor, tests, REPL, debugging — run **Help: Get Started** from the command palette and pick **Get started with Phel**.

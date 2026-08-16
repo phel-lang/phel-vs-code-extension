@@ -816,7 +816,93 @@
                     "description": "Flag what Phel 0.50 removed (the core aliases push, put, values, …; the reader syntax #| |#, bare # comments, |() short fns, foo$ gensyms, `,` unquote, ^:reference) and deprecated (php/new, php/->, php/::, set-var, the \\ namespace separator), plus calls to your own :deprecated definitions, and offer a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50."
                 }
             }
-        }
+        },
+        "walkthroughs": [
+            {
+                "id": "phel.gettingStarted",
+                "title": "Get started with Phel",
+                "description": "Install the Phel CLI, point the extension at it, then run tests, a REPL, and a debug session from the editor.",
+                "steps": [
+                    {
+                        "id": "phel.gettingStarted.install",
+                        "title": "Install Phel",
+                        "description": "Everything past highlighting shells out to the Phel CLI. In an existing project run `composer require phel-lang/phel`; Composer puts the binary at `vendor/bin/phel`.\n[Read the getting started guide](https://phel-lang.org/documentation/getting-started/)",
+                        "media": {
+                            "markdown": "media/walkthrough/install.md"
+                        },
+                        "completionEvents": [
+                            "onLink:https://phel-lang.org/documentation/getting-started/"
+                        ]
+                    },
+                    {
+                        "id": "phel.gettingStarted.configure",
+                        "title": "Point at your CLI",
+                        "description": "`phel.executablePath` defaults to `vendor/bin/phel` and backs every subsystem. Change it only when your binary lives somewhere else.\n[Open the setting](command:workbench.action.openSettings?%5B%22phel.executablePath%22%5D)",
+                        "media": {
+                            "markdown": "media/walkthrough/configure.md"
+                        },
+                        "completionEvents": [
+                            "onSettingChanged:phel.executablePath"
+                        ]
+                    },
+                    {
+                        "id": "phel.gettingStarted.init",
+                        "title": "Or scaffold a project",
+                        "description": "No project yet? **Phel: Init Project** picks a template, asks for a name, and runs `phel init` for you — composer.json, phel-config.php, and a src/ tree included.\n[Init a project](command:phel.init)",
+                        "media": {
+                            "markdown": "media/walkthrough/install.md"
+                        },
+                        "completionEvents": [
+                            "onCommand:phel.init"
+                        ]
+                    },
+                    {
+                        "id": "phel.gettingStarted.doctor",
+                        "title": "Check your setup",
+                        "description": "**Phel: Doctor** runs `phel doctor` into an output channel and tells you whether the CLI, `phel-config.php`, and the cache directory agree.\n[Run Doctor](command:phel.doctor)",
+                        "media": {
+                            "markdown": "media/walkthrough/doctor.md"
+                        },
+                        "completionEvents": [
+                            "onCommand:phel.doctor"
+                        ]
+                    },
+                    {
+                        "id": "phel.gettingStarted.tests",
+                        "title": "Run the tests",
+                        "description": "Every `deftest` shows up in the Testing view and behind a `▶ Run test` CodeLens. **Phel: Watch Tests** keeps `phel test --watch` running in a terminal.\n[Open the Testing view](command:workbench.view.testing.focus)\n[Watch tests](command:phel.test.watch)",
+                        "media": {
+                            "markdown": "media/walkthrough/tests.md"
+                        },
+                        "completionEvents": [
+                            "onCommand:phel.test.watch"
+                        ]
+                    },
+                    {
+                        "id": "phel.gettingStarted.repl",
+                        "title": "Start a REPL",
+                        "description": "**Phel: Start REPL** opens a terminal you can send forms to with Ctrl/Cmd+Enter. The extension switches namespace for you when you eval from a different file.\n[Start a REPL](command:phel.repl.start)",
+                        "media": {
+                            "markdown": "media/walkthrough/repl.md"
+                        },
+                        "completionEvents": [
+                            "onCommand:phel.repl.start"
+                        ]
+                    },
+                    {
+                        "id": "phel.gettingStarted.debug",
+                        "title": "Debug with breakpoints in .phel",
+                        "description": "With Xdebug enabled and a `type: \"phel\"` launch configuration, breakpoints, stack traces, and stepping all stay in your Phel source.\n[Read the debugging guide](https://github.com/phel-lang/phel-vs-code-extension/blob/main/docs/debugging.md)",
+                        "media": {
+                            "markdown": "media/walkthrough/debug.md"
+                        },
+                        "completionEvents": [
+                            "onLink:https://github.com/phel-lang/phel-vs-code-extension/blob/main/docs/debugging.md"
+                        ]
+                    }
+                ]
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "npm run bundle:prod",
