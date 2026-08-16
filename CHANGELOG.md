@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-08-16
+
 ### Added
 
 - The Test Explorer now runs tests over a live nREPL connection when there is one (`phel.tests.preferNrepl`, default on): a run reloads changed namespaces once, then asks the session for one `deftest` at a time — milliseconds each, since the runtime is already warm, against a PHP boot per file. The verdict is the `{:pass :fail :error}` map the `run-tests` op returns for that one test, and the failure message is what the reporter printed, parsed into an expected/actual **diff** and anchored at the location the headline named (the file is a basename and the line is the enclosing `(deftest …)`'s, which is what the reporter has to say). It never opens a connection: without one, and always for **Run with Coverage**, the `phel test --reporter=junit-xml` runner is used exactly as before. `phel.tests.runOnSave` (default off) closes the loop — saving a `.phel` file reloads and re-runs its own `deftest`s, else the test file its namespace maps to, else every test file that `(:require`s it — and `phel.status.describe` reports what the last namespace run came back with.
