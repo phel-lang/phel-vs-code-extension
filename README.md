@@ -52,6 +52,6 @@ Per-subsystem overrides (`phel.diagnostics.command`, `phel.format.command`, `phe
 
 ## Documentation
 
-Full docs live in [docs/](docs/README.md) — [installation](docs/installation.md), [syntax](docs/syntax.md), [completion & snippets](docs/completion.md), [REPL & paredit](docs/repl-and-paredit.md), [refactoring](docs/refactoring.md), [debugging](docs/debugging.md), [taps](docs/taps.md), [settings](docs/settings.md), [troubleshooting](docs/troubleshooting.md).
+Full docs live in [docs/](docs/README.md) — [installation](docs/installation.md), [syntax](docs/syntax.md), [completion & snippets](docs/completion.md), [REPL & paredit](docs/repl-and-paredit.md), [refactoring](docs/refactoring.md), [debugging](docs/debugging.md), [taps](docs/taps.md), [commands](docs/commands.md), [settings](docs/settings.md), [troubleshooting](docs/troubleshooting.md).
 
 Contributing: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Release history: [CHANGELOG.md](CHANGELOG.md).

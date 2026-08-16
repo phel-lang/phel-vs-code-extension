@@ -11,6 +11,7 @@ User-facing docs that go beyond the project [README](../README.md).
 | [Refactoring](refactoring.md) | Go to definition, references, rename, outline, code actions, locals vs globals |
 | [Debugging](debugging.md) | Debug adapter, Xdebug setup, configuration, Docker / remote |
 | [Tracing with taps](taps.md) | `add-tap` / `tap>` / `remove-tap` for ad-hoc inspection |
+| [Commands reference](commands.md) | Every command, its id, what it runs, and its default keybinding |
 | [Settings reference](settings.md) | Every `phel.*` setting and what it does |
 | [Troubleshooting](troubleshooting.md) | Common problems and fixes |
 | [Contributing](CONTRIBUTING.md) | Dev setup, conventions, refreshing the language surface, releasing |

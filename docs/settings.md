@@ -102,4 +102,6 @@ A non-zero exit is expected from both: they exit 1 when they found errors and st
 
 ### Phel: Lint Workspace
 
-`phel lint` also walks the configured source dirs, so the **Phel: Lint Workspace** command runs it over the whole project and populates the Problems panel for every file — including ones never opened in the editor. On-save diagnostics stay scoped to the file you saved.
+`phel lint` also walks the configured source dirs, so the **Phel: Lint Workspace** command (`phel.lintWorkspace`) runs it over the whole project and populates the Problems panel for every file — including ones never opened in the editor. On-save diagnostics stay scoped to the file you saved.
+
+Every other command the extension contributes is listed in the [commands reference](commands.md).
