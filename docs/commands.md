@@ -18,7 +18,7 @@ The extension activates on `onLanguage:phel`, so the commands only show up in th
 
 The palette has all of them, but the ones you reach for while writing code also sit where the file is:
 
-- **Right-click in a `.phel` editor → Phel** — a submenu with the three ways to evaluate (form under cursor, selection, nREPL inline — the selection entry only appears when there is one), the three ways to run the file (tests, benchmarks, the file itself), **Go to Test / Source File**, then **Show Documentation** and **Lint Workspace**.
+- **Right-click in a `.phel` editor → Phel** — a submenu with the three ways to evaluate (form under cursor, selection, nREPL inline — the selection entry only appears when there is one), the ways to run the file (tests, tests under the debugger, benchmarks, the file itself), **Go to Test / Source File**, then **Show Documentation** and **Lint Workspace**. **Debug Test** is there only while `phel.debug.enabled` is on.
 - **The ▷ button in the editor title bar** — **Run File** and **Run All Tests in File**, on any open `.phel` file.
 - **Right-click a `.phel` file in the Explorer** — **Run All Tests in File**, **Run Benchmarks in Current File**, **Run File**. These take the file you clicked, not the one you are looking at, so nothing has to be open first.
 
@@ -30,8 +30,9 @@ Registered by [`src/phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.
 
 | Command | Id | What it runs / does | Needs | Key |
 |---|---|---|---|---|
-| Phel: Run Test | `phel.runTest` | `phel test --filter '^<name>$' <file>` in the **Phel Tests** terminal. Uses `phel.test.command`. Takes `(uri, testName)` from the `▶ Run test` CodeLens; from the palette there is no name, so it degrades to running the whole active file. | Phel CLI | — |
+| Phel: Run Test | `phel.runTest` | `phel test --filter '/^<name>$/' <file>` in the **Phel Tests** terminal. The name goes in as a PCRE — `phel test` reads a filter without `/…/` delimiters as a literal substring, so an anchored bare name would match nothing. Uses `phel.test.command`. Takes `(uri, testName)` from the `▶ Run test` CodeLens; from the palette there is no name, so it degrades to running the whole active file. | Phel CLI | — |
 | Phel: Run All Tests in File | `phel.runTestsInFile` | `phel test <file>` in the **Phel Tests** terminal, on the passed uri or the active editor. Uses `phel.test.command`. | Phel CLI | — |
+| Phel: Debug Test | `phel.debugTest` | Starts a `phel` debug session listening on a free port, then runs the same `phel test [--filter '/^<name>$/'] <file>` in the **Phel Debug Test** terminal with `XDEBUG_MODE=debug`, `XDEBUG_SESSION=1` and `XDEBUG_CONFIG=client_port=<port>`, so the run dials back into that session. Takes `(uri, testName)` from the `$(debug-alt) Debug test` CodeLens; without a name it debugs the whole file. Uses `phel.test.command`. Needs Xdebug in the PHP running the tests. | Phel CLI | — |
 | Phel: Watch Tests | `phel.test.watch` | `phel test --watch` in the **Phel Test (watch)** terminal, at the root of the active file's workspace folder (or the picked one). Uses `phel.test.command`. | Phel CLI | — |
 | Phel: Run Benchmarks | `phel.bench` | Prompts for a `--filter` substring, then `phel bench [--filter=…]` in the **Phel Bench** terminal, at the active file's workspace-folder root. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Run Benchmarks in Current File | `phel.benchFile` | Same prompt, then `phel bench <file> [--filter=…]` in the folder owning that file, with `<file>` relative to it. Also backs the file-level `▶ Run all benchmarks in file` lens. | Phel CLI | — |
@@ -39,7 +40,7 @@ Registered by [`src/phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.
 
 Neither Explorer tree is a command: each registers run profiles that the Testing view drives.
 
-- **Phel** ([`src/phelTestController.ts`](../src/phelTestController.ts)) — one item per `deftest`, with a coverage profile. **Run** has two runners, see below.
+- **Phel** ([`src/phelTestController.ts`](../src/phelTestController.ts)) — one item per `deftest`, with a coverage profile and a debug profile. **Run** has two runners, see below. **Debug** does per file what **Debug Test** does: a session, then the run pointed at it — always the subprocess runner, since Xdebug attaches to the process the run starts. It cannot report pass / fail, because a debugged run prints into its terminal instead of answering the way the two runners do, so its items end up skipped; the run ends when the terminal's process exits, which is after the last breakpoint has been continued from.
 - **Phel Benchmarks** ([`src/phelBenchController.ts`](../src/phelBenchController.ts)) — one item per `defbench`, run through `phel bench <file>` (plus `--filter=<name>` when a single benchmark was asked for) and read back from the table it prints, so each item's duration is that benchmark's mean and the whole table lands in the run output. A benchmark cannot fail, only take time: a row that comes back is passed, one the runner left out is skipped, and a run with no table at all is an error carrying what the CLI said. Kept apart from the tests so that "Run All Tests" never times a benchmark. Uses `phel.executablePath`.
 
 ### The two test runners

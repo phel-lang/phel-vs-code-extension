@@ -29,6 +29,7 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { runPhelCli } from './phelCli';
+import { startDebugTestRun, waitForTerminalExit } from './phelDebugTest';
 import { coverageEnv } from './phelInvocation';
 import { normalizeNs, parseNsForm, requireEntries } from './phelNsAnalyzer';
 import { layoutOf, pathToNs, testFileFor, type PhelFile } from './phelNsPaths';
@@ -238,6 +239,14 @@ export class PhelTestController implements vscode.Disposable {
                 true
             ),
             vscode.workspace.onDidSaveTextDocument((doc) => this.queueSaveRun(doc))
+        );
+        this.disposables.push(
+            this.controller.createRunProfile(
+                'Debug',
+                vscode.TestRunProfileKind.Debug,
+                (request, token) => this.debug(request, token),
+                false
+            )
         );
         if (COVERAGE_API_AVAILABLE) {
             const coverageProfile = this.controller.createRunProfile(
@@ -559,6 +568,56 @@ export class PhelTestController implements vscode.Disposable {
             }
         }
         return matches;
+    }
+
+    /**
+     * The Debug profile: one debug session and one `phel test` run per file,
+     * exactly what the `Debug test` CodeLens does, driven from the Explorer.
+     *
+     * Always the subprocess, never the nREPL runner: what Xdebug attaches to
+     * is the process the run starts, and a live nREPL server was started
+     * without it.
+     *
+     * The run is over when the terminal's process exits — which is *after* the
+     * last breakpoint has been continued from, so a session spent paused keeps
+     * the run open. What it cannot do is report pass / fail: a debugged run
+     * prints into its terminal rather than answering the way the Run profile's
+     * two runners do, so every item ends up skipped. Use Run for results and
+     * Debug for the breakpoints.
+     */
+    private async debug(
+        request: vscode.TestRunRequest,
+        token: vscode.CancellationToken
+    ): Promise<void> {
+        const byFile = groupQueue(request.include ?? this.tree.roots(), request);
+        const run = this.controller.createTestRun(request);
+
+        try {
+            for (const [fileItem, leaves] of byFile) {
+                const folder = fileItem.uri
+                    ? vscode.workspace.getWorkspaceFolder(fileItem.uri)
+                    : undefined;
+                if (token.isCancellationRequested || !folder || !fileItem.uri) {
+                    leaves.forEach((l) => run.skipped(l));
+                    continue;
+                }
+
+                leaves.forEach((l) => run.started(l));
+                const started = await startDebugTestRun(folder, fileItem.uri);
+                if (started) {
+                    await waitForTerminalExit(started.terminal, token);
+                    // The listener has nothing left to wait for, and each run
+                    // opens its own; leaving them up would stack a session per
+                    // run in the Debug view.
+                    if (started.session) {
+                        await vscode.debug.stopDebugging(started.session);
+                    }
+                }
+                leaves.forEach((l) => run.skipped(l));
+            }
+        } finally {
+            run.end();
+        }
     }
 
     dispose(): void {

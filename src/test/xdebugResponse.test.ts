@@ -1,5 +1,9 @@
 import * as assert from 'node:assert/strict';
-import { parseBreakpointId, parseBreakpointSetResponse } from '../xdebugResponse';
+import {
+    parseBreakLocation,
+    parseBreakpointId,
+    parseBreakpointSetResponse,
+} from '../xdebugResponse';
 
 // Captured verbatim from Xdebug 3 setting a line breakpoint that then stopped
 // execution — so this is a *successful* set, with no resolved/state attribute.
@@ -61,5 +65,47 @@ describe('parseBreakpointSetResponse', () => {
 
     it('fails when there is neither an id nor an error', () => {
         assert.equal(parseBreakpointSetResponse('<response transaction_id="9"/>').ok, false);
+    });
+});
+
+// Where execution stopped. DBGp never names the breakpoint that was hit, so
+// this element is the only thing that says which one it was — and that is what
+// tells a logpoint (print and resume) from a breakpoint (stop).
+describe('parseBreakLocation', () => {
+    const REAL_BREAK =
+        '<response xmlns="urn:debugger_protocol_v1" xmlns:xdebug="https://xdebug.org/dbgp/xdebug" ' +
+        'command="run" transaction_id="7" status="break" reason="ok">' +
+        '<xdebug:message filename="file:///tmp/phel/demo.util__a5b0ac5e.php" lineno="29">' +
+        '</xdebug:message></response>';
+
+    it('reads the file and line off a real break response', () => {
+        assert.deepEqual(parseBreakLocation(REAL_BREAK), {
+            fileUri: 'file:///tmp/phel/demo.util__a5b0ac5e.php',
+            line: 29,
+        });
+    });
+
+    it('reads a self-closing message element', () => {
+        assert.deepEqual(
+            parseBreakLocation(
+                '<response status="break"><xdebug:message filename="file:///a.php" lineno="4"/></response>'
+            ),
+            { fileUri: 'file:///a.php', line: 4 }
+        );
+    });
+
+    it('still reads the location off an exception break', () => {
+        const xml =
+            '<response status="break"><xdebug:message exception="Exception" ' +
+            'filename="file:///a.php" lineno="12"><![CDATA[boom]]></xdebug:message></response>';
+        assert.deepEqual(parseBreakLocation(xml), { fileUri: 'file:///a.php', line: 12 });
+    });
+
+    it('answers nothing when the response says no location', () => {
+        assert.equal(parseBreakLocation('<response status="break" transaction_id="7"/>'), null);
+        assert.equal(
+            parseBreakLocation('<response status="break"><xdebug:message lineno="4"/></response>'),
+            null
+        );
     });
 });

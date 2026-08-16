@@ -41,6 +41,8 @@ import { registerDoctorCommands } from './phelDoctorProvider';
 import { registerCliCommands } from './phelCliCommandsProvider';
 import { registerTaskProvider } from './phelTaskProvider';
 import { runInTerminal } from './phelTerminal';
+import { testArgs } from './phelCliCommands';
+import { debugPhelTest } from './phelDebugTest';
 import { registerSelectionCommands } from './phelSelectionProvider';
 import { PhelFormHighlight } from './phelFormHighlight';
 import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
@@ -283,7 +285,13 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('phel.runTestsInFile', (uri?: vscode.Uri) => {
             runPhelTests(uri);
-        })
+        }),
+        vscode.commands.registerCommand(
+            'phel.debugTest',
+            async (uri?: vscode.Uri, testName?: string) => {
+                await debugPhelTest(uri, testName);
+            }
+        )
     );
 
     if (vscode.workspace.getConfiguration('phel').get<boolean>('paredit.enabled', true)) {
@@ -603,15 +611,7 @@ function runPhelTests(uri?: vscode.Uri, testName?: string): void {
     const command = resolvePhelExecutable('test.command', folder);
     const cwd = folder?.uri.fsPath ?? path.dirname(target.fsPath);
     const filePath = path.relative(cwd, target.fsPath) || target.fsPath;
-    const args = ['test'];
-    if (testName) {
-        // `--filter` is a regex; anchor and escape so "foo" doesn't also match
-        // "foobar" (matches the Test Explorer's exact-name behavior).
-        const escaped = testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        args.push('--filter', `^${escaped}$`);
-    }
-    args.push(filePath);
-    runInTerminal('Phel Tests', command, args, cwd);
+    runInTerminal('Phel Tests', command, testArgs(filePath, testName), cwd);
 }
 
 async function pickSymbol(): Promise<string | undefined> {

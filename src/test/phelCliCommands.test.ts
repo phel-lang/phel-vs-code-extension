@@ -6,6 +6,7 @@ import {
     buildArgs,
     parseTemplates,
     relativeTargetPath,
+    testArgs,
 } from '../phelCliCommands';
 
 // Captured verbatim from `phel init --list-templates`.
@@ -105,6 +106,31 @@ describe('phelCliCommands.buildArgs', () => {
             '2',
             '--report',
         ]);
+    });
+});
+
+describe('testArgs', () => {
+    it('runs a whole file when no test is named', () => {
+        assert.deepEqual(testArgs('tests/app/core_test.phel'), [
+            'test',
+            'tests/app/core_test.phel',
+        ]);
+    });
+
+    it('wraps an exact name in PCRE delimiters', () => {
+        // `phel test --filter` `preg_quote`s anything that is not `/…/`, so a
+        // bare `^greets$` is searched for literally and matches nothing —
+        // which is how running one test came to run none at all.
+        assert.deepEqual(testArgs('tests/app/core_test.phel', 'greets-a-name'), [
+            'test',
+            '--filter',
+            '/^greets-a-name$/',
+            'tests/app/core_test.phel',
+        ]);
+    });
+
+    it('escapes what the name would otherwise mean in a regex', () => {
+        assert.deepEqual(testArgs('t.phel', 'reads-a/b?')[2], '/^reads-a\\/b\\?$/');
     });
 });
 

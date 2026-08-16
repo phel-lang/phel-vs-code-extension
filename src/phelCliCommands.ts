@@ -92,6 +92,30 @@ export function benchArgs(options: BenchOptions = {}): string[] {
     return args;
 }
 
+/**
+ * Build the argument list for `phel test` on one file, optionally narrowed to
+ * a single `deftest`.
+ *
+ * `--filter` is matched against the *bare* test name, and a value is a literal
+ * substring unless it is wrapped in PCRE delimiters — `phel.test/name-matches?`
+ * runs `preg_quote` over anything that is not `/…/`. So an exact name goes in
+ * as `/^name$/`: bare `^name$` matches nothing at all, and an unanchored
+ * `name` would also run `name-2`.
+ */
+export function testArgs(relativeFile: string, testName?: string): string[] {
+    const args = ['test'];
+    if (testName) {
+        args.push('--filter', `/^${escapePcre(testName)}$/`);
+    }
+    args.push(relativeFile);
+    return args;
+}
+
+/** Escape a literal for a `/…/` PCRE, delimiter included. */
+function escapePcre(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+}
+
 /** Build the argument list for `phel balance`. */
 export function balanceArgs(options: { paths?: readonly string[]; fix?: boolean } = {}): string[] {
     const args = ['balance'];
