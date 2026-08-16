@@ -73,6 +73,7 @@ In the container, set `xdebug.client_host=host.docker.internal` (macOS / Windows
 
 - **Source-level breakpoints** - set them in `.phel`, hit them with the original Phel line + column.
 - **Phel-friendly variables** - vectors render as `[3 items]`, hash maps as `{:k v}`, keywords as `:name`. Internal Phel runtime structures stay collapsed unless you opt in.
+- **Whole-symbol hover** - hovering while paused evaluates the entire Phel name under the pointer (`add-item`, `blank?`, `str/join`), not the fragment the editor's own word pattern would cut out of it (`item`, `blank`, `join`).
 - **Multi-expression line handling** - when a single Phel line compiles to several PHP statements, the adapter consolidates breakpoints so the line behaves as one unit.
 - **Exception breakpoints** - break on all PHP exceptions or just uncaught ones (configure in the Run & Debug sidebar).
 - **Step filter** - `skipPhelInternals: true` (default) keeps stepping inside *your* code, not Phel's runtime.

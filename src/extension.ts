@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as net from 'net';
 import { SourceMapManager } from './sourceMapManager';
+import { PhelEvaluatableExpressionProvider } from './phelEvaluatableExpressionProvider';
 import { PhelCompletionProvider } from './phelCompletionProvider';
 import { PhelHoverProvider } from './phelHoverProvider';
 import { PhelSignatureHelpProvider } from './phelSignatureHelpProvider';
@@ -99,6 +100,15 @@ export function activate(context: vscode.ExtensionContext) {
         const configProvider = new PhelDebugConfigurationProvider(projectConfig);
         context.subscriptions.push(
             vscode.debug.registerDebugConfigurationProvider('phel', configProvider)
+        );
+
+        // Debug hover: send the whole Phel symbol to the adapter rather than
+        // the C-like word VS Code would carve out of it.
+        context.subscriptions.push(
+            vscode.languages.registerEvaluatableExpressionProvider(
+                'phel',
+                new PhelEvaluatableExpressionProvider()
+            )
         );
     }
 
