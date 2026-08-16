@@ -18,7 +18,7 @@ The extension activates on `onLanguage:phel`, so the commands only show up in th
 
 The palette has all of them, but the ones you reach for while writing code also sit where the file is:
 
-- **Right-click in a `.phel` editor → Phel** — a submenu with the three ways to evaluate (form under cursor, selection, nREPL inline — the selection entry only appears when there is one), the three ways to run the file (tests, benchmarks, the file itself), then **Show Documentation** and **Lint Workspace**.
+- **Right-click in a `.phel` editor → Phel** — a submenu with the three ways to evaluate (form under cursor, selection, nREPL inline — the selection entry only appears when there is one), the three ways to run the file (tests, benchmarks, the file itself), **Go to Test / Source File**, then **Show Documentation** and **Lint Workspace**.
 - **The ▷ button in the editor title bar** — **Run File** and **Run All Tests in File**, on any open `.phel` file.
 - **Right-click a `.phel` file in the Explorer** — **Run All Tests in File**, **Run Benchmarks in Current File**, **Run File**. These take the file you clicked, not the one you are looking at, so nothing has to be open first.
 
@@ -189,6 +189,7 @@ The debug session itself is started from a launch configuration of type `phel`, 
 | Command | Id | What it runs / does | Needs | Key |
 |---|---|---|---|---|
 | Phel: Show Documentation | `phel.showDoc` | Resolves the symbol from its argument, the word at the cursor, or a quick pick over the bundled corpus, then opens the rendered doc in a Markdown preview. Reads `assets/phel-core-docs.json`. | nothing | — |
+| Phel: Go to Test / Source File | `phel.ns.goToTest` | Opens the other half of the current namespace - `src/app/core.phel` ↔ `tests/app/core_test.phel`, following the project's `src-dirs` / `test-dirs`. Offers to scaffold the test file when there is none. See [refactoring](refactoring.md#go-to-test--source-file). | Phel CLI (for a non-default layout) | — |
 
 Go to definition, find references, rename, outline and code actions are language-feature providers rather than commands; they answer VS Code's own entries (<kbd>F12</kbd>, <kbd>Shift</kbd>+<kbd>F12</kbd>, <kbd>F2</kbd>, <kbd>Ctrl</kbd>+<kbd>.</kbd>). See [refactoring](refactoring.md).
 

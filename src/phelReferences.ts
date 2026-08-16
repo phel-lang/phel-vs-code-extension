@@ -37,9 +37,29 @@ export interface Occurrence {
  * block comments (`#| ... |#`), and `#_`-discarded forms.
  */
 export function findOccurrences(src: string, name: string): Occurrence[] {
-    if (!name) {
-        return [];
-    }
+    return name ? scan(src, name, true) : [];
+}
+
+/**
+ * Find every symbol *qualified by* `ns`, i.e. every token starting `ns/`. The
+ * namespace part of `json/encode` is not a token of its own, so
+ * `findOccurrences(src, 'json')` deliberately never matches it — which is what
+ * a rename wants, and the opposite of what "is this alias used?" needs.
+ *
+ * The returned span covers the `ns/` prefix; nothing so far needs the name
+ * after the slash. Same skipping rules as `findOccurrences`.
+ */
+export function findQualifiedOccurrences(src: string, ns: string): Occurrence[] {
+    return ns ? scan(src, ns + '/', false) : [];
+}
+
+/**
+ * Walk `src` outside strings / comments / char literals looking for `needle`.
+ * `closed` says whether the needle is a whole token (so the character after it
+ * has to end one) or only its head (so the character after it has to continue
+ * one, since `ns/` alone is not a symbol).
+ */
+function scan(src: string, needle: string, closed: boolean): Occurrence[] {
     const out: Occurrence[] = [];
     const len = src.length;
     let i = 0;
@@ -63,11 +83,12 @@ export function findOccurrences(src: string, name: string): Occurrence[] {
             i = skipChar(src, i, len);
             continue;
         }
-        if (matchesAt(src, i, name)) {
-            const end = i + name.length;
+        if (matchesAt(src, i, needle)) {
+            const end = i + needle.length;
             const before = i === 0 ? '' : src[i - 1];
             const after = end >= len ? '' : src[end];
-            if (isBoundaryBefore(before) && isBoundaryAfter(after)) {
+            const tail = closed ? isBoundaryAfter(after) : after !== '' && !isBoundaryAfter(after);
+            if (isBoundaryBefore(before) && tail) {
                 out.push({ start: i, end });
                 i = end;
                 continue;

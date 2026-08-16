@@ -3,7 +3,9 @@
 //   - Thread first / last (`->` / `->>`) and unwind, over the form at the cursor
 //   - Cycle a collection's delimiters: `(` → `[` → `{` → `(`
 //   - Quick-fix: add a missing `:require` for a known symbol
+//   - Quick-fix: remove a `:require` (or one `:refer`) nothing in the file uses
 //   - Quick-fix: rename a core function Phel 0.50 removed to its replacement
+//   - Source action: sort the `(:require ...)` entries by namespace
 // The structural transforms live in `phelRefactor` (pure, unit-tested); this
 // module adapts them to VS Code code actions.
 
@@ -11,6 +13,14 @@ import * as vscode from 'vscode';
 import { threadForm, unthreadForm, cycleCollection, type RefactorEdit } from './phelRefactor';
 import { lookupSymbol } from './phelDocsLookup';
 import { parseNsForm, buildRequireEdit } from './phelNsAnalyzer';
+import {
+    findUnusedRequires,
+    removeRequireEdit,
+    requireIssueIn,
+    sortRequiresEdit,
+    type NsHygieneIssue,
+} from './phelNsHygiene';
+import { LINT_UNUSED_REQUIRE_CODE } from './phelNsHygieneProvider';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 import { mergedDocs } from './phelProviderSupport';
@@ -18,13 +28,20 @@ import { findMigrationIssues } from './phelMigration';
 import { deprecatedDefinitionsFor, migrationEnabled } from './phelMigrationProvider';
 
 export class PhelCodeActionProvider implements vscode.CodeActionProvider {
-    static readonly kinds = [vscode.CodeActionKind.RefactorRewrite, vscode.CodeActionKind.QuickFix];
+    static readonly kinds = [
+        vscode.CodeActionKind.RefactorRewrite,
+        vscode.CodeActionKind.QuickFix,
+        // `editor.codeActionsOnSave: { "source.organizeImports": true }` only
+        // reaches a provider that declares the kind.
+        vscode.CodeActionKind.SourceOrganizeImports,
+    ];
 
     constructor(private readonly indexer: PhelWorkspaceIndexer) {}
 
     provideCodeActions(
         document: vscode.TextDocument,
-        range: vscode.Range | vscode.Selection
+        range: vscode.Range | vscode.Selection,
+        context: vscode.CodeActionContext
     ): vscode.CodeAction[] {
         const src = document.getText();
         const offset = document.offsetAt(range.start);
@@ -35,12 +52,7 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
                 return;
             }
             const action = new vscode.CodeAction(title, vscode.CodeActionKind.RefactorRewrite);
-            action.edit = new vscode.WorkspaceEdit();
-            action.edit.replace(
-                document.uri,
-                new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)),
-                edit.text
-            );
+            action.edit = editFor(document, edit);
             actions.push(action);
         };
 
@@ -52,6 +64,16 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
         const req = this.addRequireAction(document, range, src);
         if (req) {
             actions.push(req);
+        }
+        actions.push(...unusedRequireActions(document, src, offset, context));
+        const sorted = sortRequiresEdit(src);
+        if (sorted) {
+            const action = new vscode.CodeAction(
+                'Sort requires',
+                vscode.CodeActionKind.SourceOrganizeImports
+            );
+            action.edit = editFor(document, sorted);
+            actions.push(action);
         }
         actions.push(...migrationActions(document, src, offset, this.indexer));
         return actions;
@@ -94,6 +116,79 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
         action.edit.insert(document.uri, document.positionAt(edit.insertAt), edit.text);
         return action;
     }
+}
+
+/**
+ * Offer to drop a `(:require ...)` entry, or one name out of its `:refer`,
+ * that nothing in the file uses.
+ *
+ * Two sources, because two analyzers report this. Ours is re-derived from the
+ * source the way `migrationActions` is, so the fix works with the hints
+ * switched off and right after an edit. `phel lint`'s `phel/unused-require` is
+ * read off the diagnostic instead: it ran over the whole project, it may well
+ * have found an entry this analyzer counts as used, and it anchors its range
+ * differently - so the entry is looked up by position and taken at its word.
+ */
+function unusedRequireActions(
+    document: vscode.TextDocument,
+    src: string,
+    offset: number,
+    context: vscode.CodeActionContext
+): vscode.CodeAction[] {
+    const issues = new Map<string, NsHygieneIssue>();
+    const remember = (issue: NsHygieneIssue | null): void => {
+        if (issue) {
+            issues.set(`${issue.kind}:${issue.start}:${issue.end}`, issue);
+        }
+    };
+    for (const issue of findUnusedRequires(src)) {
+        if (offset >= issue.start && offset <= issue.end) {
+            remember(issue);
+        }
+    }
+    for (const diagnostic of context.diagnostics) {
+        if (diagnostic.code !== LINT_UNUSED_REQUIRE_CODE) {
+            continue;
+        }
+        remember(
+            requireIssueIn(
+                src,
+                document.offsetAt(diagnostic.range.start),
+                document.offsetAt(diagnostic.range.end)
+            )
+        );
+    }
+
+    const actions: vscode.CodeAction[] = [];
+    for (const issue of issues.values()) {
+        const edit = removeRequireEdit(src, issue);
+        if (!edit) {
+            continue;
+        }
+        const title =
+            issue.kind === 'refer'
+                ? `Remove unused refer '${issue.name}'`
+                : `Remove unused require '${issue.ns}'`;
+        const action = new vscode.CodeAction(title, vscode.CodeActionKind.QuickFix);
+        action.edit = editFor(document, edit);
+        action.isPreferred = true;
+        actions.push(action);
+    }
+    return actions;
+}
+
+/** A one-replacement `WorkspaceEdit` over `document`. */
+function editFor(
+    document: vscode.TextDocument,
+    edit: { start: number; end: number; text: string }
+): vscode.WorkspaceEdit {
+    const workspaceEdit = new vscode.WorkspaceEdit();
+    workspaceEdit.replace(
+        document.uri,
+        new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)),
+        edit.text
+    );
+    return workspaceEdit;
 }
 
 /**

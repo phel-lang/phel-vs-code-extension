@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { findOccurrences, isValidSymbolName } from '../phelReferences';
+import { findOccurrences, findQualifiedOccurrences, isValidSymbolName } from '../phelReferences';
 
 function offsets(occ: ReturnType<typeof findOccurrences>): number[] {
     return occ.map((o) => o.start);
@@ -48,6 +48,37 @@ describe('phelReferences.findOccurrences', () => {
 
     it('returns empty for empty name', () => {
         assert.deepEqual(findOccurrences('foo', ''), []);
+    });
+});
+
+describe('phelReferences.findQualifiedOccurrences', () => {
+    it('finds a symbol qualified by the namespace', () => {
+        const src = '(str/join ", " (str/split s))';
+        assert.deepEqual(offsets(findQualifiedOccurrences(src, 'str')), [1, 16]);
+    });
+
+    it('does not match the bare token findOccurrences is for', () => {
+        const src = '(def str 1)';
+        assert.deepEqual(findQualifiedOccurrences(src, 'str'), []);
+        assert.deepEqual(offsets(findOccurrences(src, 'str')), [5]);
+    });
+
+    it('does not match a slash that ends the token', () => {
+        // `str/` is not a symbol; the name after the slash has to be there.
+        assert.deepEqual(findQualifiedOccurrences('(str/ 1)', 'str'), []);
+    });
+
+    it('does not match a namespace that is only a suffix of another', () => {
+        assert.deepEqual(findQualifiedOccurrences('(my.str/join xs)', 'str'), []);
+    });
+
+    it('skips strings and comments, as the unqualified scan does', () => {
+        const src = '(str/join x) "str/join" ; str/join\n';
+        assert.deepEqual(offsets(findQualifiedOccurrences(src, 'str')), [1]);
+    });
+
+    it('returns empty for an empty namespace', () => {
+        assert.deepEqual(findQualifiedOccurrences('(str/join x)', ''), []);
     });
 });
 

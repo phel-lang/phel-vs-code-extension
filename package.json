@@ -520,6 +520,11 @@
             {
                 "command": "phel.status.describe",
                 "title": "Phel: Describe Runtime State"
+            },
+            {
+                "command": "phel.ns.goToTest",
+                "title": "Phel: Go to Test / Source File",
+                "category": "Phel"
             }
         ],
         "submenus": [
@@ -580,6 +585,11 @@
                 {
                     "command": "phel.runFile",
                     "group": "2_run@3",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.ns.goToTest",
+                    "group": "2_run@4",
                     "when": "resourceLangId == phel"
                 },
                 {
@@ -998,6 +1008,11 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Flag what Phel 0.50 removed (the core aliases push, put, values, …; the reader syntax #| |#, bare # comments, |() short fns, foo$ gensyms, `,` unquote, ^:reference) and deprecated (php/new, php/->, php/::, set-var, the \\ namespace separator), plus calls to your own :deprecated definitions, and offer a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50."
+                },
+                "phel.ns.autoInsert": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Give a newly created, still empty .phel file its (ns …) form, with the namespace read off how the neighbouring files map their own paths."
                 }
             }
         },
