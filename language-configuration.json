@@ -29,9 +29,5 @@
         ["(", ")"],
         ["\"", "\""]
     ],
-    "wordPattern": "[^\\s\\(\\)\\[\\]\\{\\}\"'`,;#]+#?",
-    "indentationRules": {
-        "increaseIndentPattern": "^.*\\([^)]*$|^.*\\[[^\\]]*$|^.*\\{[^}]*$",
-        "decreaseIndentPattern": "^\\s*[)\\]\\}]"
-    }
+    "wordPattern": "[^\\s\\(\\)\\[\\]\\{\\}\"'`,;#]+#?"
 }

@@ -80,6 +80,7 @@ Off by default. When enabled, completion, hover, signature help, definition, ref
 | `phel.diagnostics.engine` | `auto` \| `lint` \| `analyze` | `auto` | Which CLI subcommand backs diagnostics. See [Diagnostics engine](#diagnostics-engine). |
 | `phel.diagnostics.live` | boolean | `true` | Also report analyzer diagnostics as you type, through a long-lived `phel api-daemon`. The same daemon indexes the project for namespace-aware go-to-definition and cross-file references, so this switch turns those off too. See [Live diagnostics](#live-diagnostics) and [what the daemon adds to navigation](refactoring.md#what-the-analysis-daemon-adds). |
 | `phel.format.enabled` | boolean | `true` | Use `phel format` as the document formatter. |
+| `phel.format.onType` | boolean | `true` | Indent the line as you type it, following the rules `phel format` uses. See [Indentation as you type](repl-and-paredit.md#indentation-as-you-type). |
 | `phel.tests.codeLensEnabled` | boolean | `true` | Show inline `▶ Run test` CodeLens above each `deftest`, and `▶ Run benchmark` above each `defbench`. |
 | `phel.migration.enabled` | boolean | `true` | Flag what Phel 0.50 removed (core aliases, `#\| \|#`, bare `#` comments, `\|()` short fns, `foo$` gensyms, `,` unquote, `^:reference`) and deprecated (`php/new`, `php/->`, `php/::`, `set-var`, the `\` namespace separator), plus calls to your own `:deprecated` definitions, with a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50. Severity follows the project, see [below](#what-the-project-config-decides). See [Migrating to Phel 0.50](completion.md#migrating-to-phel-050). |
 | `phel.paredit.enabled` | boolean | `true` | Register paredit commands (slurp / barf / raise / wrap). |
@@ -125,6 +126,25 @@ No Phel installed, or one too old to print its configuration? Every one of these
   "phel.debug.enabled": false
 }
 ```
+
+## What the extension sets for you
+
+One editor setting is turned on for `.phel` files only, through
+`contributes.configurationDefaults`:
+
+```jsonc
+{
+  "[phel]": {
+    "editor.formatOnType": true
+  }
+}
+```
+
+VS Code ships `editor.formatOnType` off, and without it the editor never asks
+the on-type provider for anything — [indentation as you
+type](repl-and-paredit.md#indentation-as-you-type) would be dead code. Your own
+`settings.json` wins over this default, for the `[phel]` block as much as
+globally, so `"[phel]": { "editor.formatOnType": false }` turns it back off.
 
 ## Theming `meta.reader-conditional.phel`
 

@@ -40,6 +40,7 @@ const inlayHints = require(join(out, 'phelInlayHints.js'));
 const coreDocs = require(join(out, 'phelCoreDocs.js'));
 const docsLookup = require(join(out, 'phelDocsLookup.js'));
 const signatureHelp = require(join(out, 'phelSignatureHelp.js'));
+const indent = require(join(out, 'phelIndent.js'));
 
 const target = resolve(process.argv[2] ?? join(repoRoot, '..', 'phel-lang', 'src', 'phel'));
 if (!existsSync(target)) {
@@ -66,7 +67,21 @@ if (files.length === 0) {
 }
 
 const failures = [];
-const totals = { forms: 0, bindings: 0, unused: 0, folds: 0, symbols: 0, requires: 0, migrations: 0, hints: 0 };
+const totals = {
+    forms: 0,
+    bindings: 0,
+    unused: 0,
+    folds: 0,
+    symbols: 0,
+    requires: 0,
+    migrations: 0,
+    hints: 0,
+    indentLines: 0,
+    indentDiffs: 0,
+    indentComments: 0,
+};
+/** The first handful of lines `indentationAt` disagrees with the corpus about. */
+const indentDisagreements = [];
 
 /**
  * The arity resolver the inlay-hints provider builds, minus the editor: core
@@ -119,6 +134,37 @@ for (const file of files) {
     attempt(file, 'aliasMapFromSource', () => nsAnalyzer.aliasMapFromSource(src));
     attempt(file, 'findOccurrences', () => references.findOccurrences(src, 'map'));
 
+    // A `phel format`ted corpus is exactly where the on-type indenter should
+    // want every line to be, so `indentDiffs` is the measure of how far its
+    // mirror of the CLI's rules has drifted. It should read 0. `indentComments`
+    // is counted apart because the formatter never re-indents a comment line -
+    // it keeps whatever the author wrote - so those are not ours to match.
+    attempt(file, 'indentationAt', () => {
+        let lineStart = 0;
+        for (const line of src.split('\n')) {
+            const text = line.trimEnd();
+            const want = text === '' ? null : indent.indentationAt(src, lineStart);
+            // null: inside a multi-line string, where the leading whitespace is
+            // content. Blank lines: the formatter strips them to nothing.
+            if (want !== null) {
+                totals.indentLines++;
+                const have = text.length - text.trimStart().length;
+                if (want !== have) {
+                    if (text.trimStart().startsWith(';')) {
+                        totals.indentComments++;
+                    } else {
+                        totals.indentDiffs++;
+                        if (indentDisagreements.length < 20) {
+                            const at = `${basename(file)}:${src.slice(0, lineStart).split('\n').length}`;
+                            indentDisagreements.push(`${at}: want ${want}, has ${have}: ${text.trim()}`);
+                        }
+                    }
+                }
+            }
+            lineStart += line.length + 1;
+        }
+    });
+
     // Probe positions across the file: the offset-driven entry points are where
     // an unexpected shape shows up first.
     const step = Math.max(1, Math.floor(src.length / 40));
@@ -128,11 +174,18 @@ for (const file of files) {
     }
 }
 
-const width = 10;
+const width = 14;
 console.log(`corpus: ${target}`);
 console.log(`files:  ${files.length}`);
 for (const [name, value] of Object.entries(totals)) {
     console.log(`  ${name.padEnd(width)} ${value}`);
+}
+
+if (indentDisagreements.length > 0) {
+    console.log(`\nlines indented differently than the corpus has them:`);
+    for (const disagreement of indentDisagreements) {
+        console.log(`  ${disagreement}`);
+    }
 }
 
 if (failures.length > 0) {

@@ -15,6 +15,7 @@ import { registerDiagnostics } from './phelDiagnosticsProvider';
 import { PhelDaemonDiagnostics } from './phelDaemonDiagnosticsProvider';
 import { resolvePhelExecutable } from './phelExecutable';
 import { PhelFormatProvider } from './phelFormatProvider';
+import { PhelOnTypeFormattingProvider } from './phelOnTypeFormattingProvider';
 import { PhelTestCodeLensProvider } from './phelTestCodeLensProvider';
 import { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PhelDefinitionProvider } from './phelDefinitionProvider';
@@ -502,6 +503,18 @@ function registerLanguageProviders(
 
     context.subscriptions.push(
         vscode.languages.registerDocumentFormattingEditProvider('phel', new PhelFormatProvider())
+    );
+
+    // Its rules mirror the CLI's, so the two never disagree about a line.
+    context.subscriptions.push(
+        vscode.languages.registerOnTypeFormattingEditProvider(
+            'phel',
+            new PhelOnTypeFormattingProvider(),
+            '\n',
+            ')',
+            ']',
+            '}'
+        )
     );
 }
 

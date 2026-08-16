@@ -108,6 +108,35 @@ Native **expand/shrink** (`Shift+Alt+→` / `Shift+Alt+←`) is also form-aware 
 selection-range provider, and code **folding** follows the actual form structure
 (every multi-line form folds, plus runs of `;` line comments).
 
+### Indentation as you type
+
+Pressing <kbd>Enter</kbd> puts the new line where `phel format` would put it,
+and typing a closing bracket as the first character of a line re-places that
+line. Nothing is asked of the CLI: the rules are the ones phel-lang's own
+`IndentRule` applies, mirrored in the extension, so a save with format-on-save
+has nothing left to move.
+
+```text
+(defn shape [xs]        ; a definition body: two spaces
+  (let [n (count xs)]   ; so is a block form's body, once it starts a line
+    (if (> n 1)
+      (-> xs            ; everything else aligns under the first argument,
+          (first)       ; which is what lines a `->` chain up under `xs`
+          (str "!"))
+      nil)))
+```
+
+Two deliberate differences from the CLI, both in your favour while typing:
+
+- a comment on a fresh line gets the indentation the code around it has.
+  `phel format` never re-indents a comment line, it keeps whatever indentation
+  the comment already had — so what you get here is what it then preserves;
+- a closing bracket left alone on its own line is indented rather than pulled
+  up onto the previous line, which is what a save does with it.
+
+Turn it off with `phel.format.onType`. It also needs `editor.formatOnType`,
+which the extension [switches on for `.phel` files](settings.md#what-the-extension-sets-for-you).
+
 ### Examples
 
 ```text
