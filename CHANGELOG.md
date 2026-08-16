@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-16
+
 ### Added
 
 - Support for Phel **v0.50.0**. The symbol corpus is regenerated from that tag: 1582 entries across 35 namespaces, with the new `phel.bench` namespace (`defbench`, `run-benchmarks`) and the new `phel.core/set!` and `phel.core/php-invoke`. `View source` links point at `v0.50.0`.
