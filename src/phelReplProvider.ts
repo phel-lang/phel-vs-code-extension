@@ -10,13 +10,15 @@
 //
 // Every form sent to the REPL is appended to `.vscode/phel-repl-history.phel`
 // in the corresponding workspace folder when `phel.repl.history.enabled` is
-// true (the default).
+// true (the default), and `phel.repl.history` reads it back as a picker.
 
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { toInvocation } from './phelInvocation';
+import { evalOverLiveConnection, peekConnection } from './phelNreplProvider';
 import { parseNsForm } from './phelNsAnalyzer';
 import { flattenForTerminal, nextTopLevelFormAfter, topLevelFormAt } from './phelRepl';
+import { parseReplHistory } from './phelReplHistory';
 import { folderForDocument as workspaceFolderForDoc } from './phelWorkspace';
 
 const REPL_TERMINAL_NAME = 'Phel REPL';
@@ -203,6 +205,77 @@ async function switchNs(): Promise<void> {
     terminalNs.set(term, ns);
 }
 
+interface HistoryItem extends vscode.QuickPickItem {
+    /** The form to send; `label` shows it, so they are the same text. */
+    form: string;
+}
+
+/** The per-item button that runs a recalled form over the nREPL instead. */
+const EVAL_IN_NREPL: vscode.QuickInputButton = {
+    iconPath: new vscode.ThemeIcon('plug'),
+    tooltip: 'Eval in nREPL',
+};
+
+async function readHistory(folder: vscode.WorkspaceFolder): Promise<string | undefined> {
+    const uri = vscode.Uri.joinPath(folder.uri, HISTORY_FILE);
+    try {
+        return Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
+    } catch {
+        return undefined; // nothing was ever sent from this folder
+    }
+}
+
+/**
+ * Pick a previously sent form out of the history file and send it again. Picking
+ * uses the REPL terminal, as the original send did; the per-item button runs it
+ * over a live nREPL connection instead, which is the same form with a structured
+ * answer.
+ */
+async function showHistory(): Promise<void> {
+    const folder = workspaceFolderForDoc(vscode.window.activeTextEditor?.document);
+    if (!folder) {
+        vscode.window.showWarningMessage('Open a file inside a Phel project first.');
+        return;
+    }
+    const text = await readHistory(folder);
+    const entries = text === undefined ? [] : parseReplHistory(text);
+    if (entries.length === 0) {
+        vscode.window.showInformationMessage(`No Phel REPL history yet in ${HISTORY_FILE}.`);
+        return;
+    }
+    // The button is only offered while a connection exists: it may not open one
+    // (see `evalOverLiveConnection`), and a button that cannot act is worse than
+    // no button.
+    const buttons = peekConnection(folder) ? [EVAL_IN_NREPL] : [];
+    const picker = vscode.window.createQuickPick<HistoryItem>();
+    picker.title = 'Phel REPL History';
+    picker.placeholder = 'Send a form you evaluated before';
+    picker.matchOnDescription = true;
+    picker.items = entries.map((entry) => ({
+        label: entry.form,
+        description: entry.stamp,
+        form: entry.form,
+        buttons,
+    }));
+    picker.onDidAccept(() => {
+        const item = picker.selectedItems[0];
+        picker.hide();
+        if (item) {
+            sendToRepl(item.form, folder);
+        }
+    });
+    picker.onDidTriggerItemButton(async (event) => {
+        picker.hide();
+        if (!(await evalOverLiveConnection(folder, event.item.form))) {
+            vscode.window.showWarningMessage(
+                'Phel nREPL: no live connection. Run "Phel: Connect to nREPL Server" first.'
+            );
+        }
+    });
+    picker.onDidHide(() => picker.dispose());
+    picker.show();
+}
+
 function startRepl(): void {
     const folder = workspaceFolderForDoc(vscode.window.activeTextEditor?.document);
     ensureTerminal(folder);
@@ -216,6 +289,7 @@ export function registerReplCommands(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('phel.repl.evalNextForm', evalNextForm),
         vscode.commands.registerCommand('phel.repl.evalFile', evalFile),
         vscode.commands.registerCommand('phel.repl.switchNs', switchNs),
+        vscode.commands.registerCommand('phel.repl.history', showHistory),
         vscode.window.onDidCloseTerminal((t) => {
             terminalNs.delete(t);
         })

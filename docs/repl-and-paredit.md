@@ -11,6 +11,7 @@
 | `Phel: Eval Next Form` | _unbound_ | Sends the next top-level form and advances the cursor. |
 | `Phel: Eval File` | _unbound_ | Sends the entire buffer. |
 | `Phel: Switch REPL to Current Namespace` | _unbound_ | Sends `(in-ns 'this.ns)` for the active file. |
+| `Phel: REPL History` | _unbound_ | Picks a form you sent before out of the history file and sends it again. |
 
 ### Inline results (nREPL)
 
@@ -19,6 +20,33 @@ top-level form under the cursor over the nREPL connection and shows the value as
 a dimmed `=> …` decoration at the end of the form's line (errors in the error
 colour). The decoration clears as soon as you edit the buffer. The full value,
 captured stdout, and stack traces still go to the **Phel nREPL** output channel.
+
+### Results in the buffer (nREPL)
+
+Two commands write the value where you can keep it:
+
+- **`Phel: nREPL Evaluate to Comment`** (`ctrl+alt+c` / `cmd+alt+c`) puts it on
+  the line under the form, as `;; => value`. Evaluating the same form again
+  rewrites that block rather than stacking a second one under the first, so the
+  comment follows the code as you edit it. A multi-line value gets one comment
+  line each, padded so the value stays in one column — which is also how the
+  block is recognised next time, so an ordinary `;; note` written under a result
+  is left where it is. On macOS this shadows **Copy Path** inside `.phel` files.
+- **`Phel: nREPL Evaluate and Replace Form`** swaps the form for its value. A
+  form that errored is left exactly as it was (the error goes to the output
+  channel): the form is the only copy of itself.
+
+### The last result, in a document
+
+`Phel: nREPL Show Last Result` opens `phel-result:last.phel` beside the editor —
+a read-only document holding the value of the most recent evaluation, with Phel
+highlighting because the value *is* Phel data. Every nREPL eval command refreshes
+it, so leaving it pinned in a second column turns it into a result pane.
+
+The value shown is the one the eval brought back. Phel's nREPL keeps a
+per-session `*1`/`*2`/`*3` ring, but surfaces it as fields on the response
+frame — those names are not bound in the namespace your code compiles in, so
+nothing is re-read from the runtime to fill this document.
 
 ### Hover evaluation (nREPL)
 
@@ -71,6 +99,11 @@ Each REPL terminal remembers which namespace it last switched into. When you eva
 ### History
 
 Every form sent to the REPL is appended to `.vscode/phel-repl-history.phel` in the workspace, with a UTC timestamp comment above each entry. Toggle via `phel.repl.history.enabled`.
+
+`Phel: REPL History` reads that file back as a picker: newest first, one row per
+distinct form. Picking one sends it to the REPL terminal again; the **Eval in
+nREPL** button on a row runs it over the nREPL connection instead, and only
+appears while there is one — like hover evaluation, it never opens a connection.
 
 ### Settings
 
