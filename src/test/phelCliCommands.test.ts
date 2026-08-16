@@ -1,5 +1,12 @@
 import * as assert from 'node:assert/strict';
-import { balanceArgs, benchArgs, buildArgs, parseTemplates } from '../phelCliCommands';
+import * as path from 'path';
+import {
+    balanceArgs,
+    benchArgs,
+    buildArgs,
+    parseTemplates,
+    relativeTargetPath,
+} from '../phelCliCommands';
 
 // Captured verbatim from `phel init --list-templates`.
 const LIST_OUTPUT = [
@@ -43,6 +50,37 @@ describe('phelCliCommands.parseTemplates', () => {
     it('returns an empty array when nothing matches', () => {
         assert.deepEqual(parseTemplates(''), []);
         assert.deepEqual(parseTemplates('No templates found.'), []);
+    });
+});
+
+describe('relativeTargetPath', () => {
+    const root = path.join(path.sep, 'projects', 'app');
+
+    it('names the file relative to the folder the command runs in', () => {
+        assert.equal(
+            relativeTargetPath(root, path.join(root, 'tests', 'bench.phel')),
+            path.join('tests', 'bench.phel')
+        );
+    });
+
+    it('gives the same argument for the same file in another root', () => {
+        const other = path.join(path.sep, 'projects', 'lib');
+        assert.equal(
+            relativeTargetPath(other, path.join(other, 'tests', 'bench.phel')),
+            relativeTargetPath(root, path.join(root, 'tests', 'bench.phel'))
+        );
+    });
+
+    it('falls back to the absolute path when the target is the root itself', () => {
+        assert.equal(relativeTargetPath(root, root), root);
+    });
+
+    it('reaches out of the root rather than inventing a path', () => {
+        // A file outside the folder is still addressable from its cwd.
+        assert.equal(
+            relativeTargetPath(root, path.join(path.sep, 'projects', 'lib', 'x.phel')),
+            path.join('..', 'lib', 'x.phel')
+        );
     });
 });
 

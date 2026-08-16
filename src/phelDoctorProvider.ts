@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { runPhelCli } from './phelCli';
-import { activeWorkspaceFolder } from './phelWorkspace';
+import { pickWorkspaceFolder } from './phelWorkspace';
 
 const OUTPUT_CHANNEL_NAME = 'Phel Doctor';
 
@@ -30,9 +30,8 @@ function runPhel(
 }
 
 async function runDoctor(): Promise<void> {
-    const folder = activeWorkspaceFolder();
+    const folder = await pickWorkspaceFolder();
     if (!folder) {
-        vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
     }
     const ch = channel();
@@ -61,9 +60,8 @@ async function runDoctor(): Promise<void> {
 }
 
 async function showConfig(): Promise<void> {
-    const folder = activeWorkspaceFolder();
+    const folder = await pickWorkspaceFolder();
     if (!folder) {
-        vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
     }
     const result = await vscode.window.withProgress(

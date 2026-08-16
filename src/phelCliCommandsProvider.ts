@@ -10,25 +10,34 @@
 // These run in an integrated terminal (they are long-running or scaffold files
 // the user wants to see), matching the existing terminal-based test commands.
 
-import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { runPhelCli } from './phelCli';
 import { runInTerminal } from './phelTerminal';
-import { activeWorkspaceFolder } from './phelWorkspace';
+import { activeWorkspaceFolder, folderForUri, pickWorkspaceFolder } from './phelWorkspace';
 import {
     balanceArgs,
     benchArgs,
     buildArgs,
     type OptimizationLevel,
     parseTemplates,
+    relativeTargetPath,
     type PhelTemplate,
 } from './phelCliCommands';
 
-function testWatch(): void {
-    const folder = activeWorkspaceFolder();
+/**
+ * The folder a file-scoped command runs in: the one owning the file it was
+ * invoked on, so a lens or context menu in a multi-root workspace does not run
+ * against whatever happens to be in the active editor. Only the palette entries,
+ * which have no file, fall back to the active editor's folder.
+ */
+function folderForTarget(uri?: vscode.Uri): vscode.WorkspaceFolder | undefined {
+    return (uri ? folderForUri(uri) : undefined) ?? activeWorkspaceFolder();
+}
+
+async function testWatch(): Promise<void> {
+    const folder = await pickWorkspaceFolder();
     if (!folder) {
-        vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
     }
     const command = resolvePhelExecutable('test.command', folder);
@@ -36,9 +45,8 @@ function testWatch(): void {
 }
 
 async function build(): Promise<void> {
-    const folder = activeWorkspaceFolder();
+    const folder = await pickWorkspaceFolder();
     if (!folder) {
-        vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
     }
     const level = await vscode.window.showQuickPick(
@@ -82,7 +90,15 @@ async function listTemplates(command: string, cwd: string): Promise<PhelTemplate
 }
 
 async function init(): Promise<void> {
-    const folder = activeWorkspaceFolder();
+    // A window with no folder open can still scaffold a project (into the
+    // host's own cwd); with folders open, run in the picked one.
+    let folder: vscode.WorkspaceFolder | undefined;
+    if (vscode.workspace.workspaceFolders?.length) {
+        folder = await pickWorkspaceFolder();
+        if (!folder) {
+            return; // cancelled
+        }
+    }
     const cwd = folder?.uri.fsPath ?? process.cwd();
     // init has no per-command override; resolve from phel.executablePath.
     const command = resolvePhelExecutable(undefined, folder);
@@ -132,7 +148,7 @@ async function init(): Promise<void> {
  * map, and the baseline flags (`--store`, `--ref`, `--tolerance`) belong in CI.
  */
 async function bench(uri?: vscode.Uri): Promise<void> {
-    const folder = activeWorkspaceFolder();
+    const folder = folderForTarget(uri);
     if (!folder) {
         vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
@@ -147,7 +163,7 @@ async function bench(uri?: vscode.Uri): Promise<void> {
     // bench has no per-command override; resolve from phel.executablePath.
     const command = resolvePhelExecutable(undefined, folder);
     const args = benchArgs({
-        paths: uri ? [uri.fsPath] : [],
+        paths: uri ? [relativeTargetPath(folder.uri.fsPath, uri.fsPath)] : [],
         filter,
     });
     runInTerminal('Phel Bench', command, args, folder.uri.fsPath);
@@ -159,14 +175,17 @@ async function bench(uri?: vscode.Uri): Promise<void> {
  * match: a benchmark whose name is a prefix of another runs both.
  */
 function runBenchmark(uri: vscode.Uri | undefined, name: string): void {
-    const folder = activeWorkspaceFolder();
+    const folder = folderForTarget(uri);
     if (!folder) {
         vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
     }
     // bench has no per-command override; resolve from phel.executablePath.
     const command = resolvePhelExecutable(undefined, folder);
-    const args = benchArgs({ paths: uri ? [uri.fsPath] : [], filter: name });
+    const args = benchArgs({
+        paths: uri ? [relativeTargetPath(folder.uri.fsPath, uri.fsPath)] : [],
+        filter: name,
+    });
     runInTerminal('Phel Bench', command, args, folder.uri.fsPath);
 }
 
@@ -185,14 +204,14 @@ function runFile(uri?: vscode.Uri): void {
         vscode.window.showWarningMessage('Open a Phel file first.');
         return;
     }
-    const folder = vscode.workspace.getWorkspaceFolder(target) ?? activeWorkspaceFolder();
+    const folder = folderForTarget(target);
     if (!folder) {
         vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
     }
     // run has no per-command override; resolve from phel.executablePath.
     const command = resolvePhelExecutable(undefined, folder);
-    const relative = path.relative(folder.uri.fsPath, target.fsPath);
+    const relative = relativeTargetPath(folder.uri.fsPath, target.fsPath);
     runInTerminal('Phel Run', command, ['run', relative], folder.uri.fsPath);
 }
 
@@ -202,9 +221,8 @@ function runFile(uri?: vscode.Uri): void {
  * confirmation for a command that edits source on disk.
  */
 async function balance(): Promise<void> {
-    const folder = activeWorkspaceFolder();
+    const folder = await pickWorkspaceFolder();
     if (!folder) {
-        vscode.window.showWarningMessage('Open a Phel project folder first.');
         return;
     }
     const mode = await vscode.window.showQuickPick(

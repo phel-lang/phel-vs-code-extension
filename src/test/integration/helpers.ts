@@ -82,6 +82,25 @@ export function delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * The cwd a terminal was created with. `creationOptions` widens to
+ * `TerminalOptions | ExtensionTerminalOptions`, and only the former has a `cwd`
+ * — which is then a string or a Uri, depending on what the caller passed.
+ */
+export function terminalCwd(terminal: vscode.Terminal): string | undefined {
+    const cwd = (terminal.creationOptions as vscode.TerminalOptions).cwd;
+    if (cwd === undefined) {
+        return undefined;
+    }
+    return typeof cwd === 'string' ? cwd : cwd.fsPath;
+}
+
+/** The argv the terminal's process was started with; its paths are cwd-relative. */
+export function terminalArgs(terminal: vscode.Terminal): readonly string[] {
+    const shellArgs = (terminal.creationOptions as vscode.TerminalOptions).shellArgs ?? [];
+    return typeof shellArgs === 'string' ? [shellArgs] : shellArgs;
+}
+
 /** Completion labels are either a string or a `{ label }` record. */
 export function labelOf(item: vscode.CompletionItem): string {
     return typeof item.label === 'string' ? item.label : item.label.label;

@@ -103,6 +103,10 @@ export async function startLanguageClient(
         return isLanguageServerRunning();
     }
 
+    // One server per window, rooted at the first folder: `phel lsp` has no
+    // multi-root notion, and a client per folder would mean one process (and
+    // one compiler cache) per folder. Known limitation, documented in
+    // docs/settings.md.
     const folder = vscode.workspace.workspaceFolders?.[0];
     const { command, args } = resolveServerCommand(folder);
 

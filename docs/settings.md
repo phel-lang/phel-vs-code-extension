@@ -35,6 +35,18 @@ The extension shells out to the Phel CLI for diagnostics, formatting, the test r
 }
 ```
 
+## Language server
+
+Off by default. When enabled, completion, hover, signature help, definition, references, rename, symbols, formatting and diagnostics are served by Phel's own `phel lsp` instead of the bundled providers; the bundled ones take over again if the server never starts or keeps dying. See [completion](completion.md).
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `phel.lsp.enabled` | boolean | `false` | Use `phel lsp` for the language features. Needs a reload. |
+| `phel.lsp.command` | string | `""` | Override `phel.executablePath` for the language server. Empty string → fall back to `phel.executablePath`. |
+| `phel.lsp.args` | string[] | `["lsp"]` | Arguments passed to the Phel CLI when starting the server. |
+
+**Known limitation — multi-root workspaces.** The extension starts one server per window, rooted at the **first** workspace folder, and every `.phel` file in the window is served by it: `phel lsp` has no multi-root notion, and a server per folder would mean one compiler process and one cache per folder. Relative paths in `phel.lsp.command` / `phel.executablePath` and the server's own config therefore resolve against that first folder. Everything else — diagnostics, formatting, the test and benchmark runners, the REPL — resolves the folder from the file it acts on. If the second project needs its own server, open it in its own window.
+
 ## Feature toggles
 
 | Setting | Type | Default | Description |

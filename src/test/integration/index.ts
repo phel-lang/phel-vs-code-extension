@@ -10,6 +10,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import Mocha from 'mocha';
 
+/**
+ * Suites that need the two-folder host (`test-fixtures/multi-root.code-workspace`)
+ * rather than the single-folder fixture. `runTests.js` launches both and sets
+ * `PHEL_ITEST_MULTI_ROOT` to say which window this is; each suite runs in
+ * exactly one of them.
+ */
+const MULTI_ROOT_SUITES = new Set(['multiRoot.itest.js']);
+
 export function run(): Promise<void> {
     const mocha = new Mocha({
         ui: 'bdd',
@@ -21,8 +29,11 @@ export function run(): Promise<void> {
         timeout: 20_000,
     });
 
+    const multiRoot = process.env.PHEL_ITEST_MULTI_ROOT === '1';
     for (const file of suiteFiles(__dirname)) {
-        mocha.addFile(file);
+        if (MULTI_ROOT_SUITES.has(path.basename(file)) === multiRoot) {
+            mocha.addFile(file);
+        }
     }
 
     return new Promise((resolve, reject) => {

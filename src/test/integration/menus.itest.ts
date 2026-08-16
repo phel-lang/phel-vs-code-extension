@@ -11,23 +11,9 @@
 
 import * as assert from 'node:assert/strict';
 import * as vscode from 'vscode';
-import { WORKSPACE_ROOT, activateExtension, fixtureUri, waitFor } from './helpers';
+import { WORKSPACE_ROOT, activateExtension, fixtureUri, terminalCwd, waitFor } from './helpers';
 
 const RUN_TERMINAL = 'Phel Run';
-
-/**
- * `creationOptions` widens to `TerminalOptions | ExtensionTerminalOptions`, and
- * only the former has a `cwd` — which is then a string or a Uri, depending on
- * what the caller passed.
- */
-function cwdOf(terminal: vscode.Terminal): string | undefined {
-    const options = terminal.creationOptions as vscode.TerminalOptions;
-    const cwd = options.cwd;
-    if (cwd === undefined) {
-        return undefined;
-    }
-    return typeof cwd === 'string' ? cwd : cwd.fsPath;
-}
 
 describe('menu commands', function () {
     before(async function () {
@@ -50,7 +36,7 @@ describe('menu commands', function () {
         );
 
         try {
-            assert.equal(cwdOf(terminal), WORKSPACE_ROOT);
+            assert.equal(terminalCwd(terminal), WORKSPACE_ROOT);
         } finally {
             terminal.dispose();
         }

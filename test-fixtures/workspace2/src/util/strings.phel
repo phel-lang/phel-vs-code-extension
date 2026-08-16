@@ -1,4 +1,12 @@
-(ns util.strings)
+(ns util.strings
+  (:require phel.test :refer [deftest is])
+  (:require phel.bench :refer [defbench]))
 
 (defn shout [s]
   (str s "!"))
+
+(deftest shouts-a-word
+  (is (= "hi!" (shout "hi"))))
+
+(defbench shouting
+  (shout "hi"))
