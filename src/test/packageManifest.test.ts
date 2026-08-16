@@ -233,6 +233,7 @@ describe('package.json configuration scopes', () => {
         'phel.lsp.args',
         'phel.diagnostics.command',
         'phel.format.command',
+        'phel.references.codeLens',
         'phel.test.command',
         'phel.repl.command',
         'phel.repl.args',

@@ -22,3 +22,31 @@
  * the bracket / quote characters that end a token.
  */
 export const PHEL_SYMBOL_RE = /[A-Za-z0-9_!?*+<>=/\-.:$&%][^\s(){}[\]"`,]*/;
+
+/**
+ * The symbol token covering column `character` of `lineText`, as a `[start,
+ * end)` pair, or `undefined` when that column sits outside any token.
+ *
+ * `TextDocument.getWordRangeAtPosition` does this for an open buffer; this does
+ * it for text read off disk. Both are needed because the analysis daemon
+ * reports a reference as the position its token *starts* at and says nothing
+ * about how far it runs: assuming the length of the name that was searched for
+ * spans `s/sho` of an `s/shout` written in a file nobody has open.
+ */
+export function symbolTokenAt(
+    lineText: string,
+    character: number
+): { start: number; end: number } | undefined {
+    const scanner = new RegExp(PHEL_SYMBOL_RE.source, 'g');
+    for (let match = scanner.exec(lineText); match; match = scanner.exec(lineText)) {
+        const start = match.index;
+        const end = start + match[0].length;
+        if (character >= start && character < end) {
+            return { start, end };
+        }
+        if (start > character) {
+            return undefined;
+        }
+    }
+    return undefined;
+}

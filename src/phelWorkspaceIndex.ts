@@ -5,6 +5,11 @@
 // Each indexed doc carries the originating file as `sourceUri` so providers
 // can build go-to-definition responses, and inherits `line` / `column` from
 // the parser.
+//
+// Alongside the docs it keeps, per file, how often each symbol token is written
+// there. Summed across files that answers "how many references" in one map
+// lookup, which is what the reference CodeLens needs: recomputing it per lens
+// would mean rereading the whole workspace on every keystroke.
 
 import type { PhelDoc } from './phelDocs';
 
@@ -17,20 +22,43 @@ export interface WorkspaceDoc extends PhelDoc {
     sourceFile: string;
 }
 
+/** No token tally for a file, for callers that only care about its docs. */
+const NO_COUNTS: ReadonlyMap<string, number> = new Map();
+
 export class PhelWorkspaceIndex {
     private readonly perFile = new Map<string, WorkspaceDoc[]>();
+    /** How often each symbol token is written, per file. */
+    private readonly countsPerFile = new Map<string, ReadonlyMap<string, number>>();
+    /** The same tallies summed across every file, kept in step with them. */
+    private readonly totals = new Map<string, number>();
 
     /**
-     * Replace the docs known for `file`. A file that defines nothing stays in
-     * the index with no docs rather than dropping out of it: find-references
-     * scans the files this index knows, and a benchmark file or a script uses
-     * plenty of symbols while defining none. `removeFile` is what forgets one.
+     * Replace the docs known for `file`, and the tally of the symbol tokens it
+     * writes. A file that defines nothing stays in the index with no docs
+     * rather than dropping out of it: find-references scans the files this
+     * index knows, and a benchmark file or a script uses plenty of symbols
+     * while defining none. `removeFile` is what forgets one.
      */
-    setFile(file: string, docs: PhelDoc[]): void {
+    setFile(file: string, docs: PhelDoc[], counts: ReadonlyMap<string, number> = NO_COUNTS): void {
         this.perFile.set(
             file,
             docs.map((d) => ({ ...d, sourceFile: file }))
         );
+        this.replaceCounts(file, counts);
+    }
+
+    /**
+     * How often `name` is written as a symbol token across every indexed file,
+     * counting a qualified `s/name` as a use of `name`. One map lookup, which
+     * is what makes it usable from a CodeLens.
+     */
+    occurrenceCount(name: string): number {
+        return this.totals.get(name) ?? 0;
+    }
+
+    /** The same tally for one file — what an unsaved buffer supersedes. */
+    occurrenceCountIn(file: string, name: string): number {
+        return this.countsPerFile.get(file)?.get(name) ?? 0;
     }
 
     /** Every file that has been indexed, including those that define nothing. */
@@ -41,11 +69,15 @@ export class PhelWorkspaceIndex {
     /** Forget every doc that came from `file`. */
     removeFile(file: string): void {
         this.perFile.delete(file);
+        this.replaceCounts(file, NO_COUNTS);
+        this.countsPerFile.delete(file);
     }
 
     /** Forget everything. */
     clear(): void {
         this.perFile.clear();
+        this.countsPerFile.clear();
+        this.totals.clear();
     }
 
     /** All workspace docs across every indexed file. */
@@ -76,6 +108,26 @@ export class PhelWorkspaceIndex {
     /** Docs that came from a specific file. */
     docsForFile(file: string): WorkspaceDoc[] {
         return this.perFile.get(file) ?? [];
+    }
+
+    /**
+     * Swap one file's tally, keeping `totals` exact. Subtracting the old one
+     * first is what makes a re-index of the same file idempotent; a name that
+     * falls to zero is dropped so the map does not grow with every rename.
+     */
+    private replaceCounts(file: string, counts: ReadonlyMap<string, number>): void {
+        for (const [name, n] of this.countsPerFile.get(file) ?? NO_COUNTS) {
+            const left = (this.totals.get(name) ?? 0) - n;
+            if (left > 0) {
+                this.totals.set(name, left);
+            } else {
+                this.totals.delete(name);
+            }
+        }
+        this.countsPerFile.set(file, counts);
+        for (const [name, n] of counts) {
+            this.totals.set(name, (this.totals.get(name) ?? 0) + n);
+        }
     }
 }
 

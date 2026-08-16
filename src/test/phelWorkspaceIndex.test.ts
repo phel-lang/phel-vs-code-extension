@@ -1,5 +1,6 @@
 import * as assert from 'assert';
 import type { PhelDoc } from '../phelDocs';
+import { countSymbolTokens } from '../phelReferences';
 import { combineDocs, PhelWorkspaceIndex, WorkspaceDoc } from '../phelWorkspaceIndex';
 
 function fakeDoc(name: string, ns = 'app.core', overrides: Partial<PhelDoc> = {}): PhelDoc {
@@ -84,6 +85,45 @@ describe('PhelWorkspaceIndex', function () {
         idx.clear();
         assert.strictEqual(idx.fileCount(), 0);
         assert.strictEqual(idx.docCount(), 0);
+    });
+});
+
+describe('PhelWorkspaceIndex token counts', function () {
+    it('sums a name across every file that writes it', function () {
+        const idx = new PhelWorkspaceIndex();
+        idx.setFile('/repo/a.phel', [fakeDoc('greet')], countSymbolTokens('(defn greet [] 1)'));
+        idx.setFile('/repo/b.phel', [], countSymbolTokens('(greet) (greet)'));
+
+        assert.strictEqual(idx.occurrenceCount('greet'), 3);
+        assert.strictEqual(idx.occurrenceCountIn('/repo/b.phel', 'greet'), 2);
+        assert.strictEqual(idx.occurrenceCount('nowhere'), 0);
+    });
+
+    it('re-indexing a file replaces its tally rather than adding to it', function () {
+        const idx = new PhelWorkspaceIndex();
+        idx.setFile('/repo/a.phel', [], countSymbolTokens('(greet) (greet)'));
+        idx.setFile('/repo/a.phel', [], countSymbolTokens('(greet)'));
+
+        assert.strictEqual(idx.occurrenceCount('greet'), 1);
+    });
+
+    it('forgetting a file takes its tally with it', function () {
+        const idx = new PhelWorkspaceIndex();
+        idx.setFile('/repo/a.phel', [], countSymbolTokens('(greet)'));
+        idx.setFile('/repo/b.phel', [], countSymbolTokens('(greet)'));
+        idx.removeFile('/repo/a.phel');
+        assert.strictEqual(idx.occurrenceCount('greet'), 1);
+
+        idx.clear();
+        assert.strictEqual(idx.occurrenceCount('greet'), 0);
+    });
+
+    it('counts an alias-qualified use under the bare name too', function () {
+        const idx = new PhelWorkspaceIndex();
+        idx.setFile('/repo/a.phel', [], countSymbolTokens('(s/greet "hi")'));
+
+        assert.strictEqual(idx.occurrenceCount('greet'), 1);
+        assert.strictEqual(idx.occurrenceCount('s/greet'), 1);
     });
 });
 

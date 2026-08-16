@@ -1,12 +1,13 @@
-// Workspace-wide rename for Phel symbols. Reuses the find-references
-// scanner so every standalone occurrence (excluding strings and comments)
-// is rewritten consistently.
+// Workspace-wide rename for Phel symbols. Reuses the find-references search so
+// every reference site (excluding strings and comments) is rewritten
+// consistently — including the ones written `alias/name`, where only the name
+// half is replaced and the alias is left alone.
 //
 // `prepareRename` rejects names that aren't valid Phel symbol tokens to
 // avoid producing broken source.
 
 import * as vscode from 'vscode';
-import { findReferenceLocations } from './phelReferenceProvider';
+import { findMergedReferences } from './phelReferenceProvider';
 import { isValidSymbolName } from './phelReferences';
 import { resolveLocalAt, localOccurrences } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
@@ -31,7 +32,11 @@ export class PhelRenameProvider implements vscode.RenameProvider {
         position: vscode.Position,
         newName: string
     ): Promise<vscode.WorkspaceEdit | undefined> {
-        if (!isValidSymbolName(newName)) {
+        // The box is pre-filled with the whole token, so a user renaming
+        // `s/shout` in place sends back `s/yell`. Either spelling means the same
+        // rename: the alias belongs to the file that wrote it, not to the name.
+        const wanted = bareName(newName);
+        if (!isValidSymbolName(wanted)) {
             throw new Error(`'${newName}' is not a valid Phel symbol name.`);
         }
         const range = document.getWordRangeAtPosition(position, PHEL_SYMBOL_RE);
@@ -39,7 +44,7 @@ export class PhelRenameProvider implements vscode.RenameProvider {
             return undefined;
         }
         const oldName = document.getText(range);
-        if (oldName === newName) {
+        if (bareName(oldName) === wanted) {
             return undefined;
         }
 
@@ -54,16 +59,20 @@ export class PhelRenameProvider implements vscode.RenameProvider {
                 edit.replace(
                     document.uri,
                     new vscode.Range(document.positionAt(occ.start), document.positionAt(occ.end)),
-                    newName
+                    wanted
                 );
             }
             return edit;
         }
 
-        const locations = await findReferenceLocations(oldName, document, this.indexer);
-        for (const loc of locations) {
-            edit.replace(loc.uri, loc.range, newName);
+        for (const reference of await findMergedReferences(oldName, document, this.indexer)) {
+            edit.replace(reference.location.uri, reference.nameRange, wanted);
         }
         return edit;
     }
+}
+
+/** `s/shout` names `shout`; the prefix is the file's alias, not the symbol. */
+function bareName(token: string): string {
+    return token.slice(token.lastIndexOf('/') + 1);
 }

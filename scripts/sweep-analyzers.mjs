@@ -81,6 +81,7 @@ const totals = {
     indentLines: 0,
     indentDiffs: 0,
     indentComments: 0,
+    tokens: 0,
 };
 /** The first handful of lines `indentationAt` disagrees with the corpus about. */
 const indentDisagreements = [];
@@ -140,6 +141,12 @@ for (const file of files) {
         )?.length ?? 0;
     attempt(file, 'aliasMapFromSource', () => nsAnalyzer.aliasMapFromSource(src));
     attempt(file, 'findOccurrences', () => references.findOccurrences(src, 'map'));
+    attempt(file, 'findQualifiedOccurrences', () => references.findQualifiedOccurrences(src, 'map'));
+    attempt(file, 'findPrefixedOccurrences', () => references.findPrefixedOccurrences(src, 'map'));
+    // Distinct symbol spellings, summed over the corpus. A qualified token is
+    // counted under both its own spelling and its bare name, so this runs a
+    // little ahead of the number of names a reader would count.
+    totals.tokens += attempt(file, 'countSymbolTokens', () => references.countSymbolTokens(src))?.size ?? 0;
 
     // A `phel format`ted corpus is exactly where the on-type indenter should
     // want every line to be, so `indentDiffs` is the measure of how far its

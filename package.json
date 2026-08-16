@@ -933,6 +933,12 @@
                     "default": true,
                     "markdownDescription": "Indent the line as you type it - on Enter, and on a closing bracket typed at the start of a line - following the same rules `phel format` uses, so a save never has to move it again. Needs `#editor.formatOnType#`, which this extension turns on for `.phel` files."
                 },
+                "phel.references.codeLens": {
+                    "type": "boolean",
+                    "default": true,
+                    "scope": "resource",
+                    "description": "Show a reference count above every definition, which opens the reference list when clicked."
+                },
                 "phel.tests.codeLensEnabled": {
                     "type": "boolean",
                     "default": true,

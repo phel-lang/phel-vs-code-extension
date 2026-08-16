@@ -2,23 +2,12 @@
 // It used to exist as seven byte-identical copies with no test at all.
 
 import * as assert from 'node:assert/strict';
-import { PHEL_SYMBOL_RE } from '../phelSymbolToken';
+import { PHEL_SYMBOL_RE, symbolTokenAt } from '../phelSymbolToken';
 
 /** What the editor would treat as the word at `offset`. */
 function wordAt(text: string, offset: number): string | null {
-    const re = new RegExp(PHEL_SYMBOL_RE.source, 'g');
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(text)) !== null) {
-        const start = match.index;
-        const end = start + match[0].length;
-        if (offset >= start && offset < end) {
-            return match[0];
-        }
-        if (start > offset) {
-            return null;
-        }
-    }
-    return null;
+    const token = symbolTokenAt(text, offset);
+    return token ? text.slice(token.start, token.end) : null;
 }
 
 describe('PHEL_SYMBOL_RE', () => {
@@ -73,5 +62,24 @@ describe('PHEL_SYMBOL_RE', () => {
         // Regression guard: the grammar treats a trailing `#` as part of the
         // symbol, and word selection has to agree.
         assert.equal(wordAt('(let [x# 1] x#)', 6), 'x#');
+    });
+});
+
+describe('symbolTokenAt', () => {
+    it('spans the whole token from the position it starts at', () => {
+        // What the daemon reports for a reference: the start of the token, and
+        // nothing about its length. `s/shout` has to come back whole, or a
+        // rename would rewrite the first five characters of it.
+        assert.deepEqual(symbolTokenAt('  (s/shout text))', 3), { start: 3, end: 10 });
+    });
+
+    it('spans it from anywhere inside it', () => {
+        assert.deepEqual(symbolTokenAt('(shout text)', 4), { start: 1, end: 6 });
+    });
+
+    it('answers nothing for a column that is not in a token', () => {
+        assert.equal(symbolTokenAt('(shout text)', 0), undefined);
+        assert.equal(symbolTokenAt('   ', 1), undefined);
+        assert.equal(symbolTokenAt('(shout text)', 99), undefined);
     });
 });

@@ -13,7 +13,17 @@ With an analysis daemon running (see [below](#what-the-analysis-daemon-adds)) tw
 
 Lists every standalone occurrence of the symbol across every indexed `.phel` file plus the active buffer. Strings, character literals, line comments, and block comments are skipped, so you don't get false positives in docstrings.
 
-The daemon's own reference sites are merged in on top of that. They are worth having because a scan for a token cannot see a namespace-qualified use — `s/includes?` is one token, and searching for `includes?` never matches inside it — while the daemon indexed it under exactly that spelling. A file with unsaved changes is the one place the daemon is ignored: it read the file off disk, so the buffer wins for its own hits.
+A use written with a namespace prefix is listed too. `s/includes?` is a single token, so searching for `includes?` never matches inside it; the search therefore also looks for `alias/name`, and keeps it only where that file's `(:require …)` makes the alias mean the namespace the symbol belongs to. A same-named function from another namespace is not a hit.
+
+The daemon's own reference sites are merged in on top of that, which is how a qualified use the token scan could not attribute still shows up. A file with unsaved changes is the one place the daemon is ignored: it read the file off disk, so the buffer wins for its own hits.
+
+## Reference count CodeLens
+
+Every definition carries a `N references` lens above it; clicking it opens the same list `shift+F12` would. `phel.references.codeLens` (default on, per folder) turns it off.
+
+The number is the count of every mention of the name anywhere in the workspace except the definition's own — including the `:refer` entry that imports it, and including a call written through an alias. It is a lookup, not a search: the workspace index tallies the symbol tokens of each file as it reads it, so the lens costs nothing per keystroke. Unsaved buffers are re-counted from what they say now; a definition you have just typed gets its lens once the file is saved, which is when the index learns about it.
+
+`deftest` forms get no reference lens — the runner discovers them by name, nothing calls them — and they already carry a **Run test** lens.
 
 ## What the analysis daemon adds
 
@@ -27,9 +37,11 @@ That index is rebuilt two seconds after each save, and never on a keystroke: wal
 
 ## Rename Symbol (`F2`)
 
-Rewrites every occurrence of the symbol in the workspace via a single `WorkspaceEdit`. The new name is validated as a legal Phel symbol token before any edit is applied.
+Rewrites every reference the search above finds, in the workspace, via a single `WorkspaceEdit`. The new name is validated as a legal Phel symbol token before any edit is applied.
 
 Same skipping rules as Find References - you can rename `foo` without touching the literal `"foo"` inside a string.
+
+A use written `s/shout` has only its name half rewritten, so it becomes `s/yell`: the alias belongs to the file that declared it, not to the symbol. Renaming *at* such a token works the same way — the box is pre-filled with the whole token, and sending back either `yell` or `s/yell` means the same rename.
 
 ## Locals vs globals
 
