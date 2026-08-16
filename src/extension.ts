@@ -23,6 +23,7 @@ import { PhelRenameProvider } from './phelRenameProvider';
 import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelSymbolProviders';
 import { PhelSemanticTokensProvider, SEMANTIC_LEGEND } from './phelSemanticTokens';
 import { PhelUnusedLocals } from './phelUnusedLocals';
+import { PhelMigrationDiagnostics } from './phelMigrationProvider';
 import { PhelCodeActionProvider } from './phelCodeActionsProvider';
 import { PhelFoldingRangeProvider } from './phelFoldingProvider';
 import { PhelSelectionRangeProvider } from './phelSelectionRangeProvider';
@@ -360,6 +361,7 @@ function registerLanguageProviders(context: vscode.ExtensionContext): void {
     );
 
     context.subscriptions.push(new PhelUnusedLocals());
+    context.subscriptions.push(new PhelMigrationDiagnostics());
 
     context.subscriptions.push(
         vscode.languages.registerCodeActionsProvider(

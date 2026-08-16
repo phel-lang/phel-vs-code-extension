@@ -54,6 +54,9 @@
 			"include": "#number"
 		},
 		{
+			"include": "#interop"
+		},
+		{
 			"include": "#corelib"
 		},
 		{
@@ -65,7 +68,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.phel",
-					"match": "(?<=\\(|\\{|\\[|\\s)(with-output-buffer|with-mock-wrapper|unquote-splicing|extend-protocol|compiled-router|definterface\\*?|defexception\\*?|defenum\\*?|with-bindings|future-fiber|with-redefs|with-config|symbol-info|extend-type|explain-sym|defprotocol|with-mocks|with-open|when-first|defstruct\\*?|when-some|instance\\?|defrecord|defmethod|defmacro-|when-not|when-let|prefer-method|prefers|lazy-seq|lazy-cat|hash-map|defmulti|defmacro|unquote|testing|some->>|set-var|require|if-some|foreach|finally|dotrace|dotimes|deftrace|deftype|deftest|defspec|declare|cond->>|comment|break|binding|vector|source|some->|reify\\*?|if-not|if-let|future|cond->|concat|assert|throw|recur|quote|match|letfn|in-ns|doseq|dofor|deref|delay|defn-|condp|catch|async|apply|while|when|time|loop|load|list|html|dbg|doto|defonce|defn|def-|conj|cond|case|aset|as->|var|use|try|pop|new|let|for|doc|dir|def|are|and|->>|or|ns|is|if|fn|do|->)(?=\\s|\\)|\\]|\\})"
+					"match": "(?<=\\(|\\{|\\[|\\s)(with-isolated-reporters|with-isolated-stats|with-output-buffer|with-mock-wrapper|unquote-splicing|extend-protocol|compiled-router|definterface\\*?|defexception\\*?|defenum\\*?|with-bindings|future-fiber|with-redefs|with-config|symbol-info|extend-type|explain-sym|defprotocol|with-mocks|with-open|when-first|defstruct\\*?|when-some|instance\\?|defrecord|defmethod|defmacro-|when-not|when-let|prefer-method|prefers|lazy-seq|lazy-cat|hash-map|defmulti|defmacro|unquote|testing|some->>|set-var|require|if-some|foreach|finally|dotrace|dotimes|deftrace|defbench|deftype|deftest|defspec|declare|cond->>|comment|break|binding|vector|source|some->|reify\\*?|if-not|if-let|future|cond->|concat|assert|throw|recur|quote|match|letfn|in-ns|doseq|dofor|deref|delay|defn-|condp|catch|async|apply|while|when|time|loop|load|list|html|dbg|doto|defonce|defn|def-|conj|cond|case|aset|set!|as->|var|use|try|pop|new|let|for|doc|dir|def|are|and|->>|or|ns|is|if|fn|do|->)(?=\\s|\\)|\\]|\\})"
 				},
 				{
 					"name": "keyword.control.phel",
@@ -150,11 +153,16 @@
 				},
 				{
 					"name": "punctuation.other.unquote-splicing.phel",
-					"match": "~@|,@"
+					"match": "~@"
+				},
+				{
+					"comment": "A comma is plain whitespace, not unquote. `,` and `,@` lost their reader meaning before 1.0 and are not coming back, so `` `(foo ,x) `` quotes `x` rather than unquoting it. Scoped as a separator so a theme can dim it the way it dims whitespace, and deliberately not as a reader macro.",
+					"name": "punctuation.separator.comma.phel",
+					"match": ","
 				},
 				{
 					"name": "punctuation.other.phel",
-					"match": "[~`',^]|@(?![({\\[])"
+					"match": "[~`'^]|@(?![({\\[])"
 				}
 			]
 		},
@@ -440,10 +448,129 @@
 					"include": "#number"
 				},
 				{
+					"include": "#interop"
+				},
+				{
 					"include": "#corelib"
 				},
 				{
 					"include": "#symbol"
+				}
+			]
+		},
+		"interop": {
+			"comment": "Clojure-style PHP interop, the only spelling Phel writes since 0.50 (docs/spec/language-surface.md, ADR 0007). The `php/->`, `php/::` and `php/new` forms these expand to stay in #corelib: they are the compilation target and remain legal, just deprecated as source. A class is recognised lexically, by an upper-case first segment, exactly as the analyzer does. A bare capitalised symbol is left alone, because a Phel `defstruct` / `definterface` name looks the same (`phel.router/Router`).",
+			"patterns": [
+				{
+					"comment": "C/$prop - a static property read. The sigil is required here: in read position a bare name is the class constant, since PHP files constants and static properties separately.",
+					"match": "(?<![\\w$.\\\\/-])((?:\\\\)?[A-Z][A-Za-z0-9_]*(?:[.\\\\][A-Za-z0-9_]+)*)(/)(\\$[A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_-])",
+					"captures": {
+						"1": {
+							"name": "support.class.phel"
+						},
+						"2": {
+							"name": "punctuation.accessor.phel"
+						},
+						"3": {
+							"name": "variable.other.property.static.phel"
+						}
+					}
+				},
+				{
+					"comment": "C/.m - an instance method as a function of its receiver.",
+					"match": "(?<![\\w$.\\\\/-])((?:\\\\)?[A-Z][A-Za-z0-9_]*(?:[.\\\\][A-Za-z0-9_]+)*)(/)(\\.)([A-Za-z_][A-Za-z0-9_-]*)(?![A-Za-z0-9_-])",
+					"captures": {
+						"1": {
+							"name": "support.class.phel"
+						},
+						"2": {
+							"name": "punctuation.accessor.phel"
+						},
+						"3": {
+							"name": "punctuation.accessor.phel"
+						},
+						"4": {
+							"name": "entity.name.function.interop.phel"
+						}
+					}
+				},
+				{
+					"comment": "C/CONST - a class constant. Constant and static method share one spelling and are told apart by reflection at analysis time, so the grammar splits them the way PHP source does, on casing.",
+					"match": "(?<![\\w$.\\\\/-])((?:\\\\)?[A-Z][A-Za-z0-9_]*(?:[.\\\\][A-Za-z0-9_]+)*)(/)([A-Z][A-Z0-9_]*)(?![A-Za-z0-9_-])",
+					"captures": {
+						"1": {
+							"name": "support.class.phel"
+						},
+						"2": {
+							"name": "punctuation.accessor.phel"
+						},
+						"3": {
+							"name": "constant.other.class.phel"
+						}
+					}
+				},
+				{
+					"comment": "C/m - a static method, called `(C/m args)` or taken as a value.",
+					"match": "(?<![\\w$.\\\\/-])((?:\\\\)?[A-Z][A-Za-z0-9_]*(?:[.\\\\][A-Za-z0-9_]+)*)(/)([A-Za-z_][A-Za-z0-9_-]*)(?![A-Za-z0-9_-])",
+					"captures": {
+						"1": {
+							"name": "support.class.phel"
+						},
+						"2": {
+							"name": "punctuation.accessor.phel"
+						},
+						"3": {
+							"name": "entity.name.function.interop.phel"
+						}
+					}
+				},
+				{
+					"comment": "(C. args) - a constructor, the trailing-dot spelling of `(new C args)`.",
+					"match": "(?<=\\()((?:\\\\)?[A-Z][A-Za-z0-9_]*(?:[.\\\\][A-Za-z0-9_]+)*)(\\.)(?=\\s|\\)|$)",
+					"captures": {
+						"1": {
+							"name": "support.class.phel"
+						},
+						"2": {
+							"name": "punctuation.accessor.phel"
+						}
+					}
+				},
+				{
+					"comment": "(.-field obj) - a value member read.",
+					"match": "(?<![\\w$.\\\\/-])(\\.-)([A-Za-z_][A-Za-z0-9_-]*)(?![A-Za-z0-9_-])",
+					"captures": {
+						"1": {
+							"name": "punctuation.accessor.phel"
+						},
+						"2": {
+							"name": "variable.other.property.phel"
+						}
+					}
+				},
+				{
+					"comment": "(.m obj args) - an instance method call. Listed after #number so a leading `.5` is already a decimal, and after `.-` so a field read is not chewed as a method named `-field`.",
+					"match": "(?<![\\w$.\\\\/-])(\\.)([A-Za-z_][A-Za-z0-9_-]*)(?![A-Za-z0-9_-])",
+					"captures": {
+						"1": {
+							"name": "punctuation.accessor.phel"
+						},
+						"2": {
+							"name": "entity.name.function.interop.phel"
+						}
+					}
+				},
+				{
+					"comment": "\\Foo.Bar - a class named with the explicit leading marker and no member access. Unambiguous, so it is safe to colour where a bare `Foo` is not.",
+					"match": "(?<![\\w$.\\\\/-])(\\\\)([A-Z][A-Za-z0-9_]*(?:[.\\\\][A-Za-z0-9_]+)*)(?![A-Za-z0-9_-])",
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.class.phel"
+						},
+						"2": {
+							"name": "support.class.phel"
+						}
+					}
 				}
 			]
 		}

@@ -137,6 +137,27 @@ export function renderLocalMarkdown(
     return lines.join('\n').trimEnd();
 }
 
+/**
+ * Render a hover for a PHP superglobal (`php/$_SERVER`). No `.phel` file
+ * declares one, so there is no doc record to fall back on.
+ */
+export function renderSuperglobalMarkdown(name: string, description: string): string {
+    return [`**\`${name}\`** _PHP superglobal_`, '', description].join('\n');
+}
+
+/**
+ * Render a hover for a form Phel 0.50 deprecated as source. It still compiles —
+ * it is the target the Clojure-style shorthand expands to — so the note says
+ * what to write instead rather than claiming the form is broken.
+ */
+export function renderSupersededMarkdown(name: string, detail: string): string {
+    return [
+        `**\`${name}\`** _deprecated as source since Phel 0.50_`,
+        '',
+        `Still compiles — it is what the Clojure-style form expands to — but ${detail}.`,
+    ].join('\n');
+}
+
 function describeKind(doc: PhelDoc): string {
     const visibility = doc.private ? 'private ' : '';
     switch (doc.kind) {

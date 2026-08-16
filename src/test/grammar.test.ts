@@ -104,8 +104,16 @@ describe('phel.tmLanguage character literals', () => {
         });
     }
 
-    it('leaves a PHP fully-qualified name as a symbol', () => {
-        assertScoped('(catch \\Throwable e', '\\Throwable', 'meta.symbol.phel');
+    it('reads a PHP fully-qualified name as a class, not a character literal', () => {
+        // The lexer's lookahead is what keeps `\T` from being the character
+        // `T`; the leading marker then makes the name unambiguously a PHP
+        // class, which is stronger than the bare symbol it used to scope as.
+        assertScoped('(catch \\Throwable e', 'Throwable', 'support.class.phel');
+        const tokens = tokenize('(catch \\Throwable e');
+        assert.ok(
+            !tokens.some((t) => t.scopes.some((s) => s.startsWith('constant.character'))),
+            'a class name must not be chewed as a character literal'
+        );
     });
 });
 
@@ -152,5 +160,138 @@ describe('phel.tmLanguage reader syntax', () => {
 
     it('scopes phel.router/compiled-router as a keyword', () => {
         assertScoped('(compiled-router routes)', 'compiled-router', 'keyword.control.phel');
+    });
+});
+
+describe('phel.tmLanguage Clojure-style interop', () => {
+    before(async () => {
+        grammar = await loadGrammar();
+    });
+
+    it('scopes an instance method call', () => {
+        assertScoped('(.format d "Y")', '.', 'punctuation.accessor.phel');
+        assertScoped('(.format d "Y")', 'format', 'entity.name.function.interop.phel');
+    });
+
+    it('scopes a value member read', () => {
+        assertScoped('(.-y point)', '.-', 'punctuation.accessor.phel');
+        assertScoped('(.-y point)', 'y', 'variable.other.property.phel');
+    });
+
+    it('does not read a field as a method named -field', () => {
+        const tokens = tokenize('(.-y point)');
+        assert.ok(
+            !tokens.some((t) => t.text === '-y'),
+            'the `.-` accessor must be one token, not `.` plus `-y`'
+        );
+    });
+
+    it('scopes a static call and a class constant', () => {
+        assertScoped('(DateTime/createFromFormat "Y" s)', 'DateTime', 'support.class.phel');
+        assertScoped(
+            '(DateTime/createFromFormat "Y" s)',
+            'createFromFormat',
+            'entity.name.function.interop.phel'
+        );
+        assertScoped('(def m PDO/ATTR_ERRMODE)', 'PDO', 'support.class.phel');
+        assertScoped('(def m PDO/ATTR_ERRMODE)', 'ATTR_ERRMODE', 'constant.other.class.phel');
+    });
+
+    it('scopes a static property read, which carries the sigil', () => {
+        assertScoped(
+            '(def n Counter/$instances)',
+            '$instances',
+            'variable.other.property.static.phel'
+        );
+    });
+
+    it('scopes a method taken as a value', () => {
+        assertScoped('(map Registry/.render xs)', 'Registry', 'support.class.phel');
+        assertScoped('(map Registry/.render xs)', 'render', 'entity.name.function.interop.phel');
+    });
+
+    it('scopes the trailing-dot constructor', () => {
+        assertScoped('(DateTime. "2024-03-10")', 'DateTime', 'support.class.phel');
+    });
+
+    it('scopes a dotted namespaced class as one name', () => {
+        assertScoped(
+            '(def s Symfony.Component.Console.Command.Command/SUCCESS)',
+            'Symfony.Component.Console.Command.Command',
+            'support.class.phel'
+        );
+    });
+
+    it('leaves a lowercase namespace alias alone', () => {
+        // `str/join` is a Phel alias, not a PHP class: only an upper-case first
+        // segment marks a class, exactly as the analyzer decides it.
+        assertScoped('(str/join ", " xs)', 'str/join', 'meta.symbol.phel');
+        assertScoped('(phel.string/blank? s)', 'phel.string/blank?', 'meta.symbol.phel');
+    });
+
+    it('leaves a bare capitalised symbol alone', () => {
+        // A `defstruct` / `definterface` name looks the same as a class, so
+        // only member access or the explicit `\` marker is treated as interop.
+        assertScoped('(defstruct Point [x y])', 'Point', 'meta.symbol.phel');
+    });
+
+    it('keeps a leading decimal a number rather than a member', () => {
+        // The decimal rule splits `.5` into its own two tokens (the period is
+        // captured separately), so this asserts on the period: it must stay
+        // numeric and must not pick up the interop accessor scope.
+        const dot = tokenize('(def x .5)').find((t) => t.text === '.');
+        assert.ok(dot, 'expected a period token');
+        assert.ok(dot.scopes.includes('constant.numeric.decimal.phel'));
+        assert.ok(!dot.scopes.includes('punctuation.accessor.phel'));
+    });
+
+    it('still scopes the php/ interop family as keywords', () => {
+        assertScoped('(php/aget arr 0)', 'php/aget', 'keyword.control.phel');
+        assertScoped('(php/$_SERVER "REQUEST_URI")', 'php/$_SERVER', 'keyword.control.phel');
+    });
+});
+
+describe('phel.tmLanguage comma handling', () => {
+    before(async () => {
+        grammar = await loadGrammar();
+    });
+
+    it('scopes a comma as a separator, not as unquote', () => {
+        // `,` and `,@` lost their reader meaning before 1.0; a comma is plain
+        // whitespace, so `` `(foo ,x) `` quotes `x` instead of unquoting it.
+        assertScoped('{:a 1, :b 2}', ',', 'punctuation.separator.comma.phel');
+        const tokens = tokenize('`(list ,x ,@xs)');
+        assert.ok(
+            !tokens.some((t) => t.scopes.some((s) => s.includes('unquote'))),
+            'a comma must not carry an unquote scope'
+        );
+    });
+
+    it('still scopes ~ and ~@ as unquote', () => {
+        assertScoped('`(list ~x)', '~', 'punctuation.other.phel');
+        assertScoped('`(list ~@xs)', '~@', 'punctuation.other.unquote-splicing.phel');
+    });
+});
+
+describe('phel.tmLanguage 0.50 forms', () => {
+    before(async () => {
+        grammar = await loadGrammar();
+    });
+
+    it('scopes defbench as a keyword', () => {
+        assertScoped('(defbench bench-sum (+ 1 1))', 'defbench', 'keyword.control.phel');
+    });
+
+    it('scopes set! as a keyword', () => {
+        assertScoped('(set! (.-y p) 1)', 'set!', 'keyword.control.phel');
+    });
+
+    it('scopes the phel.test isolation macros as keywords', () => {
+        assertScoped('(with-isolated-stats (run))', 'with-isolated-stats', 'keyword.control.phel');
+        assertScoped(
+            '(with-isolated-reporters [] (run))',
+            'with-isolated-reporters',
+            'keyword.control.phel'
+        );
     });
 });

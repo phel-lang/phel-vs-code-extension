@@ -88,3 +88,26 @@
 (defn stepper [x]
   (break)
   (inc x))
+
+;; Phel 0.50 forms
+;; Clojure-style interop is the only spelling; php/-> and php/:: are deprecated.
+(.format (new DateTimeImmutable "2024-03-10") "Y")
+(.-y point)
+(DateTimeImmutable/createFromFormat "Y" "2024")
+(DateTimeImmutable. "2024-03-10")
+(def mode PDO/ATTR_ERRMODE)
+(def slot Counter/$instances)
+(def ctor Symfony.Component.Console.Command.Command/SUCCESS)
+(map Registry/.render widgets)
+(set! (.-y point) 2024)
+(set! Counter/$instances 0)
+(php-invoke target "format" "Y")
+(php/$_SERVER "REQUEST_URI")
+(:use \DateTimeImmutable)
+
+;; A comma is whitespace, never unquote.
+(def pairs {:a 1, :b 2})
+(defmacro twice [x] `(do ~x ~x))
+
+(defbench bench-sum {:revs 10000}
+  (reduce + 0 (range 100)))

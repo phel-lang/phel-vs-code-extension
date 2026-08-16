@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+### Added
+
+- Support for Phel **v0.50.0**. The symbol corpus is regenerated from that tag: 1582 entries across 35 namespaces, with the new `phel.bench` namespace (`defbench`, `run-benchmarks`) and the new `phel.core/set!` and `phel.core/php-invoke`. `View source` links point at `v0.50.0`.
+- Syntax highlighting for the Clojure-style PHP interop spellings, which 0.50 made the only ones to write: `(.method obj)`, `(.-field obj)`, `(Class/method args)`, `(Class. args)`, `Class/CONST`, `Class/$prop`, `Class/method` and `Class/.method`. A class is recognised the way the analyzer recognises one, by an upper-case first segment, so dotted namespaced classes (`Symfony.Component.Console.Command.Command/SUCCESS`) highlight as one name. A **bare** capitalised symbol is left alone on purpose — a `defstruct` name looks identical (`phel.router/Router`) — and `\Throwable` now scopes as a class rather than a plain symbol.
+- Completion and hover for the nine PHP superglobals (`php/$_SERVER`, `php/$_GET`, …), mirroring what the language server offers. Like the special forms these exist only in PHP, so no corpus entry can carry them.
+- Migration diagnostics for the 0.50 surface change, with quick fixes. The eleven removed `phel.core` aliases (`push` → `conj`, `values` → `vals`, `id` → `identical?`, …) are warnings carrying the replacement, which the compiler cannot tell you — it only reports an unresolvable symbol. The four forms deprecated as source (`php/new`, `php/->`, `php/::`, `set-var`) are struck-through hints, since those still compile and the compiler mentions them only under `--warn-deprecations`. Only the head of a list is considered, and a name the file defines or a local binding shadows is left alone, so `(defn f [values] (values))` stays silent. New setting `phel.migration.enabled` (default on) turns the check off when targeting an older Phel.
+- `Phel: Run Benchmarks`, `Phel: Run Benchmarks in Current File` and `Phel: Run Benchmark` commands for `phel bench`, plus a `▶ Run benchmark` CodeLens above each `defbench` and a file-level lens beside the existing test one.
+- `Phel: Check Balanced Delimiters` for `phel balance`. Reporting is the default; `--fix` rewrites source, so it is only reached by picking it explicitly.
+- Snippets for `defbench`, `set!`, `new`, `php-invoke` and the `.method` / `.-field` interop shorthands.
+
+### Changed
+
+- A comma is highlighted as whitespace (`punctuation.separator.comma.phel`) instead of as a reader macro. `,` and `,@` lost their unquote meaning before 1.0 and are not coming back, so `` `(foo ,x) `` parses and *quotes* `x`; colouring it like `~` advertised a meaning it no longer has.
+- `defbench`, `set!`, `with-isolated-stats` and `with-isolated-reporters` are highlighted as keywords.
+- The deprecated interop forms sort last in completion and carry the deprecated tag, so the Clojure-style spelling is what gets picked when both match what was typed.
+
 ### Docs
 
 - Consolidated the documentation. `CONTRIBUTING.md` moved to `docs/CONTRIBUTING.md` — GitHub reads that location too, so the "Contributing guidelines" link on issues and PRs still resolves — and the root now holds only `README.md` and `CHANGELOG.md`, which tooling pins in place.

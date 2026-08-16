@@ -1,20 +1,50 @@
 # Syntax highlighting
 
-Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) **v0.49.0**: the full PHP interop surface — `php/callable`, `php/ref`, named args via `:&`, the `:php/*` metadata tags, `defenum`/`defstruct` `:php` blocks — plus the 0.48/0.49 additions (`break` stepping debugger, `while`, `with-open`, `dbg`, and the `phel.trace` macros `deftrace`/`dotrace`). Legacy forms are still recognised so older codebases keep highlighting.
+Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) **v0.50.0**: the full PHP interop surface — the Clojure-style shorthands, `php/callable`, `php/ref`, named args via `:&`, the `:php/*` metadata tags, `defenum`/`defstruct` `:php` blocks — plus the 0.48–0.50 additions (`break` stepping debugger, `while`, `with-open`, `dbg`, the `phel.trace` macros `deftrace`/`dotrace`, `set!`, and `defbench` from the new `phel.bench`). Legacy forms are still recognised so older codebases keep highlighting.
 
 ## Special forms
 
 `def`, `def-`, `defonce`, `defenum*`, `defn`, `defn-`, `defmacro`, `defmacro-`, `definterface*`, `defexception*`, `defstruct*`, `reify*`, `fn`, `let`, `loop`, `recur`, `if`, `do`, `quote`, `var`, `deref`, `new`, `apply`, `concat`, `conj`, `list`, `vector`, `hash-map`, `ns`, `in-ns`, `use`, `load`, `set-var`, `try`/`catch`/`finally`, `throw`, `foreach`, `break`, `unquote`, `unquote-splicing`, plus the `php/` interop family (`php/->`, `php/::`, `php/aget`, `php/aset`, `php/apush`, `php/aunset`, `php/new`, `php/oset`, `php/ref`, and `*-in` variants).
 
-## Macros (~81)
+## PHP interop
+
+Since 0.50 the Clojure-style spelling is the only one to write; `php/->`, `php/::` and `php/new` remain the compilation target and stay highlighted, but are [deprecated as source](completion.md#migrating-to-phel-050). A class is recognised the way the analyzer recognises one — by an **upper-case first segment**:
+
+```phel
+(.format d "Y")                 ;; instance method call
+(.-y point)                     ;; value member read
+(DateTime/createFromFormat …)   ;; static call
+(DateTime. "2024-03-10")        ;; constructor
+PDO/ATTR_ERRMODE                ;; class constant
+Counter/$instances              ;; static property (the sigil is required to read one)
+Registry/.render                ;; instance method as a function of its receiver
+Symfony.Component.Console.Command.Command/SUCCESS   ;; dotted namespaced class
+\Throwable                      ;; explicit leading marker
+```
+
+| Part | Scope |
+| --- | --- |
+| Class name | `support.class.phel` |
+| `.` / `.-` / `/` accessor | `punctuation.accessor.phel` |
+| Method name | `entity.name.function.interop.phel` |
+| Value member (`.-field`) | `variable.other.property.phel` |
+| Static property (`C/$prop`) | `variable.other.property.static.phel` |
+| ALL-CAPS member (`C/CONST`) | `constant.other.class.phel` |
+| Leading `\` marker | `punctuation.definition.class.phel` |
+
+A constant and a static method share one spelling and are told apart by reflection at analysis time, which a grammar cannot do; the split above follows PHP's own casing convention. A **bare** capitalised symbol is deliberately left as a plain symbol — a `defstruct` or `definterface` name looks identical (`phel.router/Router`), so only member access or the explicit `\` marker is treated as interop. A lower-case-first qualified name stays a namespace alias: `str/join` and `phel.string/blank?` are not interop.
+
+## Macros (~85)
 
 Threading: `->`, `->>`, `some->`, `some->>`, `as->`, `cond->`, `cond->>`.
 Conditionals: `if-let`, `if-not`, `if-some`, `when`, `when-let`, `when-not`, `when-some`, `when-first`, `while`, `cond`, `condp`, `case`.
 Iteration: `for`, `doseq`, `dofor`, `dotimes`, `doto`.
 Bindings: `binding`, `letfn`, `with-bindings`, `with-redefs`, `with-output-buffer`, `with-open`.
 Definitions: `defprotocol`, `defrecord`, `defmethod`, `defmulti`, `prefer-method`, `prefers`, `defspec`, `defstruct`, `defenum`, `definterface`, `defexception`, `deftype`, `declare`.
-Testing: `deftest`, `is`, `are`, `testing`, `assert`, `with-mocks`, `with-mock-wrapper`.
+Testing: `deftest`, `is`, `are`, `testing`, `assert`, `with-mocks`, `with-mock-wrapper`, `with-isolated-stats`, `with-isolated-reporters`.
 Debug / trace: `dbg`, `deftrace`, `dotrace`.
+Benchmarks: `defbench` (`phel.bench`).
+Interop: `set!`.
 REPL helpers: `dir`, `doc`, `source`, `require`, `symbol-info`, `explain-sym`.
 Other: `comment`, `time`, `lazy-seq`, `lazy-cat`, `match`, `instance?`, `pop`, `reify`, `delay`, `future`, `future-fiber`, `extend-protocol`, `extend-type`, `html`, `with-config`, `async`.
 
@@ -40,7 +70,7 @@ The rest:
 - Keywords: `:keyword`, `::auto-resolved`, `:my.ns/name`
 - Booleans / nil: `true`, `false`, `nil`
 - Strings: `"hello"` with `\\` escapes
-- Characters: `\A`, `\1`, `\(`, `\space`, `\newline`, `\tab`, `\formfeed`, `\backspace`, `\return`, `\u00e9`, `\o101` → `constant.character.phel`. A PHP fully-qualified name (`\Throwable`, `\Foo\Bar`) still scopes as a symbol, matching the lexer's lookahead.
+- Characters: `\A`, `\1`, `\(`, `\space`, `\newline`, `\tab`, `\formfeed`, `\backspace`, `\return`, `\u00e9`, `\o101` → `constant.character.phel`. The lexer's lookahead keeps a PHP fully-qualified name (`\Throwable`, `\Foo\Bar`) out of that rule; it scopes as a class instead — see [PHP interop](#php-interop).
 - Regex literals: `#"^\d+$"` → `string.regexp.phel` (distinct from the `#regex "…"` tagged literal)
 - Collections: `[1 2]`, `{:a 1}`, `#{1 2}`, `'(a b)`, PHP arrays `@[1 2]` / `@{:a 1}`
 - Gensyms: a trailing `#` belongs to the symbol (`x#`), so `` `(let [x# ~x] …) `` highlights as code rather than opening a comment
@@ -79,8 +109,10 @@ The rest:
 ^int  ^"?int"      ;; type tags
 ^:memoize ^:async  ;; metadata flags
 @my-atom           ;; deref
-,form  ,@xs        ;; legacy unquote / splicing - still highlighted
+{:a 1, :b 2}       ;; a comma is whitespace, never unquote
 ```
+
+`,` and `,@` lost their unquote meaning before 1.0 and are not coming back. A comma now scopes as `punctuation.separator.comma.phel`, deliberately not as a reader macro: `` `(foo ,x) `` still parses and *quotes* `x` rather than unquoting it, so highlighting it like `~` would advertise a meaning it no longer has. Write `~` and `~@`.
 
 Type and metadata tags (`^int`, `^"?int"`, `^:memoize`, `^:async`, any `^:keyword` or `^Type`) highlight their tag as `storage.type.tagged.phel` and the `^` as `punctuation.definition.tag.phel`.
 

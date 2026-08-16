@@ -3,6 +3,8 @@
 //   phel.test.watch  — `phel test --watch` in a terminal
 //   phel.build       — `phel build` with an optimization-level / report prompt
 //   phel.init        — `phel init <name> --template=<t>` with template picker
+//   phel.bench       — `phel bench` over the project or the current file
+//   phel.balance     — `phel balance`, optionally with `--fix`
 //
 // These run in an integrated terminal (they are long-running or scaffold files
 // the user wants to see), matching the existing terminal-based test commands.
@@ -13,6 +15,8 @@ import { runPhelCli } from './phelCli';
 import { runInTerminal } from './phelTerminal';
 import { activeWorkspaceFolder } from './phelWorkspace';
 import {
+    balanceArgs,
+    benchArgs,
     buildArgs,
     type OptimizationLevel,
     parseTemplates,
@@ -118,10 +122,96 @@ async function init(): Promise<void> {
     runInTerminal('Phel Init', command, args, cwd);
 }
 
+/**
+ * `phel bench` over the whole project, or over one `.phel` file when `uri` is
+ * given (the editor-context entry point). Prompts for the `--filter` substring,
+ * which is the option worth reaching for interactively; the measurement knobs
+ * (`--revs`, `--iterations`, `--warmup`) belong in the benchmark's own option
+ * map, and the baseline flags (`--store`, `--ref`, `--tolerance`) belong in CI.
+ */
+async function bench(uri?: vscode.Uri): Promise<void> {
+    const folder = activeWorkspaceFolder();
+    if (!folder) {
+        vscode.window.showWarningMessage('Open a Phel project folder first.');
+        return;
+    }
+    const filter = await vscode.window.showInputBox({
+        prompt: 'Only run benchmarks whose name contains this text (leave empty for all)',
+        placeHolder: 'e.g. sum',
+    });
+    if (filter === undefined) {
+        return; // cancelled
+    }
+    // bench has no per-command override; resolve from phel.executablePath.
+    const command = resolvePhelExecutable(undefined, folder);
+    const args = benchArgs({
+        paths: uri ? [uri.fsPath] : [],
+        filter,
+    });
+    runInTerminal('Phel Bench', command, args, folder.uri.fsPath);
+}
+
+/**
+ * One `defbench`, reached from the CodeLens above its name. `phel bench` has no
+ * per-name argument, so the name goes through `--filter`, which is a substring
+ * match: a benchmark whose name is a prefix of another runs both.
+ */
+function runBenchmark(uri: vscode.Uri | undefined, name: string): void {
+    const folder = activeWorkspaceFolder();
+    if (!folder) {
+        vscode.window.showWarningMessage('Open a Phel project folder first.');
+        return;
+    }
+    // bench has no per-command override; resolve from phel.executablePath.
+    const command = resolvePhelExecutable(undefined, folder);
+    const args = benchArgs({ paths: uri ? [uri.fsPath] : [], filter: name });
+    runInTerminal('Phel Bench', command, args, folder.uri.fsPath);
+}
+
+/**
+ * `phel balance`. Reporting is the default and `--fix` rewrites files, so the
+ * repair is only reached by picking it explicitly — the pick is the
+ * confirmation for a command that edits source on disk.
+ */
+async function balance(): Promise<void> {
+    const folder = activeWorkspaceFolder();
+    if (!folder) {
+        vscode.window.showWarningMessage('Open a Phel project folder first.');
+        return;
+    }
+    const mode = await vscode.window.showQuickPick(
+        [
+            { label: 'Report only', description: 'List imbalances, change nothing', fix: false },
+            {
+                label: 'Report and fix',
+                description: '--fix: append the missing closers to the files that can take them',
+                fix: true,
+            },
+        ],
+        { placeHolder: 'phel balance' }
+    );
+    if (!mode) {
+        return; // cancelled
+    }
+    // balance has no per-command override; resolve from phel.executablePath.
+    const command = resolvePhelExecutable(undefined, folder);
+    runInTerminal('Phel Balance', command, balanceArgs({ fix: mode.fix }), folder.uri.fsPath);
+}
+
 export function registerCliCommands(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('phel.test.watch', testWatch),
         vscode.commands.registerCommand('phel.build', build),
-        vscode.commands.registerCommand('phel.init', init)
+        vscode.commands.registerCommand('phel.init', init),
+        vscode.commands.registerCommand('phel.bench', () => bench()),
+        vscode.commands.registerCommand('phel.benchFile', (uri?: vscode.Uri) =>
+            bench(uri ?? vscode.window.activeTextEditor?.document.uri)
+        ),
+        vscode.commands.registerCommand('phel.runBenchmark', (uri?: vscode.Uri, name?: string) => {
+            if (name) {
+                runBenchmark(uri, name);
+            }
+        }),
+        vscode.commands.registerCommand('phel.balance', balance)
     );
 }

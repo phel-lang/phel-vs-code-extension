@@ -35,6 +35,7 @@ const folding = require(join(out, 'phelFolding.js'));
 const references = require(join(out, 'phelReferences.js'));
 const nsAnalyzer = require(join(out, 'phelNsAnalyzer.js'));
 const docs = require(join(out, 'phelDocs.js'));
+const migration = require(join(out, 'phelMigration.js'));
 
 const target = resolve(process.argv[2] ?? join(repoRoot, '..', 'phel-lang', 'src', 'phel'));
 if (!existsSync(target)) {
@@ -61,7 +62,7 @@ if (files.length === 0) {
 }
 
 const failures = [];
-const totals = { forms: 0, bindings: 0, unused: 0, folds: 0, symbols: 0, requires: 0 };
+const totals = { forms: 0, bindings: 0, unused: 0, folds: 0, symbols: 0, requires: 0, migrations: 0 };
 
 /** Run one analyzer, recording any throw against the file it happened on. */
 function attempt(file, label, fn) {
@@ -84,6 +85,10 @@ for (const file of files) {
     totals.symbols += attempt(file, 'parsePhelFile', () => docs.parsePhelFile(src, 'sweep'))?.length ?? 0;
     totals.requires +=
         attempt(file, 'parseNsForm', () => nsAnalyzer.parseNsForm(src))?.requireClause?.entries.length ?? 0;
+    // Over a phel-lang checkout this should be near zero: the stdlib was
+    // rewritten onto the Clojure-style spelling in 0.50, so a large count means
+    // the detector is firing on names it should have treated as shadowed.
+    totals.migrations += attempt(file, 'findMigrationIssues', () => migration.findMigrationIssues(src))?.length ?? 0;
     attempt(file, 'aliasMapFromSource', () => nsAnalyzer.aliasMapFromSource(src));
     attempt(file, 'findOccurrences', () => references.findOccurrences(src, 'map'));
 

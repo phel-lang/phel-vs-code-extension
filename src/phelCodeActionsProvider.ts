@@ -3,6 +3,7 @@
 //   - Thread first / last (`->` / `->>`) and unwind, over the form at the cursor
 //   - Cycle a collection's delimiters: `(` → `[` → `{` → `(`
 //   - Quick-fix: add a missing `:require` for a known symbol
+//   - Quick-fix: rename a core function Phel 0.50 removed to its replacement
 // The structural transforms live in `phelRefactor` (pure, unit-tested); this
 // module adapts them to VS Code code actions.
 
@@ -13,6 +14,8 @@ import { parseNsForm, buildRequireEdit } from './phelNsAnalyzer';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 import { mergedDocs } from './phelProviderSupport';
+import { findMigrationIssues } from './phelMigration';
+import { migrationEnabled } from './phelMigrationProvider';
 
 export class PhelCodeActionProvider implements vscode.CodeActionProvider {
     static readonly kinds = [vscode.CodeActionKind.RefactorRewrite, vscode.CodeActionKind.QuickFix];
@@ -50,6 +53,7 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
         if (req) {
             actions.push(req);
         }
+        actions.push(...migrationActions(document, src, offset));
         return actions;
     }
 
@@ -90,4 +94,45 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
         action.edit.insert(document.uri, document.positionAt(edit.insertAt), edit.text);
         return action;
     }
+}
+
+/**
+ * Offer the rename for a removed-or-deprecated call under the cursor.
+ *
+ * Re-derives the issues from the source rather than reading them back off
+ * `CodeActionContext.diagnostics`: the analyzer is pure and cheap, and it keeps
+ * the fix working when the diagnostics are switched off or have not yet been
+ * recomputed after an edit.
+ *
+ * Only entries carrying a `replacement` produce an action. `php/->` and
+ * `set-var` deliberately do not: their replacements rearrange the arguments or
+ * depend on the intent, so a head swap would silently write the wrong code.
+ */
+function migrationActions(
+    document: vscode.TextDocument,
+    src: string,
+    offset: number
+): vscode.CodeAction[] {
+    if (!migrationEnabled()) {
+        return [];
+    }
+    const actions: vscode.CodeAction[] = [];
+    for (const issue of findMigrationIssues(src)) {
+        if (!issue.replacement || offset < issue.start || offset > issue.end) {
+            continue;
+        }
+        const action = new vscode.CodeAction(
+            `Replace '${issue.name}' with '${issue.replacement}'`,
+            vscode.CodeActionKind.QuickFix
+        );
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.replace(
+            document.uri,
+            new vscode.Range(document.positionAt(issue.start), document.positionAt(issue.end)),
+            issue.replacement
+        );
+        action.isPreferred = true;
+        actions.push(action);
+    }
+    return actions;
 }

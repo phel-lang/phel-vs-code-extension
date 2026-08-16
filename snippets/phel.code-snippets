@@ -442,5 +442,48 @@
             "  ${0})"
         ],
         "description": "Define a traced function (phel.trace)"
+    },
+    "defbench": {
+        "prefix": "defbench",
+        "body": [
+            "(defbench ${1:bench-name} {:revs ${2:1000}}",
+            "  ${0})"
+        ],
+        "description": "Define a benchmark (phel.bench)"
+    },
+    "set!": {
+        "prefix": "set!",
+        "body": [
+            "(set! ${1:place} ${0:value})"
+        ],
+        "description": "Assign a property, a static property, or the current binding frame of a dynamic var"
+    },
+    "method-call": {
+        "prefix": ".method",
+        "body": [
+            "(.${1:method} ${2:target}${0})"
+        ],
+        "description": "Call a PHP instance method (Clojure-style interop)"
+    },
+    "property-read": {
+        "prefix": ".-field",
+        "body": [
+            "(.-${1:field} ${0:target})"
+        ],
+        "description": "Read a PHP value member (Clojure-style interop)"
+    },
+    "new": {
+        "prefix": "new",
+        "body": [
+            "(new ${1:Class}${0})"
+        ],
+        "description": "Construct a PHP object"
+    },
+    "php-invoke": {
+        "prefix": "php-invoke",
+        "body": [
+            "(php-invoke ${1:target} \"${2:method}\"${0})"
+        ],
+        "description": "Call a PHP method whose name is a value rather than a literal"
     }
 }

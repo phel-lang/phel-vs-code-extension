@@ -59,9 +59,14 @@ describe('phel snippets', () => {
             ...CORE_FNS,
             ...PHEL_DOCS.filter((d) => !d.private).map((d) => d.name),
         ]);
+        // The Clojure-style interop shorthands are reader syntax rather than
+        // symbols, so no corpus entry backs `.method` / `.-field`. They are
+        // still frozen language surface — see the interop table in phel-lang's
+        // `docs/spec/language-surface.md`.
+        const isInteropShorthand = (prefix: string): boolean => /^\.-?[A-Za-z]/.test(prefix);
         const unknown = entries
             .map(([, snip]) => snip.prefix)
-            .filter((prefix) => !known.has(prefix));
+            .filter((prefix) => !known.has(prefix) && !isInteropShorthand(prefix));
         assert.deepEqual(unknown, [], `snippet prefixes with no matching Phel form: ${unknown}`);
     });
 
