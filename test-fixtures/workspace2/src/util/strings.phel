@@ -1,0 +1,4 @@
+(ns util.strings)
+
+(defn shout [s]
+  (str s "!"))

@@ -2,9 +2,17 @@
 
 ## [Unreleased]
 
+### Added
+
+- An integration suite (`npm run test:integration`) that runs the extension inside a real VS Code against a small fixture project, headless in CI. It covers what importing a module cannot: activation, that every command id in `package.json` is really registered, and that completion, hover, signature help, folding, symbols, rename, semantic tokens, the unused-local and migration diagnostics, the `push` → `conj` quick fix and the test/benchmark CodeLenses all reach the editor through the shipped bundle. The fixture has no `vendor/bin/phel` on purpose, so the CLI-backed features failing silently is itself asserted.
+
 ### Changed
 
 - Every analyzer now reads one shared parse cache (`src/phelParseCache.ts`) instead of re-parsing the buffer per feature. Folding, ns, migration, refactor, selection, completion-context, REPL, form-highlight and scope all hit the same tree, and `Form` is immutable so sharing it is safe. Keyed by the source text, so a stale buffer can never be served.
+
+### Fixed
+
+- `npm test` no longer risks silently skipping the top-level unit tests. The glob was unquoted, and `sh` expands `**` as a single `*`, so the moment any subdirectory of `out/test/` held a `*.test.js` the shell would have resolved the pattern to that subdirectory alone.
 
 ### Docs
 

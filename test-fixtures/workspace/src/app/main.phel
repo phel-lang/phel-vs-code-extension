@@ -1,0 +1,12 @@
+(ns app.main
+  (:require app.core :refer [greet]))
+
+(defn welcome
+  "Greets everyone in `people`, one line each."
+  [people]
+  (let [prefix "-> "
+        unused-total (count people)]
+    (map (fn [person] (str prefix (greet person))) people)))
+
+(defn add-item [xs item]
+  (push xs item))
