@@ -171,6 +171,39 @@ describe('language features', function () {
         );
     });
 
+    it('indents a line as it is typed, without asking the CLI', async function () {
+        // An untitled buffer: the provider is registered against the language,
+        // not against a file on disk, and nothing here needs a Phel project.
+        const typed = await vscode.workspace.openTextDocument({
+            content: '(defn f []\n',
+            language: 'phel',
+        });
+        const edits = await vscode.commands.executeCommand<vscode.TextEdit[]>(
+            'vscode.executeFormatOnTypeProvider',
+            typed.uri,
+            new vscode.Position(1, 0),
+            '\n',
+            { tabSize: 2, insertSpaces: true }
+        );
+        assert.equal(edits?.length, 1, 'no edit for the line after a `defn` head');
+        assert.equal(edits[0].newText, '  ');
+        assert.deepEqual(
+            [edits[0].range.start.line, edits[0].range.start.character],
+            [1, 0],
+            'the edit has to replace the indentation of the new line'
+        );
+    });
+
+    it('has the editor asking for that at all, without the user opting in', function () {
+        // `editor.formatOnType` ships off, so the provider above would never be
+        // called; `contributes.configurationDefaults` turns it on for `.phel`
+        // alone. Nothing else observes that the manifest block took effect.
+        const onType = vscode.workspace
+            .getConfiguration('editor', { uri: main.uri, languageId: 'phel' })
+            .get<boolean>('formatOnType');
+        assert.equal(onType, true, 'editor.formatOnType is off for .phel files');
+    });
+
     it('produces semantic tokens for locals', async function () {
         const tokens = await vscode.commands.executeCommand<vscode.SemanticTokens>(
             'vscode.provideDocumentSemanticTokens',

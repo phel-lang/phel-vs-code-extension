@@ -863,6 +863,11 @@
                     "scope": "resource",
                     "markdownDescription": "Override `#phel.executablePath#` for formatting only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
+                "phel.format.onType": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Indent the line as you type it - on Enter, and on a closing bracket typed at the start of a line - following the same rules `phel format` uses, so a save never has to move it again. Needs `#editor.formatOnType#`, which this extension turns on for `.phel` files."
+                },
                 "phel.tests.codeLensEnabled": {
                     "type": "boolean",
                     "default": true,
@@ -939,6 +944,11 @@
                     "default": true,
                     "description": "Flag what Phel 0.50 removed (the core aliases push, put, values, …; the reader syntax #| |#, bare # comments, |() short fns, foo$ gensyms, `,` unquote, ^:reference) and deprecated (php/new, php/->, php/::, set-var, the \\ namespace separator), plus calls to your own :deprecated definitions, and offer a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50."
                 }
+            }
+        },
+        "configurationDefaults": {
+            "[phel]": {
+                "editor.formatOnType": true
             }
         },
         "walkthroughs": [

@@ -164,9 +164,10 @@ first two hosts only. `scripts/make-real-cli-fixture.sh` writes a throwaway
 project (mktemp by default) holding one instance of every case the suites need —
 a lint warning and a lint error, a file only the linter objects to, a passing and
 a failing `deftest`, a `defbench`, a removed and a deprecated form, a
-`:deprecated` definition with a caller, and two namespaces where one requires the
-other — plus a `.vscode/settings.json` pointing `phel.executablePath` at a
-wrapper around the checkout's `bin/phel`.
+`:deprecated` definition with a caller, two namespaces where one requires the
+other, and an empty one for the suite that types a body into it — plus a
+`.vscode/settings.json` pointing `phel.executablePath` at a wrapper around the
+checkout's `bin/phel`.
 The suites edit that project (they save files and rewrite `phel-config.php`), so
 re-run the script for a clean one rather than reusing it across days.
 
@@ -331,6 +332,8 @@ npm run sweep -- /path/to/other/src    # or any directory of .phel files
 It runs each analyzer over every file, probes the offset-driven entry points across each one, and exits non-zero if anything throws.
 
 **Read the counts, not just the exit code.** A number that looks wrong is worth chasing: the macro-template and sequential-rebinding bugs behind the unused-local hints were found this way, when phel's own stdlib came back reporting 98 unused bindings in code written by the language's authors. It now reports 15, and those are genuine.
+
+`indentDiffs` is the one count with a target: a corpus that has been through `phel format` is by definition indented the way the on-type provider (`src/phelIndent.ts`) should want it, so every line it disagrees with is either a gap in that mirror or a quirk worth writing down. Over phel's stdlib it reads 1, and the printed line is that quirk — a `]` the formatter left at column 0 because the node before it is a comment. `indentComments` is counted apart, since the formatter never re-indents a comment line.
 
 ### Completion + docs database (`src/phelCoreDocs.ts`)
 

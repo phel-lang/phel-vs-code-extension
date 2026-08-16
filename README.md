@@ -19,7 +19,7 @@ VS Code support for [Phel](https://phel-lang.org/), a functional Lisp that compi
 - **Completion** over special forms, macros, core and workspace symbols, with docs and call snippets. Understands `alias/…` and the `(ns …)` form, and can auto-add a missing `:require`.
 - **Outline & workspace symbols** for every defining form, each with a matching icon.
 - **[Parameter inlay hints](docs/completion.md#parameter-inlay-hints)** (opt-in) — `(assoc ds: m key: :k value: v)`, threading-aware and silent wherever a label would mislead.
-- **Diagnostics** via `phel lint`, **formatting** via `phel format`, both on save.
+- **Diagnostics** via `phel lint`, **formatting** via `phel format`, both on save — plus [indentation as you type](docs/repl-and-paredit.md#indentation-as-you-type) that follows the same rules, so the save has nothing to move.
 - **Tasks** for the CLI — `test`, `test --watch`, `lint`, `build`, `format`, `bench` under **Run Task**, with problem matchers that route lint findings and watch-mode test failures into the Problems panel. See [commands](docs/commands.md#tasks).
 - **Refactorings** (`Ctrl+.`) — thread / unwind, cycle collection delimiters, add missing `:require`.
 - **REPL and nREPL client**, with inline evaluation results, namespace reloading, and hover evaluation against the live runtime while connected.

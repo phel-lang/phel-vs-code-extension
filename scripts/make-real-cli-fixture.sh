@@ -206,6 +206,12 @@ cat >"$target/src/format_me.phel" <<'EOF'
   (+ x 1))
 EOF
 
+# Nothing but a namespace: the on-type indentation suite types a body into it
+# line by line and then asks `phel format` whether it would move any of them.
+cat >"$target/src/indent_me.phel" <<'EOF'
+(ns demo.indent-me)
+EOF
+
 # A value the nREPL suite loads into the live runtime and then hovers.
 cat >"$target/src/repl_target.phel" <<'EOF'
 (ns demo.repl-target)
