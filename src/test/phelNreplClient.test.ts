@@ -122,7 +122,9 @@ describe('PhelNreplConnection', function () {
     it('sends the requested namespace as an in-ns form ahead of the code', async function () {
         await assert.rejects(conn.eval('greet', 'app.core', 40), /timed out/);
         const evalFrame = server.received.find((f) => asString(f['op']) === 'eval');
-        assert.equal(asString(evalFrame?.['code']), "(in-ns 'app.core)\ngreet");
+        // A string, not `'app.core`: the reader turns the quote into a list,
+        // and `in-ns` rejects anything that is not a symbol or a string.
+        assert.equal(asString(evalFrame?.['code']), '(in-ns "app.core")\ngreet');
         assert.equal(asString(evalFrame?.['session']), 'session-1');
     });
 

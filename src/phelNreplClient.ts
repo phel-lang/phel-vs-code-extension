@@ -386,7 +386,13 @@ export class PhelNreplConnection {
         // `ns` op param, so switch the session first with an in-ns form when a
         // namespace is requested. (`*ns*` tracking across evals lives in the
         // session, so this persists for follow-up evals in the same file.)
-        const source = ns ? `(in-ns '${ns})\n${code}` : code;
+        //
+        // The name goes in as a string, not as `'quoted`: Phel's `in-ns` takes
+        // a symbol or a string and the reader turns `'x` into `(quote x)`, so
+        // the quoted spelling reaches it as a list and every namespaced eval
+        // comes back `AnalyzerException: First argument of 'in-ns must be a
+        // Symbol or String`.
+        const source = ns ? `(in-ns "${ns}")\n${code}` : code;
         return this.send({ op: 'eval', code: source }, timeoutMs);
     }
 
