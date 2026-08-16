@@ -19,6 +19,8 @@ export interface RunPhelCliOptions {
     onStdout?: (chunk: string) => void;
     /** Kills the process when cancelled. */
     token?: vscode.CancellationToken;
+    /** Extra environment variables, layered over the host's own. */
+    env?: Record<string, string>;
 }
 
 /**
@@ -33,7 +35,11 @@ export function runPhelCli(
 ): Promise<PhelCliResult> {
     return new Promise((resolve) => {
         const inv = toInvocation(command, args);
-        const proc = spawn(inv.file, inv.args, { cwd, shell: inv.shell });
+        const proc = spawn(inv.file, inv.args, {
+            cwd,
+            shell: inv.shell,
+            env: options.env ? { ...process.env, ...options.env } : undefined,
+        });
         let stdout = '';
         let stderr = '';
         // Decode across chunk boundaries: `chunk.toString()` on a chunk that

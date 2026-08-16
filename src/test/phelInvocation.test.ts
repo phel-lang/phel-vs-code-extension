@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { toInvocation } from '../phelInvocation';
+import { coverageEnv, toInvocation } from '../phelInvocation';
 
 /** Nothing on disk: every `exists` probe fails unless a path is listed. */
 const existing =
@@ -75,5 +75,24 @@ describe('phelInvocation.toInvocation', () => {
         const inv = toInvocation('/ws/vendor/bin/phel', args, POSIX);
         args.push('mutated');
         assert.deepEqual(inv.args, ['lint']);
+    });
+});
+
+describe('coverageEnv', () => {
+    it('asks Xdebug for coverage when nothing set a mode', () => {
+        assert.deepEqual(coverageEnv(undefined), { XDEBUG_MODE: 'coverage' });
+        assert.deepEqual(coverageEnv(''), { XDEBUG_MODE: 'coverage' });
+    });
+
+    it('overrides a mode that does not record lines', () => {
+        // The default a developer keeps in php.ini; Phel then refuses the run.
+        assert.deepEqual(coverageEnv('develop,debug'), { XDEBUG_MODE: 'coverage' });
+        assert.deepEqual(coverageEnv('off'), { XDEBUG_MODE: 'coverage' });
+    });
+
+    it('leaves a mode that already records lines alone', () => {
+        assert.equal(coverageEnv('coverage'), undefined);
+        assert.equal(coverageEnv('debug,coverage'), undefined);
+        assert.equal(coverageEnv('debug, coverage'), undefined);
     });
 });
