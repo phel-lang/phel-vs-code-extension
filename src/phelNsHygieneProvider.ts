@@ -22,16 +22,15 @@ import { savedPhelDiagnostics } from './phelDiagnosticsProvider';
 import { parseNsForm } from './phelNsAnalyzer';
 import { findUnusedRequires, type NsHygieneIssue } from './phelNsHygiene';
 import {
-    DEFAULT_SRC_DIRS,
-    DEFAULT_TEST_DIRS,
     deriveNamespace,
+    layoutOf,
     pathToNs,
     sourceFileFor,
     testFileFor,
     testFileTemplate,
     type PhelFile,
+    type PhelLayout,
 } from './phelNsPaths';
-import type { PhelProjectConfig } from './phelProjectConfig';
 import type { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 
 const MAX_CHARS = 200_000;
@@ -41,12 +40,6 @@ const DEBOUNCE_MS = 250;
 export const NS_HYGIENE_CODE = 'phel-unused-require';
 /** What `phel lint` calls the same finding, which supersedes ours after a save. */
 export const LINT_UNUSED_REQUIRE_CODE = 'phel/unused-require';
-
-/** The project layout a folder follows, defaulted for a project with no CLI. */
-interface Layout {
-    srcDirs: readonly string[];
-    testDirs: readonly string[];
-}
 
 /** The argument `phel.ns.goToTest` accepts, e.g. from a keybinding's `args`. */
 export interface GoToTestOptions {
@@ -303,19 +296,22 @@ export class PhelNsHygiene implements vscode.Disposable {
      * `wait` decides whether a first answer is worth a PHP boot: an explicit
      * command can afford one, opening a file cannot.
      */
-    private layout(folder: vscode.WorkspaceFolder, wait: true): Promise<Layout>;
-    private layout(folder: vscode.WorkspaceFolder, wait: false): Layout;
-    private layout(folder: vscode.WorkspaceFolder, wait: boolean): Layout | Promise<Layout> {
+    private layout(folder: vscode.WorkspaceFolder, wait: true): Promise<PhelLayout>;
+    private layout(folder: vscode.WorkspaceFolder, wait: false): PhelLayout;
+    private layout(
+        folder: vscode.WorkspaceFolder,
+        wait: boolean
+    ): PhelLayout | Promise<PhelLayout> {
         if (wait) {
             return this.projectConfig
-                ? this.projectConfig.get(folder).then(toLayout)
-                : Promise.resolve(toLayout(null));
+                ? this.projectConfig.get(folder).then(layoutOf)
+                : Promise.resolve(layoutOf(null));
         }
         const known = this.projectConfig?.peek(folder);
         if (known === undefined) {
             void this.projectConfig?.get(folder); // for the next caller
         }
-        return toLayout(known ?? null);
+        return layoutOf(known ?? null);
     }
 
     /**
@@ -351,13 +347,6 @@ export class PhelNsHygiene implements vscode.Disposable {
         }
         return out;
     }
-}
-
-function toLayout(config: PhelProjectConfig | null): Layout {
-    return {
-        srcDirs: config?.srcDirs.length ? config.srcDirs : DEFAULT_SRC_DIRS,
-        testDirs: config?.testDirs.length ? config.testDirs : DEFAULT_TEST_DIRS,
-    };
 }
 
 function rangeOf(doc: vscode.TextDocument, issue: NsHygieneIssue): vscode.Range {

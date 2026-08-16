@@ -67,6 +67,42 @@ Values longer than 300 characters are clipped; the full one is an eval away, in
 the **Phel nREPL** output channel. Turn the whole thing off with
 `phel.nrepl.hoverEval`.
 
+### Tests through the REPL (nREPL)
+
+While a connection is live for the folder, the Test Explorer's **Run** profile
+uses it instead of spawning `phel test`: a run reloads changed namespaces once,
+then asks the session for one `deftest` at a time. Each of those is
+milliseconds — the runtime is already warm, so there is no PHP to boot per file
+— and the verdict is exact, because the `run-tests` op answers a single test
+with its own `{:pass :fail :error}` count. What the reporter printed becomes the
+failure message, rendered as a **diff** where the assertion has two sides, and
+anchored at the location the report named.
+
+Two things follow from how the reporter works. It prints a file's *basename*, so
+a message is only anchored when that name matches the file the item is in. And
+it locates an assertion at the `(deftest …)` enclosing it, not at the `(is …)`:
+the forms the macro rebuilds inherit the enclosing form's location, so every
+failure in a test points at its first line.
+
+Turn it off per folder with `phel.tests.preferNrepl`. It never opens a
+connection — without one, and always for **Run with Coverage** (`run-tests`
+collects none), the run is the `phel test --reporter=junit-xml` subprocess it
+has always been.
+
+`phel.tests.runOnSave` (off by default) closes the loop. Saving a `.phel` file
+while a connection is live reloads and then runs, in this order:
+
+1. the saved file's own `deftest`s, if it has any;
+2. otherwise the test file its namespace maps to — `src/strings.phel` →
+   `tests/strings_test.phel`, per the project's `src-dirs` / `test-dirs` — when
+   the Explorer knows that file;
+3. otherwise every test file whose `(ns …)` form `(:require`s the saved
+   namespace.
+
+Results land in the Testing view like any other run. Saving in the editor is
+what triggers it: a file changed outside the editor is picked up by the next
+reload, which the next run does anyway.
+
 ### Which server the nREPL commands talk to
 
 The first nREPL command in a workspace folder looks for a `.nrepl-port` file at
@@ -116,6 +152,8 @@ appears while there is one — like hover evaluation, it never opens a connectio
 | `phel.nrepl.enabled` | `true` | Register the nREPL commands |
 | `phel.nrepl.reloadOnSave` | `false` | Reload changed namespaces on every save, when connected |
 | `phel.nrepl.hoverEval` | `true` | Show `=> value` when hovering a symbol, when connected |
+| `phel.tests.preferNrepl` | `true` | Run Test Explorer tests over the connection, when there is one |
+| `phel.tests.runOnSave` | `false` | Re-run the tests a saved file affects, when connected |
 
 ## Paredit
 

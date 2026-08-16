@@ -49,6 +49,7 @@ In a multi-root workspace each project can carry its own CLI. The settings below
 | `phel.references.codeLens` | the reference lens, read against the file it would sit in |
 | `phel.lsp.args` | the language server |
 | `phel.nrepl.reloadOnSave`, `phel.nrepl.hoverEval` | the nREPL connection, per folder |
+| `phel.tests.preferNrepl`, `phel.tests.runOnSave` | the Test Explorer, for the folder owning the file it runs |
 
 ```jsonc
 // api/.vscode/settings.json — only this folder uses this binary
@@ -85,6 +86,8 @@ Off by default. When enabled, completion, hover, signature help, definition, ref
 | `phel.format.onType` | boolean | `true` | Indent the line as you type it, following the rules `phel format` uses. See [Indentation as you type](repl-and-paredit.md#indentation-as-you-type). |
 | `phel.references.codeLens` | boolean | `true` | Show a `N references` CodeLens above every definition, which opens the reference list when clicked. See [Reference count CodeLens](refactoring.md#reference-count-codelens). |
 | `phel.tests.codeLensEnabled` | boolean | `true` | Show inline `▶ Run test` CodeLens above each `deftest`, and `▶ Run benchmark` above each `defbench`. |
+| `phel.tests.preferNrepl` | boolean | `true` | Run Test Explorer tests over a live nREPL connection instead of spawning `phel test`. Never starts a server; without one the subprocess runner is used unchanged, as it always is for a coverage run. See [Tests through the REPL](repl-and-paredit.md#tests-through-the-repl-nrepl). |
+| `phel.tests.runOnSave` | boolean | `false` | While a connection is live, saving a `.phel` file reloads and re-runs the tests it affects. Does not start a connection on its own. See [Tests through the REPL](repl-and-paredit.md#tests-through-the-repl-nrepl). |
 | `phel.migration.enabled` | boolean | `true` | Flag what Phel 0.50 removed (core aliases, `#\| \|#`, bare `#` comments, `\|()` short fns, `foo$` gensyms, `,` unquote, `^:reference`) and deprecated (`php/new`, `php/->`, `php/::`, `set-var`, the `\` namespace separator), plus calls to your own `:deprecated` definitions, with a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50. Severity follows the project, see [below](#what-the-project-config-decides). See [Migrating to Phel 0.50](completion.md#migrating-to-phel-050). |
 | `phel.ns.autoInsert` | boolean | `true` | Give a newly created, still empty `.phel` file its `(ns …)` form. The namespace is read off how the neighbouring files map their own paths, since `phel config` does not print the project's main namespace. See [Namespace hygiene](refactoring.md#namespace-hygiene). |
 | `phel.paredit.enabled` | boolean | `true` | Register paredit commands (slurp / barf / raise / wrap). |

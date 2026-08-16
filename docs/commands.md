@@ -39,8 +39,25 @@ Registered by [`src/phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.
 
 Neither Explorer tree is a command: each registers run profiles that the Testing view drives.
 
-- **Phel** ([`src/phelTestController.ts`](../src/phelTestController.ts)) — one item per `deftest`, run through `phel test --reporter=junit-xml`, with a coverage profile.
+- **Phel** ([`src/phelTestController.ts`](../src/phelTestController.ts)) — one item per `deftest`, with a coverage profile. **Run** has two runners, see below.
 - **Phel Benchmarks** ([`src/phelBenchController.ts`](../src/phelBenchController.ts)) — one item per `defbench`, run through `phel bench <file>` (plus `--filter=<name>` when a single benchmark was asked for) and read back from the table it prints, so each item's duration is that benchmark's mean and the whole table lands in the run output. A benchmark cannot fail, only take time: a row that comes back is passed, one the runner left out is skipped, and a run with no table at all is an error carrying what the CLI said. Kept apart from the tests so that "Run All Tests" never times a benchmark. Uses `phel.executablePath`.
+
+### The two test runners
+
+| | Over the nREPL | `phel test` subprocess |
+|---|---|---|
+| When | `phel.tests.preferNrepl` is on (the default) **and** a connection is already live for the file's folder | otherwise, and always for **Run with Coverage** |
+| What runs | one `reload` per run, then one `run-tests` op per `deftest` with `var` set | `phel test --reporter=junit-xml -o <tmp> <file>`, one process per file |
+| Verdict from | the `{:pass :fail :error}` map the op returns for that one test | the JUnit report |
+| Detail from | what the default reporter printed, parsed by [`src/phelNreplTestReport.ts`](../src/phelNreplTestReport.ts) into a diff and a location | the `<failure>` message and body |
+| Cost | milliseconds per test — the runtime is warm | a PHP boot per file |
+| Coverage | none: `run-tests` collects none | `--coverage=clover`, merged per source file |
+
+The nREPL runner never opens a connection; **Phel: Connect to nREPL Server** is
+what makes it available. `phel.tests.runOnSave` re-runs the tests a saved file
+affects over the same connection — see
+[Tests through the REPL](repl-and-paredit.md#tests-through-the-repl-nrepl) for
+which tests those are and how the reporter's locations read.
 
 ## Project
 

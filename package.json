@@ -944,6 +944,18 @@
                     "default": true,
                     "description": "Show inline CodeLens shortcuts for running individual `deftest` forms and all tests in the current file."
                 },
+                "phel.tests.preferNrepl": {
+                    "type": "boolean",
+                    "default": true,
+                    "scope": "resource",
+                    "markdownDescription": "Run Test Explorer tests over a live nREPL connection when there is one, instead of spawning `phel test`. The run reloads changed namespaces first, then asks the session for one test at a time — milliseconds each, with no PHP to boot. Never starts a server: without a connection (see **Phel: Connect to nREPL Server**) the subprocess runner is used unchanged, and a coverage run always uses it."
+                },
+                "phel.tests.runOnSave": {
+                    "type": "boolean",
+                    "default": false,
+                    "scope": "resource",
+                    "markdownDescription": "Opt-in (default off): while an nREPL connection is live, saving a `.phel` file reloads and re-runs the tests it affects — its own `deftest`s, else the test file its namespace maps to, else every test file that `(:require`s it. Results land in the Testing view. Does not start a connection on its own."
+                },
                 "phel.test.command": {
                     "type": "string",
                     "default": "",

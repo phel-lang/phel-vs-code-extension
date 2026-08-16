@@ -39,10 +39,30 @@ interface StateByKind {
 /** The state type a given kind carries, so `set` cannot mix the vocabularies. */
 export type PhelRuntimeStateOf<K extends PhelRuntimeKind> = StateByKind[K];
 
+/**
+ * What the last namespace a test run finished came back with. The Test
+ * Explorer's own results are write-only from an extension's side - `vscode.tests`
+ * has no results API - so this is the only place a run leaves a readable trace,
+ * which is what the integration suite asserts the REPL-backed runner through.
+ */
+export interface PhelTestRunSummary {
+    /** The namespace that was run. */
+    ns: string;
+    /** How many test items the run covered in it. */
+    count: number;
+    pass: number;
+    fail: number;
+    error: number;
+    /** Which runner produced it: the live nREPL, or a `phel test` subprocess. */
+    via: 'nrepl' | 'cli';
+}
+
 export interface PhelRuntimeSnapshot {
     daemon: Record<string, DaemonState>;
     nrepl: Record<string, NreplState>;
     lsp: Record<string, LspState>;
+    /** Absent until a test run has finished a namespace in this window. */
+    lastTestRun?: PhelTestRunSummary;
 }
 
 export type PhelRuntimeListener = (snapshot: PhelRuntimeSnapshot) => void;
@@ -62,6 +82,7 @@ export class PhelRuntimeState {
         lsp: new Map<string, LspState>(),
     };
     private readonly listeners = new Set<PhelRuntimeListener>();
+    private lastTestRun?: PhelTestRunSummary;
 
     /** Publish `state` for `folderKey`. Setting it to what it is does nothing. */
     set<K extends PhelRuntimeKind>(kind: K, folderKey: string, state: PhelRuntimeStateOf<K>): void {
@@ -78,11 +99,22 @@ export class PhelRuntimeState {
         return (this.states[kind] as Map<string, PhelRuntimeStateOf<K>>).get(folderKey);
     }
 
+    /**
+     * Record what a run of one namespace came back with. Unlike the states
+     * above, every run is worth publishing even when it repeats the previous
+     * one: "the same tests still pass" is the answer a watcher is waiting for.
+     */
+    setLastTestRun(run: PhelTestRunSummary): void {
+        this.lastTestRun = run;
+        this.emit();
+    }
+
     snapshot(): PhelRuntimeSnapshot {
         return {
             daemon: Object.fromEntries(this.states.daemon),
             nrepl: Object.fromEntries(this.states.nrepl),
             lsp: Object.fromEntries(this.states.lsp),
+            ...(this.lastTestRun ? { lastTestRun: { ...this.lastTestRun } } : {}),
         };
     }
 
