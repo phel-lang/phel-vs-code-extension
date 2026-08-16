@@ -805,6 +805,11 @@
                     "default": false,
                     "markdownDescription": "When an nREPL connection is active, reload changed namespaces automatically every time a `.phel` file is saved. Does not start a connection on its own."
                 },
+                "phel.inlayHints.parameterNames": {
+                    "type": "boolean",
+                    "default": false,
+                    "markdownDescription": "Opt-in (default off): show the parameter name before each argument at a call site, `(assoc ds: m key: :k value: v)`. Only functions are labelled — a macro or special form does not bind its arguments positionally — and a label is dropped where it would add nothing or mislead: quoted data, a head shadowed by a local binding, an argument already spelled like the parameter, anything past a `& rest`, and every step of a `->>` / `some->>` / `cond->>` form, where the threaded value lands last."
+                },
                 "phel.formHighlight.enabled": {
                     "type": "boolean",
                     "default": true,

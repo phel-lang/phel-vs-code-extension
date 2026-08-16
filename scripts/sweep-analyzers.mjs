@@ -36,6 +36,10 @@ const references = require(join(out, 'phelReferences.js'));
 const nsAnalyzer = require(join(out, 'phelNsAnalyzer.js'));
 const docs = require(join(out, 'phelDocs.js'));
 const migration = require(join(out, 'phelMigration.js'));
+const inlayHints = require(join(out, 'phelInlayHints.js'));
+const coreDocs = require(join(out, 'phelCoreDocs.js'));
+const docsLookup = require(join(out, 'phelDocsLookup.js'));
+const signatureHelp = require(join(out, 'phelSignatureHelp.js'));
 
 const target = resolve(process.argv[2] ?? join(repoRoot, '..', 'phel-lang', 'src', 'phel'));
 if (!existsSync(target)) {
@@ -62,7 +66,23 @@ if (files.length === 0) {
 }
 
 const failures = [];
-const totals = { forms: 0, bindings: 0, unused: 0, folds: 0, symbols: 0, requires: 0, migrations: 0 };
+const totals = { forms: 0, bindings: 0, unused: 0, folds: 0, symbols: 0, requires: 0, migrations: 0, hints: 0 };
+
+/**
+ * The arity resolver the inlay-hints provider builds, minus the editor: core
+ * corpus only (no workspace index out here), functions only.
+ */
+function arityResolver(src) {
+    const aliases = nsAnalyzer.aliasMapFromSource(src);
+    return (name) => {
+        const doc = docsLookup.lookupSymbol(name, coreDocs.PHEL_DOCS, aliases);
+        if (!doc || doc.kind !== 'fn') {
+            return undefined;
+        }
+        const arities = signatureHelp.aritiesOf(doc);
+        return arities.length > 0 ? arities : undefined;
+    };
+}
 
 /** Run one analyzer, recording any throw against the file it happened on. */
 function attempt(file, label, fn) {
@@ -89,6 +109,13 @@ for (const file of files) {
     // rewritten onto the Clojure-style spelling in 0.50, so a large count means
     // the detector is firing on names it should have treated as shadowed.
     totals.migrations += attempt(file, 'findMigrationIssues', () => migration.findMigrationIssues(src))?.length ?? 0;
+    // Whole file rather than a viewport, so the count is comparable run to run.
+    // A few thousand over phel's own stdlib is the shape to expect; near zero
+    // means the arity match broke, and a jump means a suppression rule did.
+    totals.hints +=
+        attempt(file, 'parameterHints', () =>
+            inlayHints.parameterHints(src, { start: 0, end: src.length }, arityResolver(src))
+        )?.length ?? 0;
     attempt(file, 'aliasMapFromSource', () => nsAnalyzer.aliasMapFromSource(src));
     attempt(file, 'findOccurrences', () => references.findOccurrences(src, 'map'));
 

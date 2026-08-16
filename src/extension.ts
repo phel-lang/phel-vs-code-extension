@@ -26,6 +26,7 @@ import { PhelUnusedLocals } from './phelUnusedLocals';
 import { PhelMigrationDiagnostics } from './phelMigrationProvider';
 import { PhelCodeActionProvider } from './phelCodeActionsProvider';
 import { PhelFoldingRangeProvider } from './phelFoldingProvider';
+import { PhelInlayHintsProvider } from './phelInlayHintsProvider';
 import { PhelSelectionRangeProvider } from './phelSelectionRangeProvider';
 import { registerPareditCommands } from './phelPareditProvider';
 import { registerReplCommands } from './phelReplProvider';
@@ -378,6 +379,10 @@ function registerLanguageProviders(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.languages.registerSelectionRangeProvider('phel', new PhelSelectionRangeProvider())
     );
+
+    const inlayHints = new PhelInlayHintsProvider(workspaceIndexer);
+    context.subscriptions.push(inlayHints);
+    context.subscriptions.push(vscode.languages.registerInlayHintsProvider('phel', inlayHints));
 
     workspaceIndexer.onDidChange(() => {
         // Trigger re-evaluation of the active doc so providers refresh.
