@@ -209,7 +209,8 @@
             {
                 "command": "phel.runTestsInFile",
                 "title": "Phel: Run All Tests in File",
-                "category": "Phel"
+                "category": "Phel",
+                "icon": "$(beaker)"
             },
             {
                 "command": "phel.test.watch",
@@ -240,6 +241,12 @@
                 "command": "phel.runBenchmark",
                 "title": "Phel: Run Benchmark",
                 "category": "Phel"
+            },
+            {
+                "command": "phel.runFile",
+                "title": "Phel: Run File",
+                "category": "Phel",
+                "icon": "$(play)"
             },
             {
                 "command": "phel.balance",
@@ -401,6 +408,186 @@
                 "title": "Phel: Lint Workspace"
             }
         ],
+        "submenus": [
+            {
+                "id": "phel.editorContext",
+                "label": "Phel"
+            }
+        ],
+        "menus": {
+            "editor/context": [
+                {
+                    "submenu": "phel.editorContext",
+                    "group": "phel",
+                    "when": "resourceLangId == phel"
+                }
+            ],
+            "phel.editorContext": [
+                {
+                    "command": "phel.repl.evalForm",
+                    "group": "1_eval@1",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.repl.evalSelection",
+                    "group": "1_eval@2",
+                    "when": "resourceLangId == phel && editorHasSelection"
+                },
+                {
+                    "command": "phel.nrepl.evalInline",
+                    "group": "1_eval@3",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.runTestsInFile",
+                    "group": "2_run@1",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.benchFile",
+                    "group": "2_run@2",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.runFile",
+                    "group": "2_run@3",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.showDoc",
+                    "group": "3_docs@1",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.lintWorkspace",
+                    "group": "3_docs@2",
+                    "when": "resourceLangId == phel"
+                }
+            ],
+            "editor/title/run": [
+                {
+                    "command": "phel.runFile",
+                    "group": "1_run@1",
+                    "when": "resourceLangId == phel"
+                },
+                {
+                    "command": "phel.runTestsInFile",
+                    "group": "1_run@2",
+                    "when": "resourceLangId == phel"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "phel.runTestsInFile",
+                    "group": "phel@1",
+                    "when": "resourceExtname == .phel"
+                },
+                {
+                    "command": "phel.benchFile",
+                    "group": "phel@2",
+                    "when": "resourceExtname == .phel"
+                },
+                {
+                    "command": "phel.runFile",
+                    "group": "phel@3",
+                    "when": "resourceExtname == .phel"
+                }
+            ],
+            "commandPalette": [
+                {
+                    "command": "phel.runBenchmark",
+                    "when": "false"
+                },
+                {
+                    "command": "phel.showCompiledLocation",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.slurpForward",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.barfForward",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.slurpBackward",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.barfBackward",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.raise",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.wrapRound",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.wrapSquare",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.wrapCurly",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.dragForward",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.dragBackward",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.splice",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.paredit.kill",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.repl.evalForm",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.repl.evalSelection",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.repl.evalNextForm",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.repl.evalFile",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.nrepl.eval",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.nrepl.evalInline",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.nrepl.evalSelection",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.selection.expand",
+                    "when": "editorLangId == phel"
+                },
+                {
+                    "command": "phel.selection.shrink",
+                    "when": "editorLangId == phel"
+                }
+            ]
+        },
         "keybindings": [
             {
                 "command": "phel.paredit.slurpForward",

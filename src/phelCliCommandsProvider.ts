@@ -4,11 +4,13 @@
 //   phel.build       — `phel build` with an optimization-level / report prompt
 //   phel.init        — `phel init <name> --template=<t>` with template picker
 //   phel.bench       — `phel bench` over the project or the current file
+//   phel.runFile     — `phel run <file>` on one script
 //   phel.balance     — `phel balance`, optionally with `--fix`
 //
 // These run in an integrated terminal (they are long-running or scaffold files
 // the user wants to see), matching the existing terminal-based test commands.
 
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { runPhelCli } from './phelCli';
@@ -169,6 +171,32 @@ function runBenchmark(uri: vscode.Uri | undefined, name: string): void {
 }
 
 /**
+ * `phel run <file>` on one script: the uri handed over by the explorer / editor
+ * title entries, else the active editor's document. The folder comes from the
+ * file rather than from the active editor, so running a file from the explorer
+ * of a multi-root workspace uses that file's own project root.
+ *
+ * The path is passed relative to that root, which is where `phel run` resolves
+ * it from and keeps the terminal's command line readable.
+ */
+function runFile(uri?: vscode.Uri): void {
+    const target = uri ?? vscode.window.activeTextEditor?.document.uri;
+    if (!target) {
+        vscode.window.showWarningMessage('Open a Phel file first.');
+        return;
+    }
+    const folder = vscode.workspace.getWorkspaceFolder(target) ?? activeWorkspaceFolder();
+    if (!folder) {
+        vscode.window.showWarningMessage('Open a Phel project folder first.');
+        return;
+    }
+    // run has no per-command override; resolve from phel.executablePath.
+    const command = resolvePhelExecutable(undefined, folder);
+    const relative = path.relative(folder.uri.fsPath, target.fsPath);
+    runInTerminal('Phel Run', command, ['run', relative], folder.uri.fsPath);
+}
+
+/**
  * `phel balance`. Reporting is the default and `--fix` rewrites files, so the
  * repair is only reached by picking it explicitly — the pick is the
  * confirmation for a command that edits source on disk.
@@ -212,6 +240,7 @@ export function registerCliCommands(context: vscode.ExtensionContext): void {
                 runBenchmark(uri, name);
             }
         }),
+        vscode.commands.registerCommand('phel.runFile', runFile),
         vscode.commands.registerCommand('phel.balance', balance)
     );
 }

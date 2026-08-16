@@ -12,6 +12,16 @@ The extension activates on `onLanguage:phel`, so the commands only show up in th
 | nREPL | Needs a `phel nrepl` server. The first nREPL command in a workspace folder attaches to one or starts one, so only **Disconnect** truly requires an existing connection. |
 | nothing | Pure editor-side work; no CLI, no network. |
 
+## Where to find them
+
+The palette has all of them, but the ones you reach for while writing code also sit where the file is:
+
+- **Right-click in a `.phel` editor → Phel** — a submenu with the three ways to evaluate (form under cursor, selection, nREPL inline — the selection entry only appears when there is one), the three ways to run the file (tests, benchmarks, the file itself), then **Show Documentation** and **Lint Workspace**.
+- **The ▷ button in the editor title bar** — **Run File** and **Run All Tests in File**, on any open `.phel` file.
+- **Right-click a `.phel` file in the Explorer** — **Run All Tests in File**, **Run Benchmarks in Current File**, **Run File**. These take the file you clicked, not the one you are looking at, so nothing has to be open first.
+
+The palette hides what it cannot serve: **Run Benchmark** never appears there (it needs the name its CodeLens supplies), and the editor-only commands — paredit, eval, expand / shrink selection, show compiled location — only appear while a `.phel` file is focused.
+
 ## Tests & benchmarks
 
 Registered by [`src/phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.ts) and [`src/extension.ts`](../src/extension.ts). The `▶` lenses come from [`src/phelTestCodeLensProvider.ts`](../src/phelTestCodeLensProvider.ts) and are toggled by `phel.tests.codeLensEnabled`.
@@ -33,12 +43,13 @@ The Test Explorer ([`src/phelTestController.ts`](../src/phelTestController.ts)) 
 |---|---|---|---|---|
 | Phel: Build | `phel.build` | Two quick picks (optimization level, build report), then `phel build` in the **Phel Build** terminal — with `-O 0` / `-O 2` and `--report` added per the picks. Default level leaves it to `phel-config.php`. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Init Project | `phel.init` | Runs `phel init --list-templates` to fill a template picker, prompts for a project name, then `phel init [<name>] [--template=<t>]` in the **Phel Init** terminal. Uses `phel.executablePath`. | Phel CLI | — |
+| Phel: Run File | `phel.runFile` | `phel run <file>` in the **Phel Run** terminal, on the passed uri or the active editor. The path goes in relative to the workspace folder that owns the file — not the active editor's — so running a file from the explorer of a multi-root workspace uses its own project root. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Check Balanced Delimiters | `phel.balance` | Quick pick between report-only and fix, then `phel balance [--fix]` in the **Phel Balance** terminal. `--fix` rewrites source on disk, so the pick is the confirmation. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Doctor (check project health) | `phel.doctor` | `phel doctor`, streamed into the **Phel Doctor** output channel, with the exit code appended. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Show Effective Configuration | `phel.showConfig` | `phel config --format=json`, opened pretty-printed in a JSON tab. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Lint Workspace | `phel.lintWorkspace` | `phel lint --format=json` over the first workspace folder, filling the Problems panel for every file it reports — including ones never opened. Uses `phel.diagnostics.command`. | Phel CLI | — |
 
-Sources: [`phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.ts) (build / init / balance), [`phelDoctorProvider.ts`](../src/phelDoctorProvider.ts) (doctor / config), [`phelDiagnosticsProvider.ts`](../src/phelDiagnosticsProvider.ts) (lint).
+Sources: [`phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.ts) (build / init / run / balance), [`phelDoctorProvider.ts`](../src/phelDoctorProvider.ts) (doctor / config), [`phelDiagnosticsProvider.ts`](../src/phelDiagnosticsProvider.ts) (lint).
 
 Formatting has no command of its own: `phel format` runs through VS Code's own **Format Document**, gated by `phel.format.enabled` and pointed by `phel.format.command`. Per-file diagnostics run on open and save, not on demand.
 

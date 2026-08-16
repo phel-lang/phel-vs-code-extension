@@ -4,6 +4,8 @@
 
 ### Added
 
+- Menus, so the commands are no longer Command-Palette-only: a **Phel** submenu on the editor's right-click menu (eval form / selection / nREPL inline, run tests / benchmarks / file, show docs, lint), **Run File** and **Run All Tests in File** under the editor title bar's run button, and the three run entries on a `.phel` file's Explorer context menu. The palette now hides `phel.runBenchmark` (it needs the name its CodeLens supplies) and the editor-only commands when no `.phel` file is focused.
+- `Phel: Run File` (`phel.runFile`): `phel run <file>` in the **Phel Run** terminal, on the uri the menu passes or the active editor. The path is resolved against the workspace folder that owns the file, so running one from the Explorer of a multi-root workspace uses its own project root.
 - An integration suite (`npm run test:integration`) that runs the extension inside a real VS Code against a small fixture project, headless in CI. It covers what importing a module cannot: activation, that every command id in `package.json` is really registered, and that completion, hover, signature help, folding, symbols, rename, semantic tokens, the unused-local and migration diagnostics, the `push` → `conj` quick fix and the test/benchmark CodeLenses all reach the editor through the shipped bundle. The fixture has no `vendor/bin/phel` on purpose, so the CLI-backed features failing silently is itself asserted.
 
 ### Changed
