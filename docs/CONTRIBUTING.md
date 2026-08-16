@@ -95,6 +95,7 @@ Node 22, which is what `@vscode/test-electron` requires.
 | `test-fixtures/workspace/` | A small Phel project: `phel-config.php`, `composer.json`, `src/app/*.phel`, `tests/app/core_test.phel`, and a `.vscode/tasks.json` whose one `phel` task names a subcommand no default task uses, so `resolveTask` is what has to answer for it |
 | `test-fixtures/workspace2/` | A second project (`src/util/strings.phel`, with a `deftest` and a `defbench`) |
 | `test-fixtures/multi-root.code-workspace` | Two-folder workspace over both of the above, for the multi-root cases |
+| `test-fixtures/bin/phel` | A `#!/bin/sh` stand-in for the Phel CLI that execs `out/test/fakeApiDaemon.js`. The daemon suite points `phel.executablePath` at it and skips on Windows |
 
 The launcher starts VS Code **twice**, sequentially: once on
 `test-fixtures/workspace`, once on `test-fixtures/multi-root.code-workspace`.
@@ -123,7 +124,12 @@ bundle a user would install - which is why `test:integration` bundles first.
   against a deadline and names what it was waiting for when it gives up.
 - The fixture deliberately has **no** `vendor/bin/phel`. Every CLI-backed
   feature has to fail silently there, and that is itself an assertion: see
-  `diagnostics.itest.ts`.
+  `diagnostics.itest.ts`. A suite that does need a CLI points
+  `phel.executablePath` at `test-fixtures/bin/phel` for its own duration.
+- Write settings with `ConfigurationTarget.Global`, and reset them in `after`.
+  It lands in the throwaway test profile; the workspace targets write a
+  `.vscode/settings.json` **inside the checked-in fixture**, which already has
+  a `tasks.json` of its own.
 - If a test edits a buffer, revert it (`workbench.action.files.revert`) in
   `afterEach`. The fixtures are checked in; a suite must leave them as found.
 

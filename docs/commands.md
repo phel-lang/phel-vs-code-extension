@@ -53,10 +53,11 @@ Neither Explorer tree is a command: each registers run profiles that the Testing
 | Phel: Doctor (check project health) | `phel.doctor` | `phel doctor`, streamed into the **Phel Doctor** output channel, with the exit code appended. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Show Effective Configuration | `phel.showConfig` | `phel config --format=json`, opened pretty-printed in a JSON tab. Uses `phel.executablePath`. | Phel CLI | — |
 | Phel: Lint Workspace | `phel.lintWorkspace` | `phel lint --format=json` over one workspace folder — the active file's, or the picked one — filling the Problems panel for every file it reports, including ones never opened. Uses `phel.diagnostics.command`. | Phel CLI | — |
+| Phel: Restart Analysis Daemon | `phel.diagnostics.restartDaemon` | Stops the `phel api-daemon` process behind the as-you-type diagnostics (one per workspace folder) and clears what it reported; your next edit starts a fresh one. Reach for it when live diagnostics go stale after editing another file. Logs to the **Phel Analysis** output channel. | Phel CLI | — |
 
-Sources: [`phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.ts) (build / init / run / balance), [`phelDoctorProvider.ts`](../src/phelDoctorProvider.ts) (doctor / config), [`phelDiagnosticsProvider.ts`](../src/phelDiagnosticsProvider.ts) (lint).
+Sources: [`phelCliCommandsProvider.ts`](../src/phelCliCommandsProvider.ts) (build / init / run / balance), [`phelDoctorProvider.ts`](../src/phelDoctorProvider.ts) (doctor / config), [`phelDiagnosticsProvider.ts`](../src/phelDiagnosticsProvider.ts) (lint), [`phelDaemonDiagnosticsProvider.ts`](../src/phelDaemonDiagnosticsProvider.ts) (restart daemon).
 
-Formatting has no command of its own: `phel format` runs through VS Code's own **Format Document**, gated by `phel.format.enabled` and pointed by `phel.format.command`. Per-file diagnostics run on open and save, not on demand.
+Formatting has no command of its own: `phel format` runs through VS Code's own **Format Document**, gated by `phel.format.enabled` and pointed by `phel.format.command`. Per-file diagnostics run on open and save; the analyzer ones also run as you type, which is `phel.diagnostics.live`.
 
 ## Tasks
 

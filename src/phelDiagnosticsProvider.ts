@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import * as vscode from 'vscode';
+import type { PhelDaemonDiagnostics } from './phelDaemonDiagnosticsProvider';
 import {
     groupDiagnosticsByUri,
     isUnknownCommandError,
@@ -24,8 +25,23 @@ type Engine = 'auto' | 'lint' | 'analyze';
 let lintUnavailable = false;
 
 /**
+ * What the last run reported per document, keyed by uri. The live (on-type)
+ * pass reads it to drop the findings this one already shows.
+ */
+const saved = new Map<string, PhelDiagnostic[]>();
+
+/** The on-save findings for `uri`, as the live pass needs them for deduping. */
+export function savedPhelDiagnostics(uri: vscode.Uri): readonly PhelDiagnostic[] {
+    return saved.get(uri.toString()) ?? [];
+}
+
+/**
  * Runs `phel lint` (or `phel analyze`) on every `.phel` open / save and
  * surfaces the results as VS Code diagnostics.
+ *
+ * `live` is the on-type provider, when it is registered. Beyond deduping, it
+ * owns the analysis daemon, so the `analyze` engine goes through that instead
+ * of spawning a CLI per save.
  *
  * Configuration:
  *   - `phel.diagnostics.enabled` (default `true`)
@@ -34,9 +50,23 @@ let lintUnavailable = false;
  *     `vendor/bin/phel`, resolved relative to the workspace folder when
  *     not absolute)
  */
-export function registerDiagnostics(context: vscode.ExtensionContext): void {
+export function registerDiagnostics(
+    context: vscode.ExtensionContext,
+    live?: PhelDaemonDiagnostics
+): void {
     const collection = vscode.languages.createDiagnosticCollection(COLLECTION_NAME);
     context.subscriptions.push(collection);
+
+    const setDiagnostics = (uri: vscode.Uri, diagnostics: PhelDiagnostic[]) => {
+        saved.set(uri.toString(), diagnostics);
+        collection.set(uri, toVscodeDiagnostics(diagnostics));
+        live?.syncSaved(uri);
+    };
+    const clearDiagnostics = (uri: vscode.Uri) => {
+        saved.delete(uri.toString());
+        collection.delete(uri);
+        live?.syncSaved(uri);
+    };
 
     type State = { running: boolean; pending: vscode.TextDocument | null };
     const states = new Map<string, State>();
@@ -52,7 +82,7 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
             return;
         }
         if (!isEnabled()) {
-            collection.delete(document.uri);
+            clearDiagnostics(document.uri);
             return;
         }
         const key = document.uri.toString();
@@ -68,23 +98,20 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
         const folder = vscode.workspace.getWorkspaceFolder(document.uri);
         const command = resolvePhelExecutable('diagnostics.command', folder);
         const cwd = folder?.uri.fsPath;
-        checkFile(command, document.uri.fsPath, cwd)
+        checkFile(document, command, cwd, live)
             .then((diagnostics) => {
                 if (!isOpen(document.uri)) {
-                    collection.delete(document.uri);
+                    clearDiagnostics(document.uri);
                     return;
                 }
                 // `phel lint` may report on files the linted one requires, so
                 // only the entries for this document belong to it.
                 const byUri = groupDiagnosticsByUri(diagnostics, document.uri.fsPath);
-                collection.set(
-                    document.uri,
-                    toVscodeDiagnostics(byUri.get(document.uri.fsPath) ?? [])
-                );
+                setDiagnostics(document.uri, byUri.get(document.uri.fsPath) ?? []);
             })
             .catch((err) => {
                 console.error(`phel diagnostics failed for ${document.uri.fsPath}:`, err);
-                collection.delete(document.uri);
+                clearDiagnostics(document.uri);
             })
             .finally(() => {
                 const next = states.get(key);
@@ -116,10 +143,10 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
                         ['lint', '--format=json'],
                         folder.uri.fsPath
                     );
-                    collection.clear();
+                    clearAllDiagnostics(collection, live);
                     let files = 0;
                     for (const [fsPath, forFile] of groupDiagnosticsByUri(diagnostics)) {
-                        collection.set(vscode.Uri.file(fsPath), toVscodeDiagnostics(forFile));
+                        setDiagnostics(vscode.Uri.file(fsPath), forFile);
                         files++;
                     }
                     void vscode.window.showInformationMessage(
@@ -138,8 +165,13 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('phel.lintWorkspace', lintWorkspace),
         vscode.workspace.onDidOpenTextDocument(runForDocument),
-        vscode.workspace.onDidSaveTextDocument(runForDocument),
-        vscode.workspace.onDidCloseTextDocument((doc) => collection.delete(doc.uri)),
+        vscode.workspace.onDidSaveTextDocument((doc) => {
+            // Before the run, not after: the daemon holds whatever it
+            // evaluated for the previous contents of this file.
+            live?.markSaved(doc);
+            runForDocument(doc);
+        }),
+        vscode.workspace.onDidCloseTextDocument((doc) => clearDiagnostics(doc.uri)),
         vscode.workspace.onDidChangeConfiguration((e) => {
             if (
                 e.affectsConfiguration('phel.diagnostics.enabled') ||
@@ -148,7 +180,7 @@ export function registerDiagnostics(context: vscode.ExtensionContext): void {
             ) {
                 // A different executable may well have `lint`.
                 lintUnavailable = false;
-                collection.clear();
+                clearAllDiagnostics(collection, live);
                 vscode.workspace.textDocuments.forEach(runForDocument);
             }
         })
@@ -165,22 +197,41 @@ function configuredEngine(): Engine {
     return vscode.workspace.getConfiguration('phel').get<Engine>('diagnostics.engine', 'auto');
 }
 
-/** Run the configured engine over one path, falling back when `lint` is missing. */
+function clearAllDiagnostics(
+    collection: vscode.DiagnosticCollection,
+    live: PhelDaemonDiagnostics | undefined
+): void {
+    const cleared = [...saved.keys()];
+    saved.clear();
+    collection.clear();
+    for (const key of cleared) {
+        live?.syncSaved(vscode.Uri.parse(key));
+    }
+}
+
+/** Run the configured engine over one document, falling back when `lint` is missing. */
 async function checkFile(
+    document: vscode.TextDocument,
     command: string,
-    targetPath: string,
-    cwd: string | undefined
+    cwd: string | undefined,
+    live: PhelDaemonDiagnostics | undefined
 ): Promise<PhelDiagnostic[]> {
     const engine = configuredEngine();
+    const targetPath = document.uri.fsPath;
+    // `analyze` is exactly what the daemon's `analyzeSource` answers, so where
+    // it is the engine the warm process replaces a PHP boot per save.
+    const analyze = async () =>
+        (await live?.analyzeSaved(document)) ?? runPhel(command, ['analyze', targetPath], cwd);
+
     if (engine === 'analyze') {
-        return runPhel(command, ['analyze', targetPath], cwd);
+        return analyze();
     }
     if (engine === 'lint') {
         return runPhel(command, ['lint', '--format=json', targetPath], cwd);
     }
 
     if (lintUnavailable) {
-        return runPhel(command, ['analyze', targetPath], cwd);
+        return analyze();
     }
     try {
         return await runPhel(command, ['lint', '--format=json', targetPath], cwd);
@@ -189,7 +240,7 @@ async function checkFile(
             throw err;
         }
         lintUnavailable = true;
-        return runPhel(command, ['analyze', targetPath], cwd);
+        return analyze();
     }
 }
 
@@ -220,7 +271,8 @@ function runPhel(
     });
 }
 
-function toVscodeDiagnostics(diagnostics: PhelDiagnostic[]): vscode.Diagnostic[] {
+/** Map phel diagnostics onto the editor's, shared with the live provider. */
+export function toVscodeDiagnostics(diagnostics: readonly PhelDiagnostic[]): vscode.Diagnostic[] {
     return diagnostics.map((diag) => {
         const r = toZeroBasedRange(diag);
         const range = new vscode.Range(

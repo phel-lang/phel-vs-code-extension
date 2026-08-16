@@ -55,6 +55,7 @@ Off by default. When enabled, completion, hover, signature help, definition, ref
 |---|---|---|---|
 | `phel.diagnostics.enabled` | boolean | `true` | Run the diagnostics engine on open/save and surface inline diagnostics. |
 | `phel.diagnostics.engine` | `auto` \| `lint` \| `analyze` | `auto` | Which CLI subcommand backs diagnostics. See [Diagnostics engine](#diagnostics-engine). |
+| `phel.diagnostics.live` | boolean | `true` | Also report analyzer diagnostics as you type, through a long-lived `phel api-daemon`. See [Live diagnostics](#live-diagnostics). |
 | `phel.format.enabled` | boolean | `true` | Use `phel format` as the document formatter. |
 | `phel.tests.codeLensEnabled` | boolean | `true` | Show inline `▶ Run test` CodeLens above each `deftest`, and `▶ Run benchmark` above each `defbench`. |
 | `phel.migration.enabled` | boolean | `true` | Flag what Phel 0.50 removed (core aliases, `#\| \|#`, bare `#` comments, `\|()` short fns, `foo$` gensyms, `,` unquote, `^:reference`) and deprecated (`php/new`, `php/->`, `php/::`, `set-var`, the `\` namespace separator), plus calls to your own `:deprecated` definitions, with a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50. Severity follows the project, see [below](#what-the-project-config-decides). See [Migrating to Phel 0.50](completion.md#migrating-to-phel-050). |
@@ -135,5 +136,28 @@ A non-zero exit is expected from both: they exit 1 when they found errors and st
 `phel lint` also walks the configured source dirs, so the **Phel: Lint Workspace** command (`phel.lintWorkspace`) runs it over the whole project and populates the Problems panel for every file — including ones never opened in the editor. On-save diagnostics stay scoped to the file you saved.
 
 The `phel: lint` [task](commands.md#tasks) does the same thing through the task system, with the `$phel-lint` problem matcher parsing the CLI's human-readable output. Use whichever fits: the command when you want it on a keystroke, the task when you want it in a task chain or bound to <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>.
+
+## Live diagnostics
+
+`phel.diagnostics.live` (default on) adds a second pass that runs **as you type**, 500 ms after you stop. It talks to `phel api-daemon`, a long-running process the extension starts on first use — one per workspace folder — and asks it to analyse the buffer you are editing, unsaved contents and all.
+
+What it reports is the analyzer's findings only: unresolved symbols, arity errors, reader errors. The daemon has no access to the `phel lint` rule set (unused bindings, unused requires, comment style, everything `phel-lint.phel` configures), which is why the on-save pass stays as it was. Where the two overlap — `phel lint` republishes the analyzer's own findings under its rule codes — the live copy is dropped, so nothing is squiggled twice.
+
+How it interacts with `phel.diagnostics.engine`:
+
+| `engine` | On save | As you type |
+|---|---|---|
+| `auto` (default) | `phel lint`, one CLI run | daemon |
+| `auto`, on a Phel without `lint` | daemon (no second process) | daemon |
+| `lint` | `phel lint`, one CLI run | daemon |
+| `analyze` | daemon (no second process) | daemon |
+
+So whenever the effective engine is `analyze`, the save reuses the warm daemon instead of paying for a PHP start-up. `lint` always needs its own run: only the CLI has the rules.
+
+Both settings are independent switches — `phel.diagnostics.live: false` leaves the on-save pass exactly as it was, and turning `phel.diagnostics.enabled` off turns both passes off.
+
+**A Phel without `api-daemon`** (the command landed in 0.34) simply gets no live diagnostics: the extension notices the CLI rejecting the subcommand and stays quiet for the session, without a notification. Everything on save keeps working.
+
+**Staleness.** The daemon evaluates a file's dependencies once per process, so an edit you save in *another* file is not picked up by a process that already loaded the old version. The extension restarts the daemon the first time you ask about a different file after a save, which covers the usual edit-save-switch loop. If diagnostics still look stale, **Phel: Restart Analysis Daemon** (`phel.diagnostics.restartDaemon`) drops the process; see [troubleshooting](troubleshooting.md#diagnostics).
 
 Every other command the extension contributes is listed in the [commands reference](commands.md).

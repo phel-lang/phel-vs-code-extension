@@ -29,6 +29,20 @@ Confirm the language mode is `phel` (see above). Completion lives in `src/phelCo
 **Suggestion list misses a function I just added in `phel-lang`.**
 The list is a static snapshot. Refresh it via `npm run regen-docs` and rebuild - see [completion.md](completion.md).
 
+## Diagnostics
+
+**Nothing appears while I type, only when I save.**
+As-you-type diagnostics need `phel api-daemon`, which arrived in Phel 0.34. On an older CLI the extension notices the rejected subcommand and stays quiet for the rest of the session — on-save diagnostics keep working. Check the **Phel Analysis** output channel (**View → Output**, then pick it from the dropdown): it names the command it started, and says so when the CLI has no `api-daemon`. `phel.diagnostics.live` also has to be on, and the file has to be saved on disk inside a workspace folder — the analyzer resolves a file's namespace and dependencies by reading it.
+
+**A squiggle points at something I already fixed in another file.**
+The daemon evaluates each dependency once per process; re-evaluating a namespace it already loaded throws inside Phel and is ignored, so a saved change in *another* file can stay invisible to a warm process. The extension restarts it the first time you ask about a different file after a save, which covers the usual loop. When it does not, run **Phel: Restart Analysis Daemon** (`phel.diagnostics.restartDaemon`): it stops the process and clears what it reported, and your next edit starts a fresh one.
+
+**The same problem is listed twice.**
+Shouldn't happen: the live pass drops any finding the on-save run already reports at the same position with the same message. If you do see a pair, one of them is a rule finding (`phel/…`) and the other is not, which means they are genuinely two findings. `phel.diagnostics.live: false` turns the live pass off.
+
+**Analysis stops after a while.**
+A daemon that dies or hangs is restarted, up to five times a minute; past that the extension gives up for the session rather than spin up processes forever. The output channel logs each restart and the moment it gives up. Changing `phel.executablePath` (or the `phel.diagnostics.*` settings), or running the restart command, starts over with a clean budget.
+
 ## Debugging
 
 **Breakpoints show as hollow circles.**

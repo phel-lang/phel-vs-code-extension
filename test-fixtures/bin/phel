@@ -1,0 +1,8 @@
+#!/bin/sh
+# Stands in for a real `vendor/bin/phel` in the integration suite: everything
+# the extension shells out to lands in the fake daemon, which speaks the
+# `api-daemon` protocol and answers any other subcommand with `[]`.
+#
+# POSIX only, which is why the suite that points `phel.executablePath` here
+# skips on Windows. Excluded from the vsix by `.vscodeignore` (`test-fixtures/**`).
+exec node "$(dirname "$0")/../../out/test/fakeApiDaemon.js" "$@"

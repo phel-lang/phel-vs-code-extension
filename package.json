@@ -488,6 +488,10 @@
             {
                 "command": "phel.lintWorkspace",
                 "title": "Phel: Lint Workspace"
+            },
+            {
+                "command": "phel.diagnostics.restartDaemon",
+                "title": "Phel: Restart Analysis Daemon"
             }
         ],
         "submenus": [
@@ -821,6 +825,11 @@
                     ],
                     "default": "auto",
                     "description": "Which Phel CLI subcommand backs inline diagnostics."
+                },
+                "phel.diagnostics.live": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Also report analyzer diagnostics **as you type**, through a long-lived `phel api-daemon` (one per workspace folder, started on first use). Needs a Phel that has the `api-daemon` command; with an older one this silently does nothing. Findings the on-save engine already reports are not repeated. When `#phel.diagnostics.engine#` resolves to `analyze`, the same daemon serves the on-save run instead of spawning a CLI."
                 },
                 "phel.diagnostics.command": {
                     "type": "string",
