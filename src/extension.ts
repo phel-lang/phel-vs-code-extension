@@ -6,6 +6,7 @@ import * as net from 'net';
 import { SourceMapManager } from './sourceMapManager';
 import { PhelEvaluatableExpressionProvider } from './phelEvaluatableExpressionProvider';
 import { PhelCompletionProvider } from './phelCompletionProvider';
+import { PhelInteropCompletionProvider } from './phelInteropCompletionProvider';
 import { PhelHoverProvider } from './phelHoverProvider';
 import { PhelSignatureHelpProvider } from './phelSignatureHelpProvider';
 import { PHEL_DOCS } from './phelCoreDocs';
@@ -406,6 +407,21 @@ function registerLanguageProviders(
         vscode.languages.registerCompletionItemProvider(
             'phel',
             new PhelCompletionProvider(workspaceIndexer)
+        )
+    );
+
+    // A second provider rather than a branch in the first: the PHP half needs a
+    // warm daemon, and VS Code merges what the two return. The trigger
+    // characters are the ones that open an interop position - a member access,
+    // a `php/` or `Class/` prefix, a class literal, a superglobal's sigil.
+    context.subscriptions.push(
+        vscode.languages.registerCompletionItemProvider(
+            'phel',
+            new PhelInteropCompletionProvider(liveDiagnostics),
+            '.',
+            '/',
+            '\\',
+            '$'
         )
     );
 

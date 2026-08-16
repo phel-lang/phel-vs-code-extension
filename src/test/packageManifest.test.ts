@@ -227,6 +227,7 @@ describe('package.json configuration scopes', () => {
      * per-folder value that the read then ignores is worse than not offering it.
      */
     const RESOURCE_SCOPED = new Set([
+        'phel.completion.phpInterop',
         'phel.executablePath',
         'phel.lsp.command',
         'phel.lsp.args',

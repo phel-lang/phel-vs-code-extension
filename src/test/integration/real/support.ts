@@ -14,6 +14,7 @@ import { waitFor } from '../helpers';
 export {
     activateExtension,
     delay,
+    labelOf,
     positionOf,
     terminalArgs,
     terminalCwd,

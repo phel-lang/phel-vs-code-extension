@@ -16,7 +16,7 @@ VS Code support for [Phel](https://phel-lang.org/), a functional Lisp that compi
 
 - **Syntax highlighting** for every literal the Phel reader accepts — characters, regex literals, radix / BigInt / BigDecimal / ratio numbers, `##Inf` / `##NaN`, gensyms, tagged literals, reader conditionals, metadata tags — plus the Clojure-style PHP interop spellings (`(.method obj)`, `(.-field obj)`, `Class/CONST`, `Class/$prop`, `(Class. args)`).
 - **Navigation that understands scope** — go-to-definition, find-references, rename, hover and signature help resolve a local to its own binding, so renaming a parameter never touches a same-named global.
-- **Completion** over special forms, macros, core and workspace symbols, with docs and call snippets. Understands `alias/…` and the `(ns …)` form, and can auto-add a missing `:require`.
+- **Completion** over special forms, macros, core and workspace symbols, with docs and call snippets. Understands `alias/…` and the `(ns …)` form, and can auto-add a missing `:require`. In [PHP-interop positions](docs/completion.md#php-interop) (`(php/-> x …)`, `\Foo`, `php/strto…`) the compiler answers instead, with the members, classes and functions your project can actually load.
 - **Outline & workspace symbols** for every defining form, each with a matching icon.
 - **[Parameter inlay hints](docs/completion.md#parameter-inlay-hints)** (opt-in) — `(assoc ds: m key: :k value: v)`, threading-aware and silent wherever a label would mislead.
 - **Diagnostics** via `phel lint`, **formatting** via `phel format`, both on save — plus [indentation as you type](docs/repl-and-paredit.md#indentation-as-you-type) that follows the same rules, so the save has nothing to move.

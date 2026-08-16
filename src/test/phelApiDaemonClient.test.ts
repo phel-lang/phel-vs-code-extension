@@ -279,6 +279,41 @@ describe('PhelApiDaemonClient', function () {
         });
     });
 
+    describe('completeAtPoint', () => {
+        it('reads the answer back as completions', async () => {
+            client = createClient();
+
+            const items = await client.completeAtPoint('(php/strto', 1, 11, 'k');
+
+            assert.deepEqual(
+                items.map((item) => item.label),
+                ['strtoupper', 'strtolower', 'str-contains?']
+            );
+        });
+
+        it('sends the cursor 1-based, as the daemon counts it', async () => {
+            client = createClient();
+
+            // `(php/strto` is ten characters, so a cursor after them is col 11.
+            await client.completeAtPoint('(ns a)\n(php/strto', 2, 11, 'k');
+
+            const { lastParams } = await client.request<Stats>('__stats');
+            assert.equal(lastParams.line, 2);
+            assert.equal(lastParams.col, 11);
+        });
+
+        it('replaces a queued request under the same key, as keystrokes do', async () => {
+            client = createClient();
+
+            const first = client.completeAtPoint('(php/s', 1, 7, '/a.phel:completion');
+            const queued = client.completeAtPoint('(php/st', 1, 8, '/a.phel:completion');
+            const newest = client.completeAtPoint('(php/str', 1, 9, '/a.phel:completion');
+
+            await Promise.all([first, queued, newest]);
+            assert.equal((await client.request<Stats>('__stats')).lastParams.source, '(php/str');
+        });
+    });
+
     it('rejects everything once disposed', async () => {
         client = createClient({ spawnLog });
         await analyze(client, '(ns a)', '/a.phel');
