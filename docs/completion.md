@@ -60,6 +60,39 @@ npm run regen-docs -- /path/to/phel-lang --phel-version v0.50.0
 
 `MACROS` and `CORE_FNS` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` is hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source) - add new entries there by hand. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full procedure.
 
+## Parameter inlay hints
+
+The same corpus that backs signature help can name the arguments *in place*, so
+a call reads without moving the cursor into it:
+
+```phel
+(assoc ds: m key: :name value: "Phel")
+(-> m (assoc key: :name value: "Phel"))
+```
+
+Opt-in — set `phel.inlayHints.parameterNames` to `true`. A wrong label is worse
+than none, so every rule errs towards showing nothing:
+
+- **Functions only.** A macro or special form does not bind its arguments
+  positionally (`(let [x 1] …)`, `(if a b c)`), so its parameter names would
+  describe a shape rather than a value.
+- **No quoted data.** Inside `'(…)` or `` `(…) `` a list is data, not a call.
+  An unquoted `~(…)` is code again and is labelled.
+- **No shadowed head.** `(let [map (fn [x] x)] (map 1))` calls the local, so
+  nothing is labelled — most short parameter names are also core functions.
+- **Nothing past `& rest`.** The same label on every remaining argument says
+  nothing the name did not.
+- **No echo.** An argument already spelled like its parameter (`(assoc ds …)`)
+  keeps its label to itself.
+- **Threading follows the value.** Inside `->`, `some->`, `doto` and `cond->`
+  the first parameter is the threaded one, so the written arguments start one
+  index later. A `->>` / `some->>` / `cond->>` form is skipped whole: the value
+  lands last, where a variadic tail makes the mapping guesswork.
+
+Only the visible range is analysed, over the parse tree every other analyzer
+shares, and the hint's tooltip is the arity it was read off — which is also how
+you can tell *which* arity a multi-arity call matched.
+
 ## Snippets
 
 `snippets/phel.code-snippets` ships 66 templates covering the everyday forms. Type the prefix, accept the suggestion, and tab through the placeholders.

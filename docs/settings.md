@@ -60,6 +60,7 @@ Off by default. When enabled, completion, hover, signature help, definition, ref
 | `phel.repl.enabled` | boolean | `true` | Register REPL commands (start / eval form / eval selection / eval file). |
 | `phel.repl.history.enabled` | boolean | `true` | Append every form sent to the REPL to `.vscode/phel-repl-history.phel`. |
 | `phel.formHighlight.enabled` | boolean | `true` | Subtle background tint on the form enclosing the cursor. |
+| `phel.inlayHints.parameterNames` | boolean | `false` | Show the parameter name before each argument at a call site: `(assoc ds: m key: :k value: v)`. Functions only, and dropped wherever it would mislead. See [Parameter inlay hints](completion.md#parameter-inlay-hints). |
 | `phel.debug.enabled` | boolean | `true` | Enable the bundled Phel debug adapter. Disable to fall back to a raw PHP debug session. |
 
 ## Other
