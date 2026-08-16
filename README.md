@@ -50,7 +50,7 @@ The extension expects the Phel CLI at `vendor/bin/phel` (Composer default). For 
 { "phel.executablePath": "bin/phel" }
 ```
 
-Per-subsystem overrides (`phel.diagnostics.command`, `phel.format.command`, `phel.test.command`, `phel.repl.command`) take precedence when set. Full settings reference: [docs/settings.md](docs/settings.md).
+Per-subsystem overrides (`phel.diagnostics.command`, `phel.format.command`, `phel.test.command`, `phel.repl.command`) take precedence when set, and every one of them can also be set [per workspace folder](docs/settings.md#per-folder-settings). Full settings reference: [docs/settings.md](docs/settings.md).
 
 ## Documentation
 

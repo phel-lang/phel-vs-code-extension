@@ -1,0 +1,7 @@
+{
+    // Folder-level, and deliberately different from what the first folder of
+    // `multi-root.code-workspace` resolves to (its own `vendor/bin/phel`). The
+    // binary does not exist: `multiRoot.itest.ts` reads the path off the
+    // terminal the command opened, it never starts a process.
+    "phel.executablePath": "tools/phel2"
+}

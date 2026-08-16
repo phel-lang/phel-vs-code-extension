@@ -12,7 +12,16 @@
 import * as assert from 'node:assert/strict';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { activateExtension, openFixture, terminalArgs, terminalCwd, waitFor } from './helpers';
+import {
+    WORKSPACE_ROOT,
+    activateExtension,
+    fixtureUri,
+    openFixture,
+    terminalArgs,
+    terminalCwd,
+    terminalShellPath,
+    waitFor,
+} from './helpers';
 
 const FIXTURES = path.resolve(__dirname, '../../../test-fixtures');
 /** The second folder of the workspace; the first one is `WORKSPACE_ROOT`. */
@@ -54,6 +63,30 @@ describe('multi-root workspace', function () {
 
         assert.equal(terminalCwd(terminal), UTIL_ROOT);
         assert.deepEqual(terminalArgs(terminal), ['run', STRINGS]);
+    });
+
+    it("takes the CLI path from the folder's own settings", async function () {
+        // `workspace2/.vscode/settings.json` sets `phel.executablePath` to
+        // `tools/phel2`. VS Code only keeps a folder-level value for a setting
+        // declared `"scope": "resource"`, so without that in `package.json` this
+        // resolves to the default `vendor/bin/phel` instead.
+        const terminal = await runCommand('phel.runTestsInFile', vscode.Uri.file(strings()));
+
+        assert.equal(terminalShellPath(terminal), path.join(UTIL_ROOT, 'tools', 'phel2'));
+    });
+
+    it('leaves the other folder on its own CLI', async function () {
+        // Same command, same window, a file in the folder that overrides
+        // nothing: a folder value must not leak across the workspace.
+        const terminal = await runCommand(
+            'phel.runTestsInFile',
+            fixtureUri('tests', 'app', 'core_test.phel')
+        );
+
+        assert.equal(
+            terminalShellPath(terminal),
+            path.join(WORKSPACE_ROOT, 'vendor', 'bin', 'phel')
+        );
     });
 
     it('benchmarks in the folder that file belongs to', async function () {

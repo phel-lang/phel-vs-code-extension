@@ -774,7 +774,8 @@
                 "phel.lsp.command": {
                     "type": "string",
                     "default": "",
-                    "markdownDescription": "Override `#phel.executablePath#` for the language server only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder. Changing this restarts a running server automatically."
+                    "scope": "resource",
+                    "markdownDescription": "Override `#phel.executablePath#` for the language server only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder. Changing this restarts a running server automatically. In a multi-root workspace only the first folder's value is used: the server is started once per window, rooted there."
                 },
                 "phel.lsp.args": {
                     "type": "array",
@@ -784,7 +785,8 @@
                     "default": [
                         "lsp"
                     ],
-                    "description": "Arguments passed to the Phel CLI when starting the language server. Changing this restarts a running server automatically."
+                    "scope": "resource",
+                    "description": "Arguments passed to the Phel CLI when starting the language server. Changing this restarts a running server automatically. In a multi-root workspace only the first folder's value is used: the server is started once per window, rooted there."
                 },
                 "phel.cacheDirectory": {
                     "type": "string",
@@ -804,7 +806,8 @@
                         "bin/phel",
                         "/usr/local/bin/phel"
                     ],
-                    "markdownDescription": "Workspace-wide path to the Phel CLI. Used by the language server, diagnostics, format, test, and REPL unless a per-command setting (`#phel.lsp.command#`, `#phel.diagnostics.command#`, `#phel.format.command#`, `#phel.test.command#`, `#phel.repl.command#`) overrides it. Relative paths resolve against the workspace folder; absolute paths are used as-is."
+                    "scope": "resource",
+                    "markdownDescription": "Path to the Phel CLI. Used by the language server, diagnostics, format, test, and REPL unless a per-command setting (`#phel.lsp.command#`, `#phel.diagnostics.command#`, `#phel.format.command#`, `#phel.test.command#`, `#phel.repl.command#`) overrides it. Relative paths resolve against the workspace folder; absolute paths are used as-is. Can be set per folder: in a multi-root workspace each project may point at its own binary."
                 },
                 "phel.diagnostics.enabled": {
                     "type": "boolean",
@@ -834,6 +837,7 @@
                 "phel.diagnostics.command": {
                     "type": "string",
                     "default": "",
+                    "scope": "resource",
                     "markdownDescription": "Override `#phel.executablePath#` for diagnostics only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
                 "phel.format.enabled": {
@@ -844,6 +848,7 @@
                 "phel.format.command": {
                     "type": "string",
                     "default": "",
+                    "scope": "resource",
                     "markdownDescription": "Override `#phel.executablePath#` for formatting only. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
                 "phel.tests.codeLensEnabled": {
@@ -854,6 +859,7 @@
                 "phel.test.command": {
                     "type": "string",
                     "default": "",
+                    "scope": "resource",
                     "markdownDescription": "Override `#phel.executablePath#` for the test CodeLens / Test Explorer. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
                 "phel.paredit.enabled": {
@@ -869,6 +875,7 @@
                 "phel.repl.command": {
                     "type": "string",
                     "default": "",
+                    "scope": "resource",
                     "markdownDescription": "Override `#phel.executablePath#` for the REPL terminal. Empty string falls back to `#phel.executablePath#`. Relative paths resolve against the workspace folder."
                 },
                 "phel.repl.args": {
@@ -879,12 +886,14 @@
                     "default": [
                         "repl"
                     ],
+                    "scope": "resource",
                     "description": "Arguments passed to the Phel CLI when starting the REPL."
                 },
                 "phel.repl.history.enabled": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Append every form sent to the REPL to `.vscode/phel-repl-history.phel` in the workspace."
+                    "scope": "resource",
+                    "description": "Append every form sent to the REPL to `.vscode/phel-repl-history.phel` in the workspace folder the form came from."
                 },
                 "phel.nrepl.enabled": {
                     "type": "boolean",
@@ -894,11 +903,13 @@
                 "phel.nrepl.reloadOnSave": {
                     "type": "boolean",
                     "default": false,
+                    "scope": "resource",
                     "markdownDescription": "When an nREPL connection is active, reload changed namespaces automatically every time a `.phel` file is saved. Does not start a connection on its own."
                 },
                 "phel.nrepl.hoverEval": {
                     "type": "boolean",
                     "default": true,
+                    "scope": "resource",
                     "markdownDescription": "While an nREPL connection is active, hovering a symbol also shows what it currently evaluates to in the running program. Only symbols are evaluated (never the form around them), locals and literals are skipped, and an evaluation slower than 2 s is abandoned. Does not start a connection on its own."
                 },
                 "phel.inlayHints.parameterNames": {

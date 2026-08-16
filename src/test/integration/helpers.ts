@@ -101,6 +101,15 @@ export function terminalArgs(terminal: vscode.Terminal): readonly string[] {
     return typeof shellArgs === 'string' ? [shellArgs] : shellArgs;
 }
 
+/**
+ * The executable the terminal's process was started as — the Phel CLI path the
+ * extension resolved, absolute. (On Windows a CLI that exists is run through
+ * `php` instead; the fixtures ship none, so this stays the path either way.)
+ */
+export function terminalShellPath(terminal: vscode.Terminal): string | undefined {
+    return (terminal.creationOptions as vscode.TerminalOptions).shellPath;
+}
+
 /** Completion labels are either a string or a `{ label }` record. */
 export function labelOf(item: vscode.CompletionItem): string {
     return typeof item.label === 'string' ? item.label : item.label.label;
