@@ -25,7 +25,8 @@
 // Pure — no `vscode` import, so the detection is unit-testable and can be run
 // over a corpus by `scripts/sweep-analyzers.mjs`.
 
-import { parseAll, readForm, type Form } from './phelParedit';
+import { readForm, type Form } from './phelParedit';
+import { parseAllCached } from './phelParseCache';
 import { collectAllBindings } from './phelScope';
 import { parsePhelFile } from './phelDocs';
 
@@ -597,7 +598,7 @@ export function findMigrationIssues(src: string, options: MigrationOptions = {})
     const locallyBound = (name: string, offset: number): boolean =>
         bindings.some((b) => b.name === name && offset >= b.scopeStart && offset < b.scopeEnd);
 
-    const forms = parseAll(src);
+    const forms = parseAllCached(src);
     const spans = syntaxQuoteSpans(src, forms);
     const inSyntaxQuote = (offset: number): boolean =>
         spans.some(([s, e]) => offset >= s && offset < e);

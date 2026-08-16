@@ -1,6 +1,6 @@
 // Lexical-scope analysis for `.phel` source. Built on the structural reader in
-// `phelParedit` (`parseAll` / `pathAt`), it answers two questions the
-// navigation providers need:
+// `phelParedit` (`pathAt` over the shared parse cache), it answers two
+// questions the navigation providers need:
 //
 //   1. Is the symbol token at a given offset a *local* binding (a fn/defn
 //      parameter, a `let`/`loop`/`binding` name, a `catch` var, an iteration
@@ -16,49 +16,18 @@
 //
 // No `vscode` imports: pure and unit-testable.
 
-import { parseAll, pathAt, type Form } from './phelParedit';
+import { pathAt, type Form } from './phelParedit';
+import { derive, parseAllCached } from './phelParseCache';
 import { findOccurrences, type Occurrence } from './phelReferences';
 
 /**
- * One-entry parse cache.
- *
- * A semantic-tokens or unused-locals pass calls `resolveLocalAt` once per
- * candidate occurrence, and each call used to re-parse the whole document.
- * Every call in a pass sees the identical source, so caching the last result
- * collapses hundreds of parses into one. Keyed by the source string itself, so
- * a stale buffer can never be served.
+ * Occurrences by name, memoised against the source. A pass scans once per
+ * binding, and bindings share names heavily — 410 bindings over 158 distinct
+ * names in phel's own `test.phel` — so the same full-text scan was repeated
+ * two to three times on average.
  */
-let cachedSrc: string | null = null;
-let cachedForms: Form[] | null = null;
-
-function parseCached(src: string): Form[] {
-    if (cachedSrc === src && cachedForms) {
-        return cachedForms;
-    }
-    const forms = parseAll(src);
-    cachedSrc = src;
-    cachedForms = forms;
-    occurrenceCache.clear();
-    return forms;
-}
-
-/**
- * Occurrences by name, for the source currently in `cachedSrc`. A pass scans
- * once per binding, and bindings share names heavily — 410 bindings over 158
- * distinct names in phel's own `test.phel` — so the same full-text scan was
- * repeated two to three times on average.
- */
-const occurrenceCache = new Map<string, readonly Occurrence[]>();
-
 function occurrencesCached(src: string, name: string): readonly Occurrence[] {
-    parseCached(src); // keeps the two caches keyed to the same source
-    const hit = occurrenceCache.get(name);
-    if (hit) {
-        return hit;
-    }
-    const found = findOccurrences(src, name);
-    occurrenceCache.set(name, found);
-    return found;
+    return derive(src, `occ:${name}`, () => findOccurrences(src, name));
 }
 
 export interface LocalBinding {
@@ -577,7 +546,7 @@ function bindingsOnPath(src: string, path: readonly Form[]): LocalBinding[] {
  * global / core symbol).
  */
 export function resolveLocalAt(src: string, offset: number): LocalBinding | null {
-    const forms = parseCached(src);
+    const forms = parseAllCached(src);
     const path = pathAt(forms, offset);
     const last = path[path.length - 1];
     if (!last || last.kind !== 'atom') {
@@ -649,7 +618,7 @@ export function localOccurrences(src: string, b: LocalBinding): Occurrence[] {
  * de-duplicated. Used to surface in-scope locals in completion.
  */
 export function localsInScopeAt(src: string, offset: number): string[] {
-    const forms = parseCached(src);
+    const forms = parseAllCached(src);
     const path = pathAt(forms, offset);
     const seen = new Set<string>();
     const out: string[] = [];
@@ -690,7 +659,7 @@ export function collectAllBindings(src: string): LocalBinding[] {
             walk(child);
         }
     };
-    for (const form of parseCached(src)) {
+    for (const form of parseAllCached(src)) {
         walk(form);
     }
     return out;

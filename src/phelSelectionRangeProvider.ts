@@ -4,14 +4,15 @@
 // expand/shrink commands with VS Code's built-in smart-select.
 
 import * as vscode from 'vscode';
-import { parseAll, pathAt } from './phelParedit';
+import { pathAt } from './phelParedit';
+import { parseAllCached } from './phelParseCache';
 
 export class PhelSelectionRangeProvider implements vscode.SelectionRangeProvider {
     provideSelectionRanges(
         document: vscode.TextDocument,
         positions: vscode.Position[]
     ): vscode.SelectionRange[] {
-        const forms = parseAll(document.getText());
+        const forms = parseAllCached(document.getText());
         return positions.map((pos) => {
             const path = pathAt(forms, document.offsetAt(pos));
             // Build outermost → innermost so each form's parent is the one

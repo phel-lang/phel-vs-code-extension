@@ -10,7 +10,8 @@
 //
 // Pure: no `vscode` import, so the decisions are unit-testable.
 
-import { parseAll, pathAt, type Form } from './phelParedit';
+import { pathAt, type Form } from './phelParedit';
+import { parseAllCached } from './phelParseCache';
 import { aliasMapFromSource, normalizeNs } from './phelNsAnalyzer';
 import type { PhelDoc } from './phelDocs';
 
@@ -128,7 +129,7 @@ export function completionContextAt(
         // handling and let the provider filter as usual.
     }
 
-    const path = pathAt(parseAll(src), offset);
+    const path = pathAt(parseAllCached(src), offset);
     const nsIndex = path.findIndex((f) => f.kind === 'list' && headText(src, f) === 'ns');
     if (nsIndex < 0) {
         return { kind: 'normal' };

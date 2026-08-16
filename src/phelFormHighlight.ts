@@ -6,7 +6,8 @@
 // The decoration is debounced so rapid cursor movement doesn't churn.
 
 import * as vscode from 'vscode';
-import { enclosingContainer, parseAll, pathAt } from './phelParedit';
+import { enclosingContainer, pathAt } from './phelParedit';
+import { parseAllCached } from './phelParseCache';
 
 const DEBOUNCE_MS = 50;
 const SETTING = 'phel.formHighlight.enabled';
@@ -63,7 +64,7 @@ export class PhelFormHighlight implements vscode.Disposable {
         }
         const text = editor.document.getText();
         const offset = editor.document.offsetAt(editor.selection.active);
-        const forms = parseAll(text);
+        const forms = parseAllCached(text);
         const target = enclosingContainer(forms, offset) ?? pathAt(forms, offset).slice(-1)[0];
         if (!target) {
             editor.setDecorations(this.decoration, []);

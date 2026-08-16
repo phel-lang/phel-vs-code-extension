@@ -2,7 +2,8 @@
 // folds, as do runs of consecutive line comments. Line numbers are 0-based to
 // match VS Code's `FoldingRange`. No `vscode` import, so it is unit-testable.
 
-import { parseAll, isContainer, type Form } from './phelParedit';
+import { isContainer, type Form } from './phelParedit';
+import { parseAllCached } from './phelParseCache';
 
 export interface FoldRange {
     start: number;
@@ -52,7 +53,7 @@ export function computeFoldRanges(src: string): FoldRange[] {
             walk(child);
         }
     };
-    for (const f of parseAll(src)) {
+    for (const f of parseAllCached(src)) {
         walk(f);
     }
 

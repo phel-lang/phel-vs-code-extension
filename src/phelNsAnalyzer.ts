@@ -8,7 +8,8 @@
 //   (ns my.app
 //     (:require [other.ns :refer [a b] :as o]))
 
-import { parseAll, type Form } from './phelParedit';
+import type { Form } from './phelParedit';
+import { parseAllCached } from './phelParseCache';
 
 export interface RequireEntry {
     /** Span of the `[other.ns ...]` vector. */
@@ -61,7 +62,7 @@ export function aliasMapFromSource(src: string): Map<string, string> {
 }
 
 export function parseNsForm(src: string): NsForm | null {
-    const forms = parseAll(src);
+    const forms = parseAllCached(src);
     for (const form of forms) {
         if (form.kind !== 'list' || form.children.length === 0) {
             continue;
@@ -130,7 +131,7 @@ function findRequireClause(src: string, ns: Form): RequireClause | null {
  * `:as` / `:refer` options follow as siblings until the next symbol or vector.
  * Both shapes are legal, and several flat entries may share one clause.
  */
-function parseRequireEntries(src: string, children: Form[]): RequireEntry[] {
+function parseRequireEntries(src: string, children: readonly Form[]): RequireEntry[] {
     const out: RequireEntry[] = [];
     let i = 0;
     while (i < children.length) {
@@ -158,7 +159,11 @@ function parseRequireEntries(src: string, children: Form[]): RequireEntry[] {
 }
 
 /** `some.ns :as alias :refer [a b]` written flat inside the clause. */
-function parseFlatRequireEntry(src: string, children: Form[], start: number): RequireEntry {
+function parseFlatRequireEntry(
+    src: string,
+    children: readonly Form[],
+    start: number
+): RequireEntry {
     const nsAtom = children[start];
     const entry: RequireEntry = {
         start: nsAtom.start,

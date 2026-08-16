@@ -7,21 +7,25 @@
 
 export type FormKind = 'list' | 'vector' | 'map' | 'set' | 'anon' | 'string' | 'char' | 'atom';
 
+/**
+ * A parsed form. Immutable: parse results are shared through `phelParseCache`,
+ * so no consumer may edit a node another one is still reading.
+ */
 export interface Form {
     /** Offset of the first char of the form, including reader prefixes. */
-    start: number;
+    readonly start: number;
     /** Offset just past the last char of the form (exclusive). */
-    end: number;
+    readonly end: number;
     /** Offset of the opening bracket / first body char (after prefixes). */
-    bodyStart: number;
+    readonly bodyStart: number;
     /** Offset just after the closing bracket, or `end` for atoms / strings. */
-    bodyEnd: number;
+    readonly bodyEnd: number;
     /** For container forms, offset just after the opener, else equal to `bodyStart`. */
-    innerStart: number;
+    readonly innerStart: number;
     /** For container forms, offset of the closing bracket, else equal to `bodyEnd`. */
-    innerEnd: number;
-    kind: FormKind;
-    children: Form[];
+    readonly innerEnd: number;
+    readonly kind: FormKind;
+    readonly children: readonly Form[];
 }
 
 export interface PareditEdit {
