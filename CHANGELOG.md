@@ -11,6 +11,8 @@
 
 ### Changed
 
+- The extension now loads on 118 KB of JavaScript instead of 507 KB. The language client (`vscode-languageclient` and friends, 68% of the old bundle, opt-in and off by default) and the Xdebug debug adapter ship as sibling bundles that `extension.js` loads only when `phel.lsp.enabled` is on, respectively when a debug session starts. `npm run bundle:report` prints what each bundle is made of.
+
 - Every analyzer now reads one shared parse cache (`src/phelParseCache.ts`) instead of re-parsing the buffer per feature. Folding, ns, migration, refactor, selection, completion-context, REPL, form-highlight and scope all hit the same tree, and `Form` is immutable so sharing it is safe. Keyed by the source text, so a stale buffer can never be served.
 
 ### Fixed
