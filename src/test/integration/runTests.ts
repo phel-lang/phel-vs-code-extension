@@ -9,10 +9,13 @@
 // in `package.json` match the ones the code registers. That only shows up in a
 // real host, which is what this exists for.
 //
-// There are two launches, because "which workspace folder does this command run
-// in" can only be asked of a window that has more than one. The second host
-// opens `test-fixtures/multi-root.code-workspace`; `PHEL_ITEST_MULTI_ROOT` tells
-// `index.js` which of the two sets of suites to run.
+// There are up to three launches. The second exists because "which workspace
+// folder does this command run in" can only be asked of a window that has more
+// than one, so it opens `test-fixtures/multi-root.code-workspace`. The third is
+// opt-in: `PHEL_REAL_CLI_WORKSPACE` points it at a project with a real Phel
+// (see `scripts/make-real-cli-fixture.sh`), which is the only way to see what
+// the CLI-backed features do against the CLI rather than against a stand-in.
+// `PHEL_ITEST_SUITES` tells `index.js` which of the three sets to run.
 
 import * as path from 'path';
 import { runTests } from '@vscode/test-electron';
@@ -21,12 +24,15 @@ import { runTests } from '@vscode/test-electron';
 const extensionDevelopmentPath = path.resolve(__dirname, '../../..');
 const extensionTestsPath = path.resolve(__dirname, './index.js');
 
-async function launch(workspace: string, multiRoot: boolean): Promise<void> {
+/** Which set of suites a host runs; mirrored by `SuiteGroup` in `index.ts`. */
+type SuiteGroup = 'default' | 'multi-root' | 'real';
+
+async function launch(workspace: string, suites: SuiteGroup): Promise<void> {
     await runTests({
         version: process.env.VSCODE_TEST_VERSION ?? 'stable',
         extensionDevelopmentPath,
         extensionTestsPath,
-        extensionTestsEnv: { PHEL_ITEST_MULTI_ROOT: multiRoot ? '1' : '' },
+        extensionTestsEnv: { PHEL_ITEST_SUITES: suites },
         launchArgs: [
             workspace,
             // Another extension claiming `.phel`, a trust prompt swallowing the
@@ -54,10 +60,22 @@ async function launch(workspace: string, multiRoot: boolean): Promise<void> {
 
 async function main(): Promise<void> {
     const fixtures = path.join(extensionDevelopmentPath, 'test-fixtures');
-    // Sequentially: the two hosts share `--user-data-dir`, and a second window
+    // Sequentially: the hosts share `--user-data-dir`, and a second window
     // opened while the first is up would be adopted by it.
-    await launch(path.join(fixtures, 'workspace'), false);
-    await launch(path.join(fixtures, 'multi-root.code-workspace'), true);
+    await launch(path.join(fixtures, 'workspace'), 'default');
+    await launch(path.join(fixtures, 'multi-root.code-workspace'), 'multi-root');
+
+    const realCli = process.env.PHEL_REAL_CLI_WORKSPACE;
+    if (!realCli) {
+        // Not a failure: CI has no PHP project to point at, and the suites are
+        // meant to be run against one before a release.
+        console.log(
+            'PHEL_REAL_CLI_WORKSPACE is not set; skipping the real-CLI suites ' +
+                '(see scripts/make-real-cli-fixture.sh).'
+        );
+        return;
+    }
+    await launch(path.resolve(realCli), 'real');
 }
 
 main().catch((err) => {

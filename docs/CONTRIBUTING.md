@@ -96,6 +96,8 @@ Node 22, which is what `@vscode/test-electron` requires.
 | `test-fixtures/workspace2/` | A second project (`src/util/strings.phel`, with a `deftest` and a `defbench`) |
 | `test-fixtures/multi-root.code-workspace` | Two-folder workspace over both of the above, for the multi-root cases |
 | `test-fixtures/bin/phel` | A `#!/bin/sh` stand-in for the Phel CLI that execs `out/test/fakeApiDaemon.js`. The daemon suite points `phel.executablePath` at it and skips on Windows |
+| `src/test/integration/real/*.itest.ts` | The opt-in suites that need a real Phel; see below |
+| `scripts/make-real-cli-fixture.sh` | Builds the project those suites run against |
 
 The launcher starts VS Code **twice**, sequentially: once on
 `test-fixtures/workspace`, once on `test-fixtures/multi-root.code-workspace`.
@@ -104,6 +106,41 @@ that has more than one, and running every suite in both would only double the
 runtime. `MULTI_ROOT_SUITES` in `index.ts` lists the suites belonging to the
 second host; every other suite runs in the first. Add a multi-root suite to that
 set, or it will run in the single-folder window and fail there.
+
+### Against a real Phel CLI
+
+Both fixtures above ship **no** Phel, so everything that shells out is verified
+against a stand-in or against failing silently. The suites in
+`src/test/integration/real/` are the other half: they run in a third host,
+opened on a real `phel init` project with a real `phel` pointed at it, and every
+assertion observes what the CLI actually did. They are opt-in — CI has no PHP
+project to point at — and worth running before a release.
+
+```bash
+# Needs PHP 8.2+ and a phel-lang checkout with `composer install` done.
+FIXTURE=$(scripts/make-real-cli-fixture.sh)          # defaults to ../phel-lang
+FIXTURE=$(scripts/make-real-cli-fixture.sh --phel /path/to/phel-lang)
+
+PHEL_REAL_CLI_WORKSPACE=$FIXTURE \
+    VSCODE_TEST_USER_DATA_DIR=$(mktemp -d) \
+    npm run test:integration
+```
+
+Without `PHEL_REAL_CLI_WORKSPACE` the launcher prints one line and runs the
+first two hosts only. `scripts/make-real-cli-fixture.sh` writes a throwaway
+project (mktemp by default) holding one instance of every case the suites need —
+a lint warning and a lint error, a passing and a failing `deftest`, a `defbench`,
+a removed and a deprecated form, a `:deprecated` definition with a caller, and
+two namespaces where one requires the other — plus a `.vscode/settings.json`
+pointing `phel.executablePath` at a wrapper around the checkout's `bin/phel`.
+The suites edit that project (they save files and rewrite `phel-config.php`), so
+re-run the script for a clean one rather than reusing it across days.
+
+Two rules for writing one. Use `real/support.ts`, not `helpers.ts`: the project
+path is only known at runtime, so everything is anchored to
+`vscode.workspace.workspaceFolders[0]`. And give `waitFor` a generous timeout —
+a PHP boot is ~1 s and the first project-wide index several times that; the
+mocha timeout for this host is 120 s rather than 20 s.
 
 The `.itest.ts` suffix is what keeps the two suites apart. `npm test` globs
 `out/test/**/*.test.js`, which never matches `*.itest.js`, so the integration
