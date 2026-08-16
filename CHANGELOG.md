@@ -47,6 +47,10 @@
 
 - `docs/commands.md`: every contributed command with its id, the exact CLI invocation or editor operation behind it, which setting resolves the executable, what it needs (Phel CLI / nREPL / nothing), and its default keybinding — including the two that only make sense from a CodeLens. A unit test keeps the id column in step with `contributes.commands`.
 
+### Internal
+
+- The two things that make the extension cheap to load are now gates, not something to notice later. `npm run bundle:check` (CI, in place of the bare `bundle:prod` step) fails when `dist/extension.js` passes 200 000 bytes — it is 146.5 KB — or when `vscode-languageclient`, `@vscode/debugadapter` or `phelDebugAdapter.ts` turn up among its inputs, which moves the deferred-bundle guard onto the *production* metafile users actually download. `activation.itest.ts` times the cold `activate()` in the real host, logs it, and fails over 750 ms (20-35 ms today; the ceiling is 20x that, sized for an xvfb runner and aimed at a synchronous corpus parse or a spawn on the activation path, and overridable per run with `PHEL_ACTIVATION_BUDGET_MS`). Both budgets are documented in `docs/CONTRIBUTING.md`.
+
 ## [0.13.0] - 2026-08-16
 
 ### Added
