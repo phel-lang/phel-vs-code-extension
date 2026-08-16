@@ -22,7 +22,7 @@ The palette has all of them, but the ones you reach for while writing code also 
 - **The ▷ button in the editor title bar** — **Run File** and **Run All Tests in File**, on any open `.phel` file.
 - **Right-click a `.phel` file in the Explorer** — **Run All Tests in File**, **Run Benchmarks in Current File**, **Run File**. These take the file you clicked, not the one you are looking at, so nothing has to be open first.
 
-The palette hides what it cannot serve: **Run Benchmark** never appears there (it needs the name its CodeLens supplies), and the editor-only commands — paredit, eval, expand / shrink selection, show compiled location — only appear while a `.phel` file is focused.
+The palette hides what it cannot serve: **Run Benchmark** never appears there (it needs the name its CodeLens supplies), **Describe Runtime State** is a test seam with nothing to show a user, and the editor-only commands — paredit, eval, expand / shrink selection, show compiled location — only appear while a `.phel` file is focused.
 
 ## Tests & benchmarks
 
@@ -185,6 +185,15 @@ The debug session itself is started from a launch configuration of type `phel`, 
 | Phel: Show Documentation | `phel.showDoc` | Resolves the symbol from its argument, the word at the cursor, or a quick pick over the bundled corpus, then opens the rendered doc in a Markdown preview. Reads `assets/phel-core-docs.json`. | nothing | — |
 
 Go to definition, find references, rename, outline and code actions are language-feature providers rather than commands; they answer VS Code's own entries (<kbd>F12</kbd>, <kbd>Shift</kbd>+<kbd>F12</kbd>, <kbd>F2</kbd>, <kbd>Ctrl</kbd>+<kbd>.</kbd>). See [refactoring](refactoring.md).
+
+## Status bar
+
+Registered by [`src/phelStatusBar.ts`](../src/phelStatusBar.ts). The item on the right shows the namespace of the `.phel` file you are in, followed by one icon per Phel process that is up — `$(pulse)` the analysis daemon, `$(plug)` an nREPL connection, `$(server)` the language server — and its tooltip spells the three out. See [the status bar](repl-and-paredit.md#the-status-bar).
+
+| Command | Id | What it runs / does | Needs | Key |
+|---|---|---|---|---|
+| Phel: Status Actions | `phel.status.actions` | What clicking the status-bar item opens: a quick pick over **Start REPL**, **Connect** / **Disconnect** the nREPL server (whichever the current state allows), **Restart the analysis daemon**, **Restart the language server** (only while `phel.lsp.enabled` is on), **Show the Phel Analysis output**, and **Run doctor**. | nothing | — |
+| Phel: Describe Runtime State | `phel.status.describe` | Returns the state behind those icons — daemon, nREPL and language server, per workspace folder — as a plain object. Hidden from the palette: it exists so the integration suite can read what the status bar renders, which `StatusBarItem` does not expose. | nothing | — |
 
 ## Rebinding
 

@@ -27,6 +27,7 @@ import { PhelInlineEval } from './phelInlineEval';
 import { formatInlineResult } from './phelInlineFormat';
 import { resolvePhelExecutable } from './phelExecutable';
 import { PhelNreplHoverProvider } from './phelNreplHoverProvider';
+import { phelRuntimeState } from './phelRuntimeState';
 
 let inlineEval: PhelInlineEval | undefined;
 
@@ -59,12 +60,14 @@ async function getConnection(
     const key = folder.uri.toString();
     const existing = connections.get(key);
     if (existing && existing.connected) {
+        publishState(key, existing);
         return existing;
     }
     if (existing) {
         // A stale (closed) connection lingered; drop it before reconnecting.
         existing.dispose();
         connections.delete(key);
+        phelRuntimeState.set('nrepl', key, 'disconnected');
     }
     if (!create) {
         return undefined;
@@ -73,22 +76,40 @@ async function getConnection(
     if (inflight) {
         return inflight;
     }
+    phelRuntimeState.set('nrepl', key, 'connecting');
+    let opened: PhelNreplConnection | undefined;
     const promise = PhelNreplConnection.connect(
         folder,
         channel(),
-        resolvePhelExecutable('repl.command', folder)
+        resolvePhelExecutable('repl.command', folder),
+        // The socket can close without anyone asking (the server exits, or it
+        // crashes); the status bar has to stop claiming a connection then. A
+        // connection that is no longer the folder's says nothing about it.
+        () => {
+            if (opened !== undefined && connections.get(key) === opened) {
+                phelRuntimeState.set('nrepl', key, 'disconnected');
+            }
+        }
     )
         .then((conn) => {
+            opened = conn;
             connections.set(key, conn);
             connecting.delete(key);
+            publishState(key, conn);
             return conn;
         })
         .catch((err) => {
             connecting.delete(key);
+            phelRuntimeState.set('nrepl', key, 'disconnected');
             throw err;
         });
     connecting.set(key, promise);
     return promise;
+}
+
+/** A live connection is `attached` when it joined a server the user started. */
+function publishState(key: string, conn: PhelNreplConnection): void {
+    phelRuntimeState.set('nrepl', key, conn.attached ? 'attached' : 'connected');
 }
 
 async function withConnection(
@@ -301,14 +322,16 @@ function disconnect(): void {
         const key = folder.uri.toString();
         connections.get(key)?.dispose();
         connections.delete(key);
+        phelRuntimeState.set('nrepl', key, 'disconnected');
     } else {
         disposeAll();
     }
 }
 
 function disposeAll(): void {
-    for (const conn of connections.values()) {
+    for (const [key, conn] of connections) {
         conn.dispose();
+        phelRuntimeState.set('nrepl', key, 'disconnected');
     }
     connections.clear();
     connecting.clear();

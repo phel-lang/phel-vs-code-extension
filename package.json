@@ -492,6 +492,14 @@
             {
                 "command": "phel.diagnostics.restartDaemon",
                 "title": "Phel: Restart Analysis Daemon"
+            },
+            {
+                "command": "phel.status.actions",
+                "title": "Phel: Status Actions"
+            },
+            {
+                "command": "phel.status.describe",
+                "title": "Phel: Describe Runtime State"
             }
         ],
         "submenus": [
@@ -582,6 +590,10 @@
             "commandPalette": [
                 {
                     "command": "phel.runBenchmark",
+                    "when": "false"
+                },
+                {
+                    "command": "phel.status.describe",
                     "when": "false"
                 },
                 {

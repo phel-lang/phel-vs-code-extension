@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { LspRestartBudget } from '../lspRestartBudget';
 import { PhelApiDaemonClient, PhelApiDaemonUnavailableError } from '../phelApiDaemonClient';
+import type { DaemonState } from '../phelRuntimeState';
 
 const FAKE_DAEMON = join(__dirname, 'fakeApiDaemon.js');
 
@@ -31,7 +32,9 @@ interface FakeDiagnostic {
  * starts, which is how the restart cases tell "started again" from "never
  * started again".
  */
-function createClient(options: { spawnLog?: string; budget?: LspRestartBudget } = {}) {
+function createClient(
+    options: { spawnLog?: string; budget?: LspRestartBudget; states?: DaemonState[] } = {}
+) {
     const args = ['api-daemon'];
     if (options.spawnLog) {
         args.push('--spawn-log', options.spawnLog);
@@ -43,6 +46,7 @@ function createClient(options: { spawnLog?: string; budget?: LspRestartBudget } 
         // Short enough to keep the suite quick; the real defaults exist to
         // survive a PHP boot, which node does not need.
         timeouts: { first: 1500, next: 1500 },
+        onStateChange: (state) => options.states?.push(state),
     });
 }
 
@@ -284,5 +288,43 @@ describe('PhelApiDaemonClient', function () {
         await assert.rejects(client.request('__stats'), /disposed/);
         assert.equal(client.running, false);
         assert.equal(spawnCount(), 1);
+    });
+
+    // What the status bar reads. Only changes are reported: the client is asked
+    // about a document on every keystroke pause, and a status bar rewritten
+    // that often would flicker for nothing.
+    describe('the state it reports', () => {
+        it('is running while a request is out, idle once answered, off when gone', async () => {
+            const states: DaemonState[] = [];
+            client = createClient({ states });
+
+            await analyze(client, '(ns a)', '/a.phel');
+            await analyze(client, '(ns a)', '/a.phel');
+            client.dispose();
+
+            assert.deepEqual(states, ['running', 'idle', 'running', 'idle', 'off']);
+        });
+
+        it('reports unavailable when the CLI has no such command', async () => {
+            const states: DaemonState[] = [];
+            client = createClient({ states });
+
+            await assert.rejects(
+                client.request('analyzeSource', { __unknownCommand: true }),
+                PhelApiDaemonUnavailableError
+            );
+
+            assert.deepEqual(states.slice(-1), ['unavailable']);
+        });
+
+        it('reports exhausted once the restart budget is spent', async () => {
+            const states: DaemonState[] = [];
+            client = createClient({ states, budget: new LspRestartBudget(1, 60_000) });
+
+            await assert.rejects(client.request('analyzeSource', { __crash: true }), /stopped/);
+            await assert.rejects(client.request('analyzeSource', { __crash: true }), /unavailable/);
+
+            assert.deepEqual(states.slice(-1), ['exhausted']);
+        });
     });
 });

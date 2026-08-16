@@ -119,19 +119,23 @@ export class PhelNreplConnection {
     private constructor(
         readonly folder: vscode.WorkspaceFolder,
         private readonly output: NreplOutput,
-        private readonly command: string
+        private readonly command: string,
+        private readonly onClose?: () => void
     ) {}
 
     /**
      * `command` is the resolved Phel CLI, passed in rather than read from the
      * configuration here, so this module needs `vscode` for types only.
+     * `onClose` fires when the socket goes away on its own, which `dispose`
+     * (the explicit disconnect) does not count as.
      */
     static async connect(
         folder: vscode.WorkspaceFolder,
         output: NreplOutput,
-        command: string
+        command: string,
+        onClose?: () => void
     ): Promise<PhelNreplConnection> {
-        const conn = new PhelNreplConnection(folder, output, command);
+        const conn = new PhelNreplConnection(folder, output, command, onClose);
         await conn.startServerAndConnect();
         return conn;
     }
@@ -445,6 +449,7 @@ export class PhelNreplConnection {
             this.proc.kill();
         }
         this.proc = undefined;
+        this.onClose?.();
     }
 
     dispose(): void {

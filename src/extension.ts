@@ -40,6 +40,7 @@ import { registerSelectionCommands } from './phelSelectionProvider';
 import { PhelFormHighlight } from './phelFormHighlight';
 import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
 import { PhelStatusBar } from './phelStatusBar';
+import { type LspState, phelRuntimeState } from './phelRuntimeState';
 import { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 import { PhelTestController } from './phelTestController';
 import { PhelBenchController } from './phelBenchController';
@@ -72,6 +73,18 @@ async function loadLanguageClient(): Promise<PhelLanguageClient> {
  */
 function isLanguageServerEnabled(): boolean {
     return vscode.workspace.getConfiguration('phel').get<boolean>('lsp.enabled', false);
+}
+
+/**
+ * Publish the language server's state for the status bar. There is one server
+ * per window, rooted at the first workspace folder (see `phelLanguageClient`),
+ * so that folder's key is the one it is filed under.
+ */
+function setLanguageServerState(state: LspState): void {
+    const key = vscode.workspace.workspaceFolders?.[0]?.uri.toString();
+    if (key !== undefined) {
+        phelRuntimeState.set('lsp', key, state);
+    }
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -204,7 +217,7 @@ export function activate(context: vscode.ExtensionContext) {
             ) {
                 // Path/args changed while the server is up — restart it so the
                 // change takes effect without a reload.
-                void lsp.restartLanguageClient(context);
+                void restartLanguageServer(context);
             }
         })
     );
@@ -225,11 +238,16 @@ export function activate(context: vscode.ExtensionContext) {
         // The fallback can be triggered either at startup (client bundle missing
         // or server can't launch) or later (server proves unusable); register
         // the providers at most once.
-        const fallBack = (): void => registerLanguageProviders(context, projectConfig);
+        const fallBack = (): void => {
+            setLanguageServerState('fallback');
+            registerLanguageProviders(context, projectConfig);
+        };
+        setLanguageServerState('starting');
         void (async () => {
             try {
                 const lsp = await loadLanguageClient();
                 if (await lsp.startLanguageClient(context, { onUnrecoverable: fallBack })) {
+                    setLanguageServerState('running');
                     return;
                 }
                 console.warn(
@@ -244,6 +262,7 @@ export function activate(context: vscode.ExtensionContext) {
             fallBack();
         })();
     } else {
+        setLanguageServerState('disabled');
         registerLanguageProviders(context, projectConfig);
     }
 
@@ -280,7 +299,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     registerTaskProvider(context);
 
-    void new PhelStatusBar().start(context);
+    // The status bar's action list can restart the server, which only this
+    // module may load (the client is its own bundle).
+    void new PhelStatusBar({
+        restartLanguageServer: () => restartLanguageServer(context),
+    }).start(context);
 
     context.subscriptions.push(new PhelTestController(projectConfig));
     context.subscriptions.push(new PhelBenchController(projectConfig));
@@ -323,6 +346,21 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate(): Thenable<void> | undefined {
     return languageClient?.stopLanguageClient();
+}
+
+/**
+ * Restart the running language server and publish where it ended up. A no-op
+ * when no server is running: `restartLanguageClient` would not start one, and
+ * the state (`fallback`, `disabled`) is already the truth.
+ */
+async function restartLanguageServer(context: vscode.ExtensionContext): Promise<void> {
+    const lsp = await loadLanguageClient();
+    if (!lsp.isLanguageServerRunning()) {
+        return;
+    }
+    setLanguageServerState('starting');
+    await lsp.restartLanguageClient(context);
+    setLanguageServerState(lsp.isLanguageServerRunning() ? 'running' : 'stopped');
 }
 
 /**
