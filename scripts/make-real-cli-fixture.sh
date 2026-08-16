@@ -9,8 +9,8 @@
 # pointed at it, holding one instance of every case the suites assert on -
 # a lint warning, a lint error, a file only the linter objects to, a failing and
 # a passing `deftest`, a `defbench`, a removed and a deprecated form, a
-# `:deprecated` definition with a caller, an unused `:require`, and two
-# namespaces where one requires the other.
+# `:deprecated` definition with a caller, an unused `:require`, and a namespace
+# two others require, one with `:refer` and one with `:as`.
 #
 # It is written outside the repo (mktemp by default) because it is a scratch
 # project: the suites save files in it, rewrite its `phel-config.php`, and leave
@@ -116,6 +116,17 @@ cat >"$target/src/unused_dep.phel" <<'EOF'
 
 (defn helper [x]
   (str x))
+EOF
+
+# The same function reached through an alias instead of `:refer`. A scan for the
+# token `shout` cannot see it — `s/shout` is one token — so this is what says
+# whether the reference count and the rename follow a qualified use.
+cat >"$target/src/qualified_consumer.phel" <<'EOF'
+(ns demo.qualified-consumer
+  (:require demo.strings :as s))
+
+(defn loud [text]
+  (s/shout text))
 EOF
 
 # `phel lint` reports `phel/unused-binding` here and nothing else; the analyzer

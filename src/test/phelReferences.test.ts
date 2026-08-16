@@ -1,5 +1,12 @@
 import * as assert from 'node:assert/strict';
-import { findOccurrences, findQualifiedOccurrences, isValidSymbolName } from '../phelReferences';
+import {
+    countSymbolTokens,
+    findOccurrences,
+    findPrefixedOccurrences,
+    findQualifiedOccurrences,
+    firstSymbolTokenOffsets,
+    isValidSymbolName,
+} from '../phelReferences';
 
 function offsets(occ: ReturnType<typeof findOccurrences>): number[] {
     return occ.map((o) => o.start);
@@ -79,6 +86,82 @@ describe('phelReferences.findQualifiedOccurrences', () => {
 
     it('returns empty for an empty namespace', () => {
         assert.deepEqual(findQualifiedOccurrences('(str/join x)', ''), []);
+    });
+});
+
+describe('phelReferences.countSymbolTokens', () => {
+    it('counts each token once per occurrence', () => {
+        const counts = countSymbolTokens('(foo bar foo)');
+        assert.equal(counts.get('foo'), 2);
+        assert.equal(counts.get('bar'), 1);
+    });
+
+    it('counts a qualified token under both its spellings', () => {
+        // A scan for `shout` cannot match inside `s/shout`, so the bare tally is
+        // the only thing that makes an alias-qualified call countable.
+        const counts = countSymbolTokens('(s/shout "hi")');
+        assert.equal(counts.get('s/shout'), 1);
+        assert.equal(counts.get('shout'), 1);
+    });
+
+    it('skips strings, comments, and char literals, like findOccurrences', () => {
+        const src = '(foo "foo" \\f)\n; foo\n#| foo |#\n(foo)';
+        assert.equal(countSymbolTokens(src).get('foo'), 2);
+    });
+
+    it('keeps a trailing apostrophe inside the token it belongs to', () => {
+        const counts = countSymbolTokens("(+ a' a)");
+        assert.equal(counts.get("a'"), 1);
+        assert.equal(counts.get('a'), 1);
+    });
+
+    it('counts nothing for a name that is only part of another token', () => {
+        assert.equal(countSymbolTokens('(foobar foo-bar)').get('foo'), undefined);
+    });
+
+    it('leaves a token that is only a slash alone', () => {
+        const counts = countSymbolTokens('(/ 6 2)');
+        assert.equal(counts.get('/'), 1);
+        assert.equal(counts.get(''), undefined);
+    });
+});
+
+describe('phelReferences.findPrefixedOccurrences', () => {
+    it('spans the whole token and the name half separately', () => {
+        const src = '(defn loud [t]\n  (s/shout t))';
+        const [occ] = findPrefixedOccurrences(src, 'shout');
+
+        assert.equal(occ.prefix, 's');
+        assert.equal(src.slice(occ.start, occ.end), 's/shout');
+        // What a rename replaces: `s/shout` becomes `s/yell`, not `yell`.
+        assert.equal(src.slice(occ.nameStart, occ.end), 'shout');
+    });
+
+    it('finds a namespace written out in full as readily as an alias', () => {
+        const occurrences = findPrefixedOccurrences('(demo.strings/shout "hi")', 'shout');
+        assert.deepEqual(
+            occurrences.map((o) => o.prefix),
+            ['demo.strings']
+        );
+    });
+
+    it('ignores the bare name and a name that is merely a suffix', () => {
+        assert.deepEqual(findPrefixedOccurrences('(shout "hi") (s/shouting)', 'shout'), []);
+    });
+
+    it('skips strings and comments', () => {
+        assert.deepEqual(findPrefixedOccurrences('"s/shout" ; s/shout', 'shout'), []);
+    });
+});
+
+describe('phelReferences.firstSymbolTokenOffsets', () => {
+    it('records where each distinct token is first written', () => {
+        const src = '(defn greet [n] (greet n))';
+        const offsets = firstSymbolTokenOffsets(src);
+
+        assert.equal(offsets.get('defn'), 1);
+        assert.equal(offsets.get('greet'), src.indexOf('greet'));
+        assert.equal(offsets.get('n'), src.indexOf('[n]') + 1);
     });
 });
 

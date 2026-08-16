@@ -24,6 +24,7 @@ import { parsePhelFile } from './phelDocs';
 import { affectsPhelExecutable } from './phelExecutable';
 import type { PhelIndexDefinition, PhelIndexLocation, PhelProjectIndex } from './phelProjectIndex';
 import type { PhelProjectConfigProvider } from './phelProjectConfigProvider';
+import { countSymbolTokens } from './phelReferences';
 import { PhelWorkspaceIndex } from './phelWorkspaceIndex';
 
 const NAMESPACE_RE = /\((?:ns|in-ns)\s+([A-Za-z][\w.-]*)/;
@@ -291,7 +292,9 @@ export class PhelWorkspaceIndexer implements vscode.Disposable {
     private indexFromText(file: string, text: string): void {
         const ns = detectNamespace(text) || namespaceForFile(file);
         const docs = parsePhelFile(text, ns);
-        this.index.setFile(file, docs);
+        // The token tally comes from the same read of the file as the docs;
+        // nothing else in the extension ever reads a file to count symbols.
+        this.index.setFile(file, docs, countSymbolTokens(text));
     }
 }
 

@@ -22,6 +22,7 @@ import { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PhelDefinitionProvider } from './phelDefinitionProvider';
 import { PhelDocumentHighlightProvider } from './phelDocumentHighlight';
 import { PhelReferenceProvider } from './phelReferenceProvider';
+import { registerReferencesCodeLens } from './phelReferencesCodeLensProvider';
 import { PhelRenameProvider } from './phelRenameProvider';
 import { PhelDocumentSymbolProvider, PhelWorkspaceSymbolProvider } from './phelSymbolProviders';
 import { PhelSemanticTokensProvider, SEMANTIC_LEGEND } from './phelSemanticTokens';
@@ -452,6 +453,9 @@ function registerLanguageProviders(
             new PhelReferenceProvider(workspaceIndexer)
         )
     );
+
+    // Reads the same index as the reference provider, and clicks through to it.
+    registerReferencesCodeLens(context, workspaceIndexer);
 
     context.subscriptions.push(
         vscode.languages.registerDocumentHighlightProvider(

@@ -46,6 +46,7 @@ In a multi-root workspace each project can carry its own CLI. The settings below
 | `phel.executablePath` | every subsystem, as the fallback |
 | `phel.diagnostics.command`, `phel.format.command`, `phel.test.command`, `phel.repl.command`, `phel.lsp.command` | the subsystem that names them |
 | `phel.repl.args`, `phel.repl.history.enabled` | the REPL terminal, per folder |
+| `phel.references.codeLens` | the reference lens, read against the file it would sit in |
 | `phel.lsp.args` | the language server |
 | `phel.nrepl.reloadOnSave`, `phel.nrepl.hoverEval` | the nREPL connection, per folder |
 
@@ -82,6 +83,7 @@ Off by default. When enabled, completion, hover, signature help, definition, ref
 | `phel.completion.phpInterop` | boolean | `true` | Complete PHP symbols in interop positions — class members, class names, global functions, superglobals — through the same `phel api-daemon`. Needs `phel.diagnostics.live` on; the daemon gets 400 ms per keystroke. See [PHP interop](completion.md#php-interop). |
 | `phel.format.enabled` | boolean | `true` | Use `phel format` as the document formatter. |
 | `phel.format.onType` | boolean | `true` | Indent the line as you type it, following the rules `phel format` uses. See [Indentation as you type](repl-and-paredit.md#indentation-as-you-type). |
+| `phel.references.codeLens` | boolean | `true` | Show a `N references` CodeLens above every definition, which opens the reference list when clicked. See [Reference count CodeLens](refactoring.md#reference-count-codelens). |
 | `phel.tests.codeLensEnabled` | boolean | `true` | Show inline `▶ Run test` CodeLens above each `deftest`, and `▶ Run benchmark` above each `defbench`. |
 | `phel.migration.enabled` | boolean | `true` | Flag what Phel 0.50 removed (core aliases, `#\| \|#`, bare `#` comments, `\|()` short fns, `foo$` gensyms, `,` unquote, `^:reference`) and deprecated (`php/new`, `php/->`, `php/::`, `set-var`, the `\` namespace separator), plus calls to your own `:deprecated` definitions, with a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50. Severity follows the project, see [below](#what-the-project-config-decides). See [Migrating to Phel 0.50](completion.md#migrating-to-phel-050). |
 | `phel.ns.autoInsert` | boolean | `true` | Give a newly created, still empty `.phel` file its `(ns …)` form. The namespace is read off how the neighbouring files map their own paths, since `phel config` does not print the project's main namespace. See [Namespace hygiene](refactoring.md#namespace-hygiene). |
