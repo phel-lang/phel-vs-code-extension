@@ -5,7 +5,7 @@
 The extension ships a static `CompletionItemProvider` for the `phel` language. It suggests every public symbol from `phel.core`:
 
 - **51 special forms** - `def`, `defonce`, `defenum*`, `fn`, `let`, `loop`, `recur`, `break`, `try` / `catch` / `finally`, `ns`, `quote`, `var`, `deref`, all `php/*` interop forms (incl. `php/ref`), etc. (kind: `Keyword`)
-- **89 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `defenum`, `cond`, `when-some`, `while`, `with-redefs`, `with-open`, `dbg`, `deftrace`, `prefer-method`, `match`, `set!`, `defbench`, threading variants, etc. (kind: `Keyword`)
+- **90 macros** - `defn`, `defmacro`, `defprotocol`, `defrecord`, `defenum`, `cond`, `when-some`, `while`, `with-redefs`, `with-open`, `dbg`, `deftrace`, `prefer-method`, `match`, `set!`, `defbench`, threading variants, etc. (kind: `Keyword`)
 - **442 functions** - `assoc`, `map`, `mapv`, `filterv`, `reduce`, `reduce-kv`, `trampoline`, `swap!`, `re-find`, `parse-uuid`, `hydrate`, `bean`, `iterator-seq`, `php-invoke`, the full numeric tower (`+`, `-`, `*`, `**`, `/`, `%`, `<`, `<=`, `=`, `==`, `>`, `>=`, `quot`, `rem`, `mod`, `gcd`, `lcm`, `floor`, `ceil`, `round`, `sqrt`, …), and the rest of `phel.core`. (kind: `Function`)
 - **6 core values** - the dynamic vars `*ns*`, `*file*`, `*argv*`, `*program*`, `*assert*`, and the constant `NAN`. (kind: `Variable`)
 - **9 PHP superglobals** - `php/$_SERVER`, `php/$_GET`, `php/$_POST`, `php/$_FILES`, `php/$_COOKIE`, `php/$_SESSION`, `php/$_REQUEST`, `php/$_ENV`, `php/$GLOBALS`. Like the special forms these exist only in PHP, so no `.phel` file declares them; hover describes each one. (kind: `Variable`)
@@ -18,12 +18,12 @@ are flagged in the editor with the replacement to write — see
 account for that: `defn`, `defmacro`, `declare` and `meta` are macros installed as
 `(def defn {:macro true} (fn …))`, and the functions core needs before `defn`
 exists (`first`, `next`, `with-meta`, …) are written the same way. The corpus
-records `kind` from the defining operator, so all of them arrive as plain
-`def`s, indistinguishable from a constant like `NAN` or from the fifteen
-internal helpers core marks `:private` in a meta-map the corpus does not carry.
-`CORE_DEF_FORMS` in `src/phelCoreSymbols.ts` restores that split by hand, the
-way `SPECIAL_FORMS` is hand-kept, and `src/test/phelCoreSymbols.test.ts` fails
-when a corpus regen brings a bootstrap `def` the table does not classify.
+reads that meta-map, so the macros arrive as macros and the internal helpers
+core marks `{:private true}` / `^:private` stay out of every list. What no
+marker says is that a `def` holds a function rather than a constant like `NAN`:
+`CORE_DEF_FORMS` in `src/phelCoreSymbols.ts` splits those by hand, the way
+`SPECIAL_FORMS` is hand-kept, and `src/test/phelCoreSymbols.test.ts` fails when
+a corpus regen brings a bootstrap `def` the table does not classify.
 
 The provider respects the word range so `defn|` completes correctly without duplicating the prefix.
 

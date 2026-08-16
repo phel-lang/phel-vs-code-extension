@@ -6,9 +6,10 @@
 // `PHEL_DOCS`.
 //
 // `MACROS`, `CORE_FNS` and `CORE_VALUES` are projections of `PHEL_DOCS`, with
-// the bare-`def` forms of `CORE_DEF_FORMS` folded in. Regenerate the
-// underlying database via `node scripts/regen-core-docs.cjs /path/to/phel-lang`
-// (see CONTRIBUTING.md) and these arrays follow automatically.
+// the bare-`def` forms `CORE_DEF_FORMS` classifies folded into the last two.
+// Regenerate the underlying database via
+// `node scripts/regen-core-docs.cjs /path/to/phel-lang` (see CONTRIBUTING.md)
+// and these arrays follow automatically.
 
 import { PHEL_DOCS } from './phelCoreDocs';
 import type { PhelDoc } from './phelDocs';
@@ -99,30 +100,22 @@ function namesWhere(predicate: (doc: PhelDoc) => boolean): string[] {
 /**
  * How to offer the `phel.core` names a bare `(def …)` introduces.
  *
- * Core bootstraps itself: `defn` and `defmacro` are installed as
- * `(def defn {:macro true} (fn …))` — they are what every later `defn` is
- * written with — and the earliest functions (`first`, `next`, `with-meta`) are
- * defined the same way, before `defn` exists. The corpus takes `kind` and
- * `private` from the defining operator, so all of them are recorded as public
- * `def`s, and the `{:macro true}` / `{:private true}` / `^:private` markers
- * that tell them apart are not carried. This table restores that split; it is
- * hand-kept for the same reason `SPECIAL_FORMS` is — the fact lives in the
- * phel source, not in the corpus.
+ * Core bootstraps itself: the earliest functions (`first`, `next`,
+ * `with-meta`) are written with a bare `def` because `defn` does not exist
+ * yet. Nothing in the source says they are functions — `{:macro true}` and
+ * `{:private true}` are carried in the corpus, but "this `def` holds a `fn`"
+ * has no marker — so this table splits them from the constants by hand, the
+ * way `SPECIAL_FORMS` is hand-kept.
  *
- * Only the names worth offering are listed: the fifteen core `def`s phel marks
- * private stay out, and so do `def-`, `concat`, `hash-map`, `list` and
- * `vector`, which `SPECIAL_FORMS` already offers because the compiler
- * special-cases them. Entries are still filtered through the corpus, so a name
- * upstream drops disappears from completion with it.
+ * `concat`, `hash-map`, `list` and `vector` are deliberately absent:
+ * `SPECIAL_FORMS` already offers them, because the compiler special-cases
+ * them. Entries are still filtered through the corpus, so a name upstream
+ * drops disappears from completion with it.
  *
  * Source: `src/phel/core.phel`, `src/phel/core/defs.phel`,
  * `src/phel/core/meta.phel` and `src/phel/core/math.phel` in phel-lang.
  */
-const CORE_DEF_FORMS: ReadonlyMap<string, 'macro' | 'fn' | 'value'> = new Map([
-    ['declare', 'macro'],
-    ['defmacro', 'macro'],
-    ['defn', 'macro'],
-    ['meta', 'macro'],
+const CORE_DEF_FORMS: ReadonlyMap<string, 'fn' | 'value'> = new Map([
     ['array-map', 'fn'],
     ['first', 'fn'],
     ['next', 'fn'],
@@ -138,7 +131,7 @@ const CORE_DEF_FORMS: ReadonlyMap<string, 'macro' | 'fn' | 'value'> = new Map([
     ['NAN', 'value'],
 ]);
 
-function coreDefNames(as: 'macro' | 'fn' | 'value'): string[] {
+function coreDefNames(as: 'fn' | 'value'): string[] {
     return namesWhere(
         (d) =>
             d.kind === 'def' &&
@@ -149,10 +142,7 @@ function coreDefNames(as: 'macro' | 'fn' | 'value'): string[] {
 }
 
 /** Public macros across every shipped `phel.*` namespace. */
-export const MACROS: readonly string[] = uniqueSorted([
-    ...namesWhere((d) => d.kind === 'macro' && !d.private),
-    ...coreDefNames('macro'),
-]);
+export const MACROS: readonly string[] = namesWhere((d) => d.kind === 'macro' && !d.private);
 
 /** Public functions defined inside the auto-imported `phel.core` namespace. */
 export const CORE_FNS: readonly string[] = uniqueSorted([

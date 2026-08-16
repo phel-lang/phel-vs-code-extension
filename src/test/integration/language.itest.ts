@@ -27,11 +27,12 @@ describe('language features', function () {
     });
 
     it('completes the core forms that are bootstrapped with a bare `def`', async function () {
-        // `defn`, `defmacro` and `first` are `(def name {…} (fn …))` in core,
-        // so the corpus records them as plain `def`s rather than as a macro or
-        // a function. `defn` also has a snippet of the same name, which is what
-        // hid that the provider was offering neither — hence the detail, which
-        // only the completion provider's own items carry.
+        // `defn`, `defmacro` and `first` are `(def name {…} (fn …))` in core:
+        // the meta-map is what makes the first two macros, and `first` only
+        // reaches the function list through `CORE_DEF_FORMS`. `defn` also has a
+        // snippet of the same name, which is what hid that the provider was
+        // offering neither — hence the detail, which only the completion
+        // provider's own items carry.
         const items = await completionsIn(main);
         const detailsOf = (label: string) =>
             items.filter((item) => labelOf(item) === label).map((item) => item.detail);

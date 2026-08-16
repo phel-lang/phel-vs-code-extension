@@ -14,6 +14,11 @@
 // name ...)` to install macros). The parser is intentionally liberal: it
 // pulls what it can find and falls back to leaving fields undefined rather
 // than throwing.
+//
+// `:doc`, `:private` and `:macro` say the same thing the defining operator
+// does, so they are read from both places a form can carry metadata: the
+// meta-map after the name, and the `^…` tags before it (`^:private` is
+// shorthand for `^{:private true}`).
 
 export type PhelDocKind = 'fn' | 'macro' | 'def';
 
@@ -24,7 +29,11 @@ export interface PhelDoc {
     ns: string;
     /** `<ns>/<name>`. */
     qualifiedName: string;
-    /** What kind of form introduced this binding. */
+    /**
+     * What kind of form introduced this binding. `{:macro true}` (or `^:macro`)
+     * makes it `macro` whatever the operator was — that is how `phel.core`
+     * installs `defn` and friends, with a bare `def`.
+     */
     kind: PhelDocKind;
     /**
      * The operator that introduced it, e.g. `defn`, `defrecord`, `deftest`.
@@ -33,13 +42,16 @@ export interface PhelDoc {
      * field existed.
      */
     form?: string;
-    /** Whether the form is private (`defn-`, `defmacro-`, `def-`). */
+    /**
+     * Whether the form is private: `defn-` / `defmacro-` / `def-`, or a
+     * `{:private true}` meta-map / `^:private` tag on any of the others.
+     */
     private: boolean;
     /** First arity signature, e.g. `(assoc m k v)`; undefined for plain `def`. */
     signature?: string;
     /** All arity signatures when the form has more than one. */
     arities?: string[];
-    /** Docstring (the string literal directly after the name), if any. */
+    /** Docstring: the string literal after the name, else a `:doc` in metadata. */
     doc?: string;
     /** `:example` value pulled from the meta-map, if any. */
     example?: string;
@@ -168,6 +180,17 @@ interface SymbolSlice {
     end: number;
 }
 
+/**
+ * The three keys a form can carry in either metadata position and that mean
+ * exactly what a defining operator means. Collected from the `^…` tags before
+ * the name and from the meta-map after it, the later one winning.
+ */
+interface FormMeta {
+    doc?: string;
+    private?: boolean;
+    macro?: boolean;
+}
+
 function parseDefiningForm(
     source: string,
     formStart: number,
@@ -176,8 +199,9 @@ function parseDefiningForm(
     ns: string
 ): PhelDoc | null {
     const meta = DEFINING_OPS[op.value];
+    const attrs: FormMeta = {};
     let pos = skipTrivia(source, op.end);
-    pos = skipMetadata(source, pos, formEnd);
+    pos = skipMetadata(source, pos, formEnd, attrs);
     const nameSlice = peekFirstSymbol(source, pos);
     if (!nameSlice) {
         return null;
@@ -224,8 +248,23 @@ function parseDefiningForm(
                     doc.supersededBy = supersededBy;
                 }
             }
+            mergeFormMeta(attrs, mapBody);
             pos = skipTrivia(source, mapEnd + 1);
         }
+    }
+
+    // Metadata carries what the operator could not say: `(def ^:private x …)`
+    // is as private as `(def- x …)`, and `(def defn {:macro true} …)` is the
+    // macro every later `defn` is written with. A docstring literal is the
+    // more explicit spelling, so it keeps precedence over a `:doc` key.
+    if (doc.doc === undefined && attrs.doc !== undefined) {
+        doc.doc = attrs.doc;
+    }
+    if (attrs.private) {
+        doc.private = true;
+    }
+    if (attrs.macro) {
+        doc.kind = 'macro';
     }
 
     // Optional args vector(s) -> signature(s). Plain `def` rarely has one;
@@ -283,13 +322,39 @@ function formatSignature(name: string, argsBody: string): string {
     return collapsed.length === 0 ? `(${name})` : `(${name} ${collapsed})`;
 }
 
-function extractMetaValue(map: string, key: string): string | undefined {
-    const idx = map.indexOf(key);
-    if (idx < 0) {
-        return undefined;
+/**
+ * Offset of the value `key` maps to inside a meta-map body, or -1.
+ *
+ * Walks the body form by form so only a top-level key matches: a docstring
+ * that talks about `:private true`, and a longer key such as
+ * `:deprecated-since`, both stay out of the way.
+ */
+function metaValueAt(map: string, key: string): number {
+    let i = skipTrivia(map, 0);
+    while (i < map.length) {
+        const keyEnd = formEndAt(map, i);
+        if (keyEnd <= i) {
+            return -1;
+        }
+        const valueStart = skipTrivia(map, keyEnd);
+        if (valueStart >= map.length) {
+            return -1;
+        }
+        if (map.slice(i, keyEnd) === key) {
+            return valueStart;
+        }
+        const valueEnd = formEndAt(map, valueStart);
+        if (valueEnd <= valueStart) {
+            return -1;
+        }
+        i = skipTrivia(map, valueEnd);
     }
-    const pos = skipTrivia(map, idx + key.length);
-    if (pos >= map.length || map[pos] !== '"') {
+    return -1;
+}
+
+function extractMetaValue(map: string, key: string): string | undefined {
+    const pos = metaValueAt(map, key);
+    if (pos < 0 || map[pos] !== '"') {
         return undefined;
     }
     const end = findStringEnd(map, pos);
@@ -299,6 +364,26 @@ function extractMetaValue(map: string, key: string): string | undefined {
     return decodePhelString(map.slice(pos + 1, end));
 }
 
+/** Whether `key` maps to a literal `true`, the spelling of every meta flag. */
+function extractMetaFlag(map: string, key: string): boolean {
+    const pos = metaValueAt(map, key);
+    return pos >= 0 && map.startsWith('true', pos) && !/[\w-]/.test(map[pos + 4] ?? '');
+}
+
+/** Folds a meta-map body's `:doc` / `:private` / `:macro` into `attrs`. */
+function mergeFormMeta(attrs: FormMeta, map: string): void {
+    const doc = extractMetaValue(map, ':doc');
+    if (doc !== undefined) {
+        attrs.doc = doc;
+    }
+    if (extractMetaFlag(map, ':private')) {
+        attrs.private = true;
+    }
+    if (extractMetaFlag(map, ':macro')) {
+        attrs.macro = true;
+    }
+}
+
 /**
  * `:deprecated` accepts a version string, any other string as the reason, or
  * `true`; `false` and a missing key both mean "not deprecated". Returned as
@@ -306,25 +391,19 @@ function extractMetaValue(map: string, key: string): string | undefined {
  */
 function extractDeprecated(map: string): string | undefined {
     const key = ':deprecated';
-    const idx = map.indexOf(key);
-    if (idx < 0 || /[\w-]/.test(map[idx + key.length] ?? '')) {
-        return undefined; // absent, or a longer key such as `:deprecated-since`
+    const pos = metaValueAt(map, key);
+    if (pos < 0) {
+        return undefined;
     }
-    const pos = skipTrivia(map, idx + key.length);
-    if (pos < map.length && map[pos] === '"') {
+    if (map[pos] === '"') {
         return extractMetaValue(map, key);
     }
-    return map.startsWith('true', pos) && !/[\w-]/.test(map[pos + 4] ?? '') ? 'true' : undefined;
+    return extractMetaFlag(map, key) ? 'true' : undefined;
 }
 
 function extractSeeAlso(map: string): string[] {
-    const key = ':see-also';
-    const idx = map.indexOf(key);
-    if (idx < 0) {
-        return [];
-    }
-    const pos = skipTrivia(map, idx + key.length);
-    if (pos >= map.length || map[pos] !== '[') {
+    const pos = metaValueAt(map, ':see-also');
+    if (pos < 0 || map[pos] !== '[') {
         return [];
     }
     const close = findMatchingBracket(map, pos);
@@ -384,15 +463,34 @@ function skipTrivia(source: string, i: number): number {
     return i;
 }
 
-function skipMetadata(source: string, start: number, end: number): number {
+/**
+ * Steps over the `^…` tags in front of a name, folding the ones that say
+ * something about the definition into `attrs`: `^{…}` maps and the `^:private`
+ * / `^:macro` keyword shorthands. Type hints (`^string`, `^\DateTime`) and
+ * anything else carry nothing we index and are only skipped.
+ */
+function skipMetadata(source: string, start: number, end: number, attrs: FormMeta): number {
     let i = start;
     while (i < end && source[i] === '^') {
         // Each `^` is followed by exactly one form (the metadata payload).
         i = skipTrivia(source, i + 1);
         const after = formEndAt(source, i);
+        if (after > i) {
+            readMetadataTag(attrs, source.slice(i, after));
+        }
         i = skipTrivia(source, after > i ? after : i + 1);
     }
     return i;
+}
+
+function readMetadataTag(attrs: FormMeta, text: string): void {
+    if (text.startsWith('{') && text.endsWith('}')) {
+        mergeFormMeta(attrs, text.slice(1, -1));
+    } else if (text === ':private') {
+        attrs.private = true;
+    } else if (text === ':macro') {
+        attrs.macro = true;
+    }
 }
 
 function formEndAt(source: string, i: number): number {

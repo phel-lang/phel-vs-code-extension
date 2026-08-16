@@ -24,7 +24,7 @@ adapter, and REPL/paredit helpers for `.phel` files.
 - Completion / hover / signature help read `assets/phel-core-docs.json`, generated from a phel-lang checkout. Do not edit it by hand.
 - Regenerate with `npm run regen-docs -- /path/to/phel-lang --phel-version vX.Y.Z` (see the `regen-phel-corpus` skill for the full per-version flow).
 - `MACROS`, `CORE_FNS` and `CORE_VALUES` in `src/phelCoreSymbols.ts` derive from the corpus automatically; `SPECIAL_FORMS` is hand-curated (engine forms live in PHP, not in any `.phel` file) — add new special forms there by hand and mirror them in the `corelib` list of `syntaxes/phel.tmLanguage.json`.
-- `CORE_DEF_FORMS` in the same file is hand-curated too: `phel.core` bootstraps `defn`, `defmacro`, `first`, … with a bare `(def …)`, and the corpus cannot tell those apart from a constant or from an internal `:private` helper. `src/test/phelCoreSymbols.test.ts` fails when a regen adds one the table does not classify.
+- `CORE_DEF_FORMS` in the same file is hand-curated too: `phel.core` bootstraps `first`, `next`, `with-meta`, … with a bare `(def …)`, and nothing in the source says such a `def` holds a function rather than a constant. `{:macro true}` and `{:private true}` / `^:private` need no table — the parser reads them. `src/test/phelCoreSymbols.test.ts` fails when a regen adds one the table does not classify.
 
 ## Commits & changelog
 
