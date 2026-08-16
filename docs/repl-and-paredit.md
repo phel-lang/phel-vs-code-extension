@@ -20,6 +20,20 @@ a dimmed `=> …` decoration at the end of the form's line (errors in the error
 colour). The decoration clears as soon as you edit the buffer. The full value,
 captured stdout, and stack traces still go to the **Phel nREPL** output channel.
 
+### Which server the nREPL commands talk to
+
+The first nREPL command in a workspace folder looks for a `.nrepl-port` file at
+the folder root. Since Phel 0.50 `phel nrepl` writes its bound port there while
+it runs and removes it on exit, so a file whose port answers is a server you
+started yourself — from a terminal, a `docker exec`, or another editor — and
+the extension **attaches** to it instead of starting a second one. Without the
+file (or when its port no longer answers, which usually means the server
+crashed) the extension starts its own `phel nrepl --port=0` and reads the port
+from its banner. `Phel: nREPL Disconnect` closes the socket either way, and only
+stops a server the extension started.
+
+Add `.nrepl-port` to `.gitignore`; it is a per-machine, per-run file.
+
 ### Namespace tracking
 
 Each REPL terminal remembers which namespace it last switched into. When you eval from a different file, the extension first sends `(in-ns 'that.ns)` so cross-file evals don't silently land in the previous namespace.
