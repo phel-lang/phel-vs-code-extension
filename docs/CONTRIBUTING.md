@@ -21,6 +21,7 @@ Useful scripts:
 | `npm test` | Mocha unit suite |
 | `npm run test:integration` | Mocha suite inside a real VS Code (see below) |
 | `npm run bundle:report` | What each shipped bundle is made of (see below) |
+| `npm run bundle:check` | The same build, asserting the bundle budgets (what CI runs) |
 
 `npm run compile && npm run lint && npm test` is the gate every PR has to pass.
 
@@ -34,7 +35,7 @@ Open the repo in VS Code and press <kbd>F5</kbd>. That starts an Extension Devel
 
 | Bundle | Loaded | Size (minified) |
 |--------|--------|-----------------|
-| `extension.js` | on activation | ~118 KB, 99% our own code |
+| `extension.js` | on activation | ~147 KB, 100% our own code |
 | `phelLanguageClient.js` | only when `phel.lsp.enabled` is on | ~348 KB, almost all `vscode-languageclient` |
 | `phelDebugAdapter.js` | only once a debug session starts | ~51 KB, half `@vscode/debugadapter` |
 
@@ -60,6 +61,36 @@ which bundles for production and prints each bundle broken down by package,
 read from the metafile esbuild writes to `dist/meta.json` (kept out of the vsix).
 `bundle.itest.ts` asserts the split from the same metafile and loads both
 siblings in a real host, so a regression fails the integration run.
+
+### Two budgets
+
+Both are cheap to keep and expensive to notice the loss of, so they are gates
+rather than something to read in a report:
+
+| Budget | Where | Today |
+|--------|-------|-------|
+| `dist/extension.js` under 200 000 bytes, and no `vscode-languageclient` / `vscode-jsonrpc` / `vscode-languageserver` / `@vscode/debugadapter` / `phelDebugAdapter.ts` among its inputs | `npm run bundle:check`, in CI right after `npm run tokenize` | 146.5 KB |
+| `activate()` under 750 ms | `activation.itest.ts`, in the integration run | 20-35 ms |
+
+`bundle:check` builds for production and then reads `dist/meta.json`, so it
+judges what users download; `bundle.itest.ts` makes the same split assertion in
+the host, but only ever against the development build. The size ceiling leaves
+room to grow without leaving room for a deferred bundle to slip back in: the
+smaller of the two is 51 KB on its own.
+
+The activation budget is 20x the slowest it has been measured locally. An xvfb
+runner is 4-5x slower, and the point is not to police 10 ms - it is to catch the
+class of regression that costs a whole second, such as parsing the symbol corpus
+synchronously or spawning the CLI on the activation path. The suite sorts first
+in the default host, so it is the one that sees the cold `activate()`; if
+anything woke the extension earlier the case skips rather than measuring a
+no-op. `PHEL_ACTIVATION_BUDGET_MS=2000 npm run test:integration` raises it for
+one run, which is for investigating a slow machine, not for making a red run
+green.
+
+Raising either for real means editing the constant (`MAX_MAIN_BYTES` in
+`scripts/bundle-report.cjs`, `BUDGET_MS` in `activation.itest.ts`), updating the
+table above, and saying in the PR what got bigger and why that is worth it.
 
 ## Integration tests
 

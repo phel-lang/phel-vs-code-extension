@@ -49,7 +49,9 @@ jobs:
       - run: npm run check:changelog
         if: github.event_name == 'pull_request'
       - run: npm run tokenize
-      - run: npm run bundle:prod
+      # Builds for production and then asserts the activation bundle's budget:
+      # under 200 000 bytes, with neither deferred sibling's dependencies in it.
+      - run: npm run bundle:check
       - name: vsce package (sanity)
         # `runner.temp` rather than /tmp: on the Windows runner that is a bash
         # path Node would resolve against the wrong drive.
