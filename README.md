@@ -23,7 +23,7 @@ VS Code support for [Phel](https://phel-lang.org/), a functional Lisp that compi
 - **Tasks** for the CLI — `test`, `test --watch`, `lint`, `build`, `format`, `bench` under **Run Task**, with problem matchers that route lint findings and watch-mode test failures into the Problems panel. See [commands](docs/commands.md#tasks).
 - **Refactorings** (`Ctrl+.`) — thread / unwind, cycle collection delimiters, add missing `:require`.
 - **REPL and nREPL client**, with inline evaluation results, namespace reloading, and hover evaluation against the live runtime while connected.
-- **Test Explorer + CodeLens** for `deftest`, with per-test results and coverage; `▶ Run benchmark` for `defbench`. Run a file, its tests or its benchmarks from the right-click menu, the editor title bar or the Explorer.
+- **Test Explorer + CodeLens** for `deftest`, with per-test results and coverage, and a second **Phel Benchmarks** tree for `defbench` that reports each mean as its duration; `▶ Run benchmark` for one. Run a file, its tests or its benchmarks from the right-click menu, the editor title bar or the Explorer.
 - **Paredit** — slurp / barf / raise / wrap / drag / splice / kill, form-aware folding and expand-selection.
 - **Debugger** with real breakpoints in `.phel` files, via Xdebug and source maps.
 - **66 snippets**, plus semantic highlighting, unused-local hints, and [Phel 0.50 migration](docs/completion.md#migrating-to-phel-050) diagnostics with quick fixes.

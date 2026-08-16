@@ -41,6 +41,7 @@ import { PhelInlineValuesProvider } from './phelInlineValuesProvider';
 import { PhelStatusBar } from './phelStatusBar';
 import { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 import { PhelTestController } from './phelTestController';
+import { PhelBenchController } from './phelBenchController';
 import { affectsPhelExecutable } from './phelExecutable';
 
 let sourceMapManager: SourceMapManager;
@@ -275,6 +276,7 @@ export function activate(context: vscode.ExtensionContext) {
     void new PhelStatusBar().start(context);
 
     context.subscriptions.push(new PhelTestController(projectConfig));
+    context.subscriptions.push(new PhelBenchController(projectConfig));
     context.subscriptions.push(new PhelFormHighlight());
 
     context.subscriptions.push(
