@@ -31,6 +31,12 @@ export const PHEL_EXECUTABLE_SETTINGS: readonly string[] = [
  *
  * Pass `undefined` for commands without their own override (doctor, config,
  * build, init) to resolve straight from `phel.executablePath`.
+ *
+ * `folder` is what makes each project in a multi-root workspace resolve its own
+ * binary — but only because every setting read here is declared
+ * `"scope": "resource"` in `package.json`. Without that, VS Code refuses a
+ * folder-level value outright and `workspaceFolderValue` below is always
+ * undefined, whatever the folder's `.vscode/settings.json` says.
  */
 export function resolvePhelExecutable(
     subsystem: PhelExecutableSubsystem | undefined,

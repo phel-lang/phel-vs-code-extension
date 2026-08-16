@@ -93,7 +93,7 @@ Node 22, which is what `@vscode/test-electron` requires.
 | `src/test/integration/helpers.ts` | `activateExtension`, `openFixture`, `positionOf`, `waitFor` |
 | `src/test/integration/*.itest.ts` | The suites |
 | `test-fixtures/workspace/` | A small Phel project: `phel-config.php`, `composer.json`, `src/app/*.phel`, `tests/app/core_test.phel`, and a `.vscode/tasks.json` whose one `phel` task names a subcommand no default task uses, so `resolveTask` is what has to answer for it |
-| `test-fixtures/workspace2/` | A second project (`src/util/strings.phel`, with a `deftest` and a `defbench`) |
+| `test-fixtures/workspace2/` | A second project (`src/util/strings.phel`, with a `deftest` and a `defbench`), plus a `.vscode/settings.json` pointing `phel.executablePath` at a `tools/phel2` that does not exist — the folder-scoped value the multi-root suite reads back off the terminal |
 | `test-fixtures/multi-root.code-workspace` | Two-folder workspace over both of the above, for the multi-root cases |
 | `test-fixtures/bin/phel` | A `#!/bin/sh` stand-in for the Phel CLI that execs `out/test/fakeApiDaemon.js`. The daemon suite points `phel.executablePath` at it and skips on Windows |
 | `src/test/integration/real/*.itest.ts` | The opt-in suites that need a real Phel; see below |
@@ -166,7 +166,9 @@ bundle a user would install - which is why `test:integration` bundles first.
 - Write settings with `ConfigurationTarget.Global`, and reset them in `after`.
   It lands in the throwaway test profile; the workspace targets write a
   `.vscode/settings.json` **inside the checked-in fixture**, which already has
-  a `tasks.json` of its own.
+  a `tasks.json` and (in `workspace2`) an `executablePath` of its own. Those
+  checked-in folder settings are the point of a case that needs one: a global
+  value cannot show that the *folder* was asked.
 - If a test edits a buffer, revert it (`workbench.action.files.revert`) in
   `afterEach`. The fixtures are checked in; a suite must leave them as found.
 

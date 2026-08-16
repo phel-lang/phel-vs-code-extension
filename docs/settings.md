@@ -1,6 +1,6 @@
 # Settings reference
 
-All settings live under `phel.*` in VS Code's settings (workspace or user level). Set them via the Settings UI, by editing `settings.json`, or per-folder in `.vscode/settings.json`.
+All settings live under `phel.*` in VS Code's settings (user or workspace level). Set them via the Settings UI or by editing `settings.json`. Some of them can additionally be set per workspace folder, in that folder's `.vscode/settings.json` — see [per-folder settings](#per-folder-settings).
 
 ## Phel CLI location
 
@@ -8,7 +8,7 @@ The extension shells out to the Phel CLI for diagnostics, formatting, the test r
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `phel.executablePath` | string | `vendor/bin/phel` | Workspace-wide CLI path. Used by all subsystems unless overridden. Relative paths resolve against the workspace folder; absolute paths are used as-is. |
+| `phel.executablePath` | string | `vendor/bin/phel` | CLI path, workspace-wide or [per folder](#per-folder-settings). Used by all subsystems unless overridden. Relative paths resolve against the workspace folder; absolute paths are used as-is. |
 | `phel.diagnostics.command` | string | `""` | Override `phel.executablePath` for `phel lint` / `phel analyze`. Empty string → fall back to `phel.executablePath`. |
 | `phel.format.command` | string | `""` | Override `phel.executablePath` for `phel format`. Empty string → fall back to `phel.executablePath`. |
 | `phel.test.command` | string | `""` | Override `phel.executablePath` for the test CodeLens / Test Explorer. Empty string → fall back to `phel.executablePath`. Benchmarks are not covered by it: `phel bench` has no per-command override anywhere. |
@@ -36,6 +36,29 @@ The `phel` [tasks](commands.md#tasks) resolve the same way, per subcommand: the 
   "phel.test.command": "scripts/phel-with-coverage.sh"
 }
 ```
+
+## Per-folder settings
+
+In a multi-root workspace each project can carry its own CLI. The settings below are read against the workspace folder of the file being acted on, so a value in that folder's `.vscode/settings.json` wins over the workspace-wide and user ones:
+
+| Setting | Read for |
+|---|---|
+| `phel.executablePath` | every subsystem, as the fallback |
+| `phel.diagnostics.command`, `phel.format.command`, `phel.test.command`, `phel.repl.command`, `phel.lsp.command` | the subsystem that names them |
+| `phel.repl.args`, `phel.repl.history.enabled` | the REPL terminal, per folder |
+| `phel.lsp.args` | the language server |
+| `phel.nrepl.reloadOnSave`, `phel.nrepl.hoverEval` | the nREPL connection, per folder |
+
+```jsonc
+// api/.vscode/settings.json — only this folder uses this binary
+{
+  "phel.executablePath": "tools/phel"
+}
+```
+
+The language server is the exception the [known limitation](#language-server) below describes: one server per window, rooted at the first folder, so `phel.lsp.command` / `phel.lsp.args` are read from that folder and a value in the second one has no effect.
+
+Everything else is window-scoped: VS Code greys it out in a folder's `settings.json` (*"This setting cannot be applied in this workspace folder"*). Either it decides at activation what the window registers — `phel.lsp.enabled`, `phel.debug.enabled`, `phel.paredit.enabled`, `phel.repl.enabled`, `phel.nrepl.enabled` — or the extension reads it once for the window rather than per file: the feature toggles (`phel.diagnostics.*`, `phel.format.enabled`, `phel.tests.codeLensEnabled`, `phel.migration.enabled`, `phel.inlayHints.parameterNames`, `phel.formHighlight.enabled`) and `phel.cacheDirectory`.
 
 ## Language server
 

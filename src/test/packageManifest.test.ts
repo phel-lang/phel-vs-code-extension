@@ -1,8 +1,9 @@
-// Guards the menu / submenu / keybinding / walkthrough wiring in `package.json`.
-// VS Code silently drops a menu item whose `command` it cannot resolve and a
-// submenu reference whose id was never declared, so a typo here costs a whole
-// context menu with nothing in the logs. Nothing but this test reads those
-// tables.
+// Guards the menu / submenu / keybinding / walkthrough / configuration wiring in
+// `package.json`. VS Code silently drops a menu item whose `command` it cannot
+// resolve and a submenu reference whose id was never declared, so a typo here
+// costs a whole context menu with nothing in the logs. A setting's `scope` fails
+// just as quietly: without it the setting is window-scoped and a folder-level
+// value is ignored. Nothing but this test reads those tables.
 
 import * as assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
@@ -47,6 +48,12 @@ interface Walkthrough {
     steps: WalkthroughStep[];
 }
 
+/** A contributed setting; `scope` defaults to `window` when absent. */
+interface ConfigurationProperty {
+    type: string;
+    scope?: string;
+}
+
 const repoRoot = join(__dirname, '..', '..');
 
 const manifest: {
@@ -56,6 +63,7 @@ const manifest: {
         menus?: Record<string, MenuItem[]>;
         keybindings?: Keybinding[];
         walkthroughs?: Walkthrough[];
+        configuration?: { properties: Record<string, ConfigurationProperty> };
     };
 } = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf-8'));
 
@@ -65,6 +73,7 @@ const {
     menus = {},
     keybindings = [],
     walkthroughs = [],
+    configuration = { properties: {} },
 } = manifest.contributes;
 
 const commandIds = new Set(commands.map((c) => c.command));
@@ -204,5 +213,70 @@ describe('package.json walkthrough', () => {
                 `${walkthrough}/${step.id} has no completionEvents`
             );
         }
+    });
+});
+
+// A setting with no `scope` is window-scoped, and VS Code then refuses it in a
+// folder's `.vscode/settings.json`: the value never reaches `inspect()`, so a
+// multi-root workspace where one project has its own binary cannot say so.
+describe('package.json configuration scopes', () => {
+    /**
+     * The settings resolved against a workspace folder — every one of them is
+     * read as `getConfiguration('phel', folder)`, so a folder value has
+     * somewhere to land. Nothing else may claim `resource`: offering a
+     * per-folder value that the read then ignores is worse than not offering it.
+     */
+    const RESOURCE_SCOPED = new Set([
+        'phel.executablePath',
+        'phel.lsp.command',
+        'phel.lsp.args',
+        'phel.diagnostics.command',
+        'phel.format.command',
+        'phel.test.command',
+        'phel.repl.command',
+        'phel.repl.args',
+        'phel.repl.history.enabled',
+        'phel.nrepl.reloadOnSave',
+        'phel.nrepl.hoverEval',
+    ]);
+
+    /**
+     * Read once in `activate` to decide what to register for the whole window.
+     * A folder value would arrive too late to change anything.
+     */
+    const ACTIVATION_GATES = [
+        'phel.lsp.enabled',
+        'phel.debug.enabled',
+        'phel.paredit.enabled',
+        'phel.repl.enabled',
+        'phel.nrepl.enabled',
+    ];
+
+    const settings = configuration.properties;
+
+    it('lets every CLI path be set per folder', () => {
+        const paths = Object.keys(settings).filter(
+            (key) => key === 'phel.executablePath' || key.endsWith('.command')
+        );
+        assert.ok(paths.length > 1, 'expected phel.executablePath and the per-command overrides');
+        for (const key of paths) {
+            assert.equal(settings[key].scope, 'resource', `${key} is not folder-scoped`);
+        }
+    });
+
+    it('keeps the activation-time toggles window-scoped', () => {
+        for (const key of ACTIVATION_GATES) {
+            assert.ok(settings[key], `no such setting ${key}`);
+            assert.notEqual(
+                settings[key].scope,
+                'resource',
+                `${key} gates registration at activation and cannot be per-folder`
+            );
+        }
+    });
+
+    it('offers a folder value only where one is read', () => {
+        const declared = Object.keys(settings).filter((key) => settings[key].scope === 'resource');
+        assert.deepEqual(declared.sort(), [...RESOURCE_SCOPED].sort());
     });
 });
