@@ -227,6 +227,26 @@
                 "category": "Phel"
             },
             {
+                "command": "phel.bench",
+                "title": "Phel: Run Benchmarks",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.benchFile",
+                "title": "Phel: Run Benchmarks in Current File",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.runBenchmark",
+                "title": "Phel: Run Benchmark",
+                "category": "Phel"
+            },
+            {
+                "command": "phel.balance",
+                "title": "Phel: Check Balanced Delimiters",
+                "category": "Phel"
+            },
+            {
                 "command": "phel.paredit.slurpForward",
                 "title": "Phel: Slurp Forward",
                 "category": "Phel"
@@ -602,6 +622,11 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Highlight the form enclosing the cursor with a subtle background tint."
+                },
+                "phel.migration.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Flag what Phel 0.50 removed (the core aliases push, put, values, …; the reader syntax #| |#, bare # comments, |() short fns, foo$ gensyms, `,` unquote, ^:reference) and deprecated (php/new, php/->, php/::, set-var, the \\ namespace separator), plus calls to your own :deprecated definitions, and offer a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50."
                 }
             }
         }

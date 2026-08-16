@@ -1,10 +1,23 @@
 import * as vscode from 'vscode';
-import { lookupSymbol, renderDocMarkdown, renderLocalMarkdown } from './phelDocsLookup';
+import {
+    lookupSymbol,
+    renderDocMarkdown,
+    renderLocalMarkdown,
+    renderSuperglobalMarkdown,
+    renderSupersededMarkdown,
+} from './phelDocsLookup';
+import { PHP_SUPERGLOBALS } from './phelCoreSymbols';
+import { MIGRATIONS } from './phelMigration';
 import { aliasMapFromSource } from './phelNsAnalyzer';
 import { resolveLocalAt } from './phelScope';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 import { mergedDocs, plainMarkdown } from './phelProviderSupport';
+
+/** The forms deprecated as source in 0.50, keyed by name. */
+const SUPERSEDED = new Map(
+    MIGRATIONS.filter((e) => e.status === 'deprecated').map((e) => [e.name, e.detail])
+);
 
 export class PhelHoverProvider implements vscode.HoverProvider {
     constructor(private readonly indexer?: PhelWorkspaceIndexer) {}
@@ -27,6 +40,19 @@ export class PhelHoverProvider implements vscode.HoverProvider {
         if (local) {
             const declLine = document.lineAt(document.positionAt(local.declStart).line).text;
             const md = plainMarkdown(renderLocalMarkdown(local, declLine));
+            return new vscode.Hover(md, range);
+        }
+
+        // Neither a superglobal nor a special form is declared in any `.phel`
+        // file, so both are checked before the corpus rather than through it.
+        const superglobal = PHP_SUPERGLOBALS.get(word);
+        if (superglobal) {
+            const md = plainMarkdown(renderSuperglobalMarkdown(word, superglobal));
+            return new vscode.Hover(md, range);
+        }
+        const superseded = SUPERSEDED.get(word);
+        if (superseded) {
+            const md = plainMarkdown(renderSupersededMarkdown(word, superseded));
             return new vscode.Hover(md, range);
         }
 

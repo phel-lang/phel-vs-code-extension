@@ -1,7 +1,13 @@
 import * as vscode from 'vscode';
-import { CORE_FNS, MACROS, SPECIAL_FORMS } from './phelCoreSymbols';
+import { CORE_FNS, MACROS, PHP_SUPERGLOBALS, SPECIAL_FORMS } from './phelCoreSymbols';
+import { MIGRATIONS } from './phelMigration';
 import { buildCallSnippet, isCalleePosition } from './phelCallSnippet';
-import { lookupSymbol, renderDocMarkdown } from './phelDocsLookup';
+import {
+    lookupSymbol,
+    renderDocMarkdown,
+    renderSuperglobalMarkdown,
+    renderSupersededMarkdown,
+} from './phelDocsLookup';
 import { buildRequireEdit, parseNsForm, type NsForm } from './phelNsAnalyzer';
 import {
     aliasQualifiedCandidates,
@@ -25,15 +31,39 @@ interface ItemSpec {
     ns?: string;
     /** Whether this symbol is a workspace doc (vs a core fn / built-in). */
     workspace?: boolean;
+    /** Markdown shown instead of a corpus lookup. Used where no doc record exists. */
+    documentation?: string;
+    /** What to write instead, for a form deprecated as source. */
+    supersededBy?: string;
 }
+
+/**
+ * The forms Phel 0.50 deprecated as source, keyed by name. They still compile —
+ * they are the target the shorthands expand to — so they stay in the candidate
+ * list, but they are struck through and sorted last so new code reaches for the
+ * Clojure-style spelling first.
+ */
+const SUPERSEDED = new Map(
+    MIGRATIONS.filter((e) => e.status === 'deprecated').map((e) => [e.name, e.detail])
+);
 
 function buildBaseSpecs(): ItemSpec[] {
     const specs: ItemSpec[] = [];
     for (const name of SPECIAL_FORMS) {
+        const superseded = SUPERSEDED.get(name);
         specs.push({
             label: name,
             kind: vscode.CompletionItemKind.Keyword,
-            detail: 'Phel special form',
+            detail: superseded ? 'Phel special form (deprecated)' : 'Phel special form',
+            ...(superseded === undefined ? {} : { supersededBy: superseded }),
+        });
+    }
+    for (const [name, description] of PHP_SUPERGLOBALS) {
+        specs.push({
+            label: name,
+            kind: vscode.CompletionItemKind.Variable,
+            detail: 'PHP superglobal',
+            documentation: renderSuperglobalMarkdown(name, description),
         });
     }
     for (const name of MACROS) {
@@ -117,15 +147,29 @@ function buildItem(
     const item = new vscode.CompletionItem(spec.label, spec.kind);
     item.detail = spec.detail;
     const doc = lookupSymbol(spec.label, docs);
-    if (doc) {
+    if (spec.documentation) {
+        item.documentation = plainMarkdown(spec.documentation);
+    } else if (doc) {
         const md = plainMarkdown(renderDocMarkdown(doc));
         item.documentation = md;
+        if (doc.deprecated !== undefined) {
+            // A definition marked `:deprecated` in its meta-map: shown struck
+            // through, the way the deprecated interop forms are.
+            item.tags = [vscode.CompletionItemTag.Deprecated];
+        }
         if (callee) {
             const snippet = buildCallSnippet(spec.label, doc.signature);
             if (snippet) {
                 item.insertText = new vscode.SnippetString(snippet);
             }
         }
+    }
+    if (spec.supersededBy) {
+        item.tags = [vscode.CompletionItemTag.Deprecated];
+        // Sorted after everything else, so the shorthand is what gets picked
+        // when both spellings match what was typed.
+        item.sortText = `z_${spec.label}`;
+        item.documentation = plainMarkdown(renderSupersededMarkdown(spec.label, spec.supersededBy));
     }
     if (range) {
         item.range = range;

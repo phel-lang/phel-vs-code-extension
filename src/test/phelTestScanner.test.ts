@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { findDeftests } from '../phelTestScanner';
+import { findDefbenches, findDeftests } from '../phelTestScanner';
 
 describe('findDeftests', function () {
     it('returns nothing when the file has no tests', function () {
@@ -61,5 +61,63 @@ describe('findDeftests', function () {
     it('handles names containing punctuation', function () {
         const source = '(deftest a/b-c?-test)\n';
         assert.strictEqual(findDeftests(source)[0].name, 'a/b-c?-test');
+    });
+});
+
+describe('findDefbenches', () => {
+    it('returns nothing when the file has no benchmarks', () => {
+        assert.deepEqual(findDefbenches('(defn f [x] x)'), []);
+    });
+
+    it('finds a top-level defbench', () => {
+        const refs = findDefbenches('(defbench bench-sum\n  (reduce + 0 (range 100)))');
+        assert.deepEqual(refs, [{ name: 'bench-sum', line: 0, nameCol: 10 }]);
+    });
+
+    it('finds the name before the option map, not the map', () => {
+        // `defbench`'s options follow the name, unlike `deftest`'s metadata.
+        const refs = findDefbenches('(defbench bench-sum {:revs 10000}\n  (+ 1 1))');
+        assert.deepEqual(
+            refs.map((r) => r.name),
+            ['bench-sum']
+        );
+    });
+
+    it('skips metadata before the name', () => {
+        assert.deepEqual(
+            findDefbenches('(defbench ^:slow bench-io (io))').map((r) => r.name),
+            ['bench-io']
+        );
+        assert.deepEqual(
+            findDefbenches('(defbench ^{:tags [:io]} bench-io (io))').map((r) => r.name),
+            ['bench-io']
+        );
+    });
+
+    it('only matches forms starting at the line head', () => {
+        assert.deepEqual(findDefbenches('(comment (defbench nested (+ 1 1)))'), []);
+    });
+
+    it('does not confuse deftest and defbench', () => {
+        const src = '(deftest test-a (is true))\n(defbench bench-b (+ 1 1))';
+        assert.deepEqual(
+            findDeftests(src).map((r) => r.name),
+            ['test-a']
+        );
+        assert.deepEqual(
+            findDefbenches(src).map((r) => r.name),
+            ['bench-b']
+        );
+    });
+
+    it('finds multiple benchmarks in order', () => {
+        const src = '(defbench b1 (+ 1 1))\n\n(defbench b2 (+ 2 2))';
+        assert.deepEqual(
+            findDefbenches(src).map((r) => [r.name, r.line]),
+            [
+                ['b1', 0],
+                ['b2', 2],
+            ]
+        );
     });
 });

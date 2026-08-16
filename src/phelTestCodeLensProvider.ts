@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { findDeftests } from './phelTestScanner';
+import { findDefbenches, findDeftests } from './phelTestScanner';
 
 const ENABLED_KEY = 'tests.codeLensEnabled';
 
@@ -34,17 +34,36 @@ export class PhelTestCodeLensProvider implements vscode.CodeLensProvider {
             );
         }
 
+        const rangeOf = (ref: { line: number; nameCol: number; name: string }): vscode.Range =>
+            new vscode.Range(ref.line, ref.nameCol, ref.line, ref.nameCol + ref.name.length);
+
         for (const ref of refs) {
-            const range = new vscode.Range(
-                ref.line,
-                ref.nameCol,
-                ref.line,
-                ref.nameCol + ref.name.length
-            );
             lenses.push(
-                new vscode.CodeLens(range, {
+                new vscode.CodeLens(rangeOf(ref), {
                     title: '$(play) Run test',
                     command: 'phel.runTest',
+                    arguments: [document.uri, ref.name],
+                })
+            );
+        }
+
+        // `defbench` is the 0.50 benchmark form. It has no per-name CLI entry
+        // point of its own, so a single benchmark is reached by filtering.
+        const benches = findDefbenches(document.getText());
+        if (benches.length > 0) {
+            lenses.push(
+                new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
+                    title: '$(dashboard) Run all benchmarks in file',
+                    command: 'phel.benchFile',
+                    arguments: [document.uri],
+                })
+            );
+        }
+        for (const ref of benches) {
+            lenses.push(
+                new vscode.CodeLens(rangeOf(ref), {
+                    title: '$(dashboard) Run benchmark',
+                    command: 'phel.runBenchmark',
                     arguments: [document.uri, ref.name],
                 })
             );

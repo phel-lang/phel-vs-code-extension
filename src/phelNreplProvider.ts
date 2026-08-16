@@ -277,9 +277,13 @@ async function connect(): Promise<void> {
         vscode.window.showWarningMessage('Open a file inside a Phel project first.');
         return;
     }
-    await withConnection(doc, async () => {
+    await withConnection(doc, async (conn) => {
         channel().show(true);
-        vscode.window.showInformationMessage('Connected to the Phel nREPL server.');
+        vscode.window.showInformationMessage(
+            conn.attached
+                ? 'Attached to the running Phel nREPL server (.nrepl-port).'
+                : 'Connected to the Phel nREPL server.'
+        );
     });
 }
 

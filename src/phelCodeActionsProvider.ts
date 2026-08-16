@@ -3,6 +3,7 @@
 //   - Thread first / last (`->` / `->>`) and unwind, over the form at the cursor
 //   - Cycle a collection's delimiters: `(` → `[` → `{` → `(`
 //   - Quick-fix: add a missing `:require` for a known symbol
+//   - Quick-fix: rename a core function Phel 0.50 removed to its replacement
 // The structural transforms live in `phelRefactor` (pure, unit-tested); this
 // module adapts them to VS Code code actions.
 
@@ -13,6 +14,8 @@ import { parseNsForm, buildRequireEdit } from './phelNsAnalyzer';
 import type { PhelWorkspaceIndexer } from './phelWorkspaceIndexProvider';
 import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 import { mergedDocs } from './phelProviderSupport';
+import { findMigrationIssues } from './phelMigration';
+import { deprecatedDefinitionsFor, migrationEnabled } from './phelMigrationProvider';
 
 export class PhelCodeActionProvider implements vscode.CodeActionProvider {
     static readonly kinds = [vscode.CodeActionKind.RefactorRewrite, vscode.CodeActionKind.QuickFix];
@@ -50,6 +53,7 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
         if (req) {
             actions.push(req);
         }
+        actions.push(...migrationActions(document, src, offset, this.indexer));
         return actions;
     }
 
@@ -90,4 +94,50 @@ export class PhelCodeActionProvider implements vscode.CodeActionProvider {
         action.edit.insert(document.uri, document.positionAt(edit.insertAt), edit.text);
         return action;
     }
+}
+
+/**
+ * Offer the rewrite for a removed-or-deprecated use under the cursor.
+ *
+ * Re-derives the issues from the source rather than reading them back off
+ * `CodeActionContext.diagnostics`: the analyzer is pure and cheap, and it keeps
+ * the fix working when the diagnostics are switched off or have not yet been
+ * recomputed after an edit.
+ *
+ * Only issues carrying a `fix` produce an action. `php/->` and `set-var`
+ * deliberately do not: their replacements rearrange the arguments or depend on
+ * the intent, so a head swap would silently write the wrong code. Nor does a
+ * call to a workspace definition marked `:deprecated`: `:superseded-by` names
+ * the replacement without promising the same arguments.
+ */
+function migrationActions(
+    document: vscode.TextDocument,
+    src: string,
+    offset: number,
+    indexer: PhelWorkspaceIndexer
+): vscode.CodeAction[] {
+    if (!migrationEnabled()) {
+        return [];
+    }
+    const actions: vscode.CodeAction[] = [];
+    const issues = findMigrationIssues(src, {
+        deprecatedDefinitions: deprecatedDefinitionsFor(indexer, document.uri.fsPath),
+    });
+    for (const issue of issues) {
+        if (!issue.fix || offset < issue.start || offset > issue.end) {
+            continue;
+        }
+        const action = new vscode.CodeAction(issue.fix.title, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        for (const edit of issue.fix.edits) {
+            action.edit.replace(
+                document.uri,
+                new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)),
+                edit.text
+            );
+        }
+        action.isPreferred = true;
+        actions.push(action);
+    }
+    return actions;
 }

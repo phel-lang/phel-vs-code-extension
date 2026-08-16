@@ -75,6 +75,33 @@ describe('parsePhelFile', function () {
             assert.strictEqual(d.example, '(quick 1)');
             assert.strictEqual(d.signature, '(quick x)');
         });
+
+        it('reads :deprecated and :superseded-by from the meta-map', function () {
+            const d = single(`
+(defn old-parse
+  "Parses a config string."
+  {:deprecated "1.4.0"
+   :superseded-by "parse-config"}
+  [s]
+  (parse-config s))
+`);
+            assert.strictEqual(d.deprecated, '1.4.0');
+            assert.strictEqual(d.supersededBy, 'parse-config');
+        });
+
+        it('keeps a bare true and a reason apart, and ignores false', function () {
+            assert.strictEqual(single(`(defn a {:deprecated true} [x] x)`).deprecated, 'true');
+            assert.strictEqual(
+                single(`(defn b {:deprecated "slow; use c"} [x] x)`).deprecated,
+                'slow; use c'
+            );
+            assert.strictEqual(single(`(defn c {:deprecated false} [x] x)`).deprecated, undefined);
+            assert.strictEqual(
+                single(`(defn d {:deprecated-since "1"} [x] x)`).deprecated,
+                undefined
+            );
+            assert.strictEqual(single(`(defn e "d" [x] x)`).deprecated, undefined);
+        });
     });
 
     describe('defmacro', function () {

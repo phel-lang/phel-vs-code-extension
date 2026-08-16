@@ -5,22 +5,63 @@
 // runtime, and the editor-targeted ops `reload` (reload changed namespaces)
 // and `run-tests` / `run-test` (run a namespace's tests, or a single test).
 //
-// We start one server per workspace folder on a random free port (`--port=0`),
-// parse the bound port from its banner, open a TCP socket, and `clone` a
-// session. Ops are bencoded dicts correlated by an `id` we generate; the server
-// streams one or more response frames per op, terminated by a `status`
-// containing `done`.
+// A server the user already started is attached to rather than duplicated:
+// since Phel 0.50 `phel nrepl` writes its bound port to `.nrepl-port` in the
+// working directory (the Clojure-standard discovery file) and removes it on
+// exit, so a readable file that answers is a live server for this project.
+// Otherwise we start one server per workspace folder on a random free port
+// (`--port=0`) and parse the bound port from its banner. Either way we open a
+// TCP socket and `clone` a session. Ops are bencoded dicts correlated by an
+// `id` we generate; the server streams one or more response frames per op,
+// terminated by a `status` containing `done`.
 
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
+import * as fs from 'node:fs/promises';
 import * as net from 'node:net';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { asString, asStringList, type BencodeValue, decode, encode } from './bencode';
 import { resolvePhelExecutable } from './phelExecutable';
+import { NREPL_PORT_FILE, parseNreplPortFile } from './phelNreplPort';
 import { StringDecoder } from 'node:string_decoder';
 
 const BANNER_RE = /nREPL server started on (\d{1,3}(?:\.\d{1,3}){3}):(\d+)/;
 const STARTUP_TIMEOUT_MS = 15000;
 const OP_TIMEOUT_MS = 60000;
+/** How long a `.nrepl-port` server gets to accept before the file is treated as stale. */
+const PROBE_TIMEOUT_MS = 2000;
+
+/** The port a `.nrepl-port` file in `cwd` advertises, if there is one. */
+async function readNreplPortFile(cwd: string): Promise<number | undefined> {
+    try {
+        return parseNreplPortFile(await fs.readFile(path.join(cwd, NREPL_PORT_FILE), 'utf8'));
+    } catch {
+        return undefined; // no file: nothing is advertising
+    }
+}
+
+/**
+ * True when something accepts a TCP connection on `port`. A throwaway socket,
+ * so a refused probe never reaches the connection's own close handling.
+ */
+function portAccepts(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+        const socket = net.createConnection({ host: '127.0.0.1', port });
+        let settled = false;
+        const finish = (ok: boolean): void => {
+            if (!settled) {
+                settled = true;
+                socket.destroy();
+                resolve(ok);
+            }
+        };
+        socket.setTimeout(PROBE_TIMEOUT_MS, () => finish(false));
+        socket.on('connect', () => finish(true));
+        // Stays attached after settling, so a late error on the destroyed
+        // socket is swallowed rather than raised as an unhandled event.
+        socket.on('error', () => finish(false));
+    });
+}
 
 export interface OpResult {
     /** Concatenated `value` frames (eval results). */
@@ -72,17 +113,47 @@ export class PhelNreplConnection {
         return !this.disposed && this.socket !== undefined && this.sessionId !== '';
     }
 
-    private async startServerAndConnect(): Promise<void> {
-        const command = resolvePhelExecutable('repl.command', this.folder);
-        const cwd = this.folder.uri.fsPath;
-        this.output.appendLine(`Starting nREPL server: ${command} nrepl --port=0 (cwd ${cwd})`);
+    /** True when this connection joined a server the user started, rather than its own. */
+    get attached(): boolean {
+        return this.socket !== undefined && this.proc === undefined;
+    }
 
-        const port = await this.spawnAndAwaitPort(command, cwd);
+    private async startServerAndConnect(): Promise<void> {
+        const cwd = this.folder.uri.fsPath;
+        const port = (await this.discoverRunningServer(cwd)) ?? (await this.startServer(cwd));
         await this.openSocket(port);
         this.sessionId = await this.cloneSession();
         this.output.appendLine(
             `nREPL session ready on 127.0.0.1:${port} (session ${this.sessionId}).`
         );
+    }
+
+    /**
+     * The port of a server already running for this folder, per `.nrepl-port`.
+     * A file whose port no longer answers is left where it is — the server
+     * that wrote it owns it — and reported, since it usually means a crash.
+     */
+    private async discoverRunningServer(cwd: string): Promise<number | undefined> {
+        const port = await readNreplPortFile(cwd);
+        if (port === undefined) {
+            return undefined;
+        }
+        if (await portAccepts(port)) {
+            this.output.appendLine(
+                `Attaching to the running nREPL server on 127.0.0.1:${port} (from ${NREPL_PORT_FILE}).`
+            );
+            return port;
+        }
+        this.output.appendLine(
+            `${NREPL_PORT_FILE} names port ${port} but nothing answers there; starting a server instead.`
+        );
+        return undefined;
+    }
+
+    private async startServer(cwd: string): Promise<number> {
+        const command = resolvePhelExecutable('repl.command', this.folder);
+        this.output.appendLine(`Starting nREPL server: ${command} nrepl --port=0 (cwd ${cwd})`);
+        return this.spawnAndAwaitPort(command, cwd);
     }
 
     private spawnAndAwaitPort(command: string, cwd: string): Promise<number> {

@@ -66,6 +66,26 @@ export const SPECIAL_FORMS: readonly string[] = [
     'vector',
 ];
 
+/**
+ * PHP superglobals, reachable from Phel as `php/$_SERVER` and friends.
+ *
+ * Like the special forms these exist only in PHP, so no `.phel` file declares
+ * them and the corpus cannot carry them. Mirrors
+ * `PhpSymbolCatalog::SUPERGLOBALS` in phel-lang, which is what the language
+ * server and the REPL completer offer (#3037).
+ */
+export const PHP_SUPERGLOBALS: ReadonlyMap<string, string> = new Map([
+    ['php/$GLOBALS', 'References all variables available in global scope.'],
+    ['php/$_SERVER', 'Server and execution environment information.'],
+    ['php/$_GET', 'HTTP GET variables.'],
+    ['php/$_POST', 'HTTP POST variables.'],
+    ['php/$_FILES', 'HTTP file upload variables.'],
+    ['php/$_COOKIE', 'HTTP cookies.'],
+    ['php/$_SESSION', 'Session variables.'],
+    ['php/$_REQUEST', 'HTTP request variables.'],
+    ['php/$_ENV', 'Environment variables.'],
+]);
+
 function uniqueSorted(values: Iterable<string>): string[] {
     const set = new Set<string>(values);
     return [...set].sort();

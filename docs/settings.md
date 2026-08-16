@@ -42,7 +42,8 @@ The extension shells out to the Phel CLI for diagnostics, formatting, the test r
 | `phel.diagnostics.enabled` | boolean | `true` | Run the diagnostics engine on open/save and surface inline diagnostics. |
 | `phel.diagnostics.engine` | `auto` \| `lint` \| `analyze` | `auto` | Which CLI subcommand backs diagnostics. See [Diagnostics engine](#diagnostics-engine). |
 | `phel.format.enabled` | boolean | `true` | Use `phel format` as the document formatter. |
-| `phel.tests.codeLensEnabled` | boolean | `true` | Show inline `▶ Run test` CodeLens above each `deftest`. |
+| `phel.tests.codeLensEnabled` | boolean | `true` | Show inline `▶ Run test` CodeLens above each `deftest`, and `▶ Run benchmark` above each `defbench`. |
+| `phel.migration.enabled` | boolean | `true` | Flag what Phel 0.50 removed (core aliases, `#\| \|#`, bare `#` comments, `\|()` short fns, `foo$` gensyms, `,` unquote, `^:reference`) and deprecated (`php/new`, `php/->`, `php/::`, `set-var`, the `\` namespace separator), plus calls to your own `:deprecated` definitions, with a quick fix where the rewrite is mechanical. Turn off when targeting a Phel older than 0.50. See [Migrating to Phel 0.50](completion.md#migrating-to-phel-050). |
 | `phel.paredit.enabled` | boolean | `true` | Register paredit commands (slurp / barf / raise / wrap). |
 | `phel.repl.enabled` | boolean | `true` | Register REPL commands (start / eval form / eval selection / eval file). |
 | `phel.repl.history.enabled` | boolean | `true` | Append every form sent to the REPL to `.vscode/phel-repl-history.phel`. |

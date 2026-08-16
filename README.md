@@ -14,17 +14,17 @@ VS Code support for [Phel](https://phel-lang.org/), a functional Lisp that compi
 
 ## Features
 
-- **Syntax highlighting** for every literal the Phel reader accepts — characters, regex literals, radix / BigInt / BigDecimal / ratio numbers, `##Inf` / `##NaN`, gensyms, tagged literals, reader conditionals, metadata tags.
+- **Syntax highlighting** for every literal the Phel reader accepts — characters, regex literals, radix / BigInt / BigDecimal / ratio numbers, `##Inf` / `##NaN`, gensyms, tagged literals, reader conditionals, metadata tags — plus the Clojure-style PHP interop spellings (`(.method obj)`, `(.-field obj)`, `Class/CONST`, `Class/$prop`, `(Class. args)`).
 - **Navigation that understands scope** — go-to-definition, find-references, rename, hover and signature help resolve a local to its own binding, so renaming a parameter never touches a same-named global.
 - **Completion** over special forms, macros, core and workspace symbols, with docs and call snippets. Understands `alias/…` and the `(ns …)` form, and can auto-add a missing `:require`.
 - **Outline & workspace symbols** for every defining form, each with a matching icon.
 - **Diagnostics** via `phel lint`, **formatting** via `phel format`, both on save.
 - **Refactorings** (`Ctrl+.`) — thread / unwind, cycle collection delimiters, add missing `:require`.
 - **REPL and nREPL client**, with inline evaluation results and namespace reloading.
-- **Test Explorer + CodeLens** for `deftest`, with per-test results and coverage.
+- **Test Explorer + CodeLens** for `deftest`, with per-test results and coverage; `▶ Run benchmark` for `defbench`.
 - **Paredit** — slurp / barf / raise / wrap / drag / splice / kill, form-aware folding and expand-selection.
 - **Debugger** with real breakpoints in `.phel` files, via Xdebug and source maps.
-- **60 snippets**, plus semantic highlighting and unused-local hints.
+- **66 snippets**, plus semantic highlighting, unused-local hints, and [Phel 0.50 migration](docs/completion.md#migrating-to-phel-050) diagnostics with quick fixes.
 
 Optionally delegates to Phel's own language server (`phel lsp`, off by default) for compiler-backed intelligence including PHP interop. See [settings](docs/settings.md).
 

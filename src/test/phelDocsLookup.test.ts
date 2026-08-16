@@ -157,6 +157,25 @@ describe('renderDocMarkdown', function () {
         assert.ok(!md.includes('Example'));
         assert.ok(!md.includes('See also'));
         assert.ok(!md.includes('View source'));
+        assert.ok(!md.includes('deprecated'));
+    });
+
+    it('leads with the deprecation note for a definition marked :deprecated', function () {
+        const doc: PhelDoc = {
+            name: 'old-parse',
+            ns: 'my.app',
+            qualifiedName: 'my.app/old-parse',
+            kind: 'fn',
+            private: false,
+            signature: '(old-parse s)',
+            deprecated: '1.4.0',
+            supersededBy: 'parse-config',
+        };
+        const lines = renderDocMarkdown(doc).split('\n');
+        assert.equal(
+            lines[2],
+            '⚠ `old-parse` is deprecated (since 1.4.0). Use `parse-config` instead.'
+        );
     });
 });
 

@@ -36,6 +36,62 @@ export function parseTemplates(output: string): PhelTemplate[] {
     return templates;
 }
 
+/** Options `phel bench` accepts, per `BenchCommand::configure()`. */
+export interface BenchOptions {
+    /** Files or namespaces to benchmark; defaults to the whole `tests` dir. */
+    paths?: readonly string[];
+    /** `--filter`: only benchmarks whose name contains this substring. */
+    filter?: string;
+    /** `--revs`: calls per measured iteration. */
+    revs?: number;
+    /** `--iterations`: measured iterations per benchmark. */
+    iterations?: number;
+    /** `--warmup`: unmeasured iterations run first. */
+    warmup?: number;
+    /** `--store`: write the results to this file as a baseline. */
+    store?: string;
+    /** `--ref`: compare against the baseline stored in this file. */
+    ref?: string;
+    /** `--tolerance`: fail when slower than the baseline by more than this percentage. */
+    tolerance?: number;
+}
+
+/** Build the argument list for `phel bench`. */
+export function benchArgs(options: BenchOptions = {}): string[] {
+    const args = ['bench'];
+    for (const path of options.paths ?? []) {
+        args.push(path);
+    }
+    // Every option takes a value, so an empty string would consume the next
+    // argument as its own. Blank input means "not set".
+    const push = (name: string, value: string | number | undefined): void => {
+        const text = typeof value === 'number' ? String(value) : value?.trim();
+        if (text) {
+            args.push(`--${name}=${text}`);
+        }
+    };
+    push('filter', options.filter);
+    push('revs', options.revs);
+    push('iterations', options.iterations);
+    push('warmup', options.warmup);
+    push('store', options.store);
+    push('ref', options.ref);
+    push('tolerance', options.tolerance);
+    return args;
+}
+
+/** Build the argument list for `phel balance`. */
+export function balanceArgs(options: { paths?: readonly string[]; fix?: boolean } = {}): string[] {
+    const args = ['balance'];
+    for (const path of options.paths ?? []) {
+        args.push(path);
+    }
+    if (options.fix) {
+        args.push('--fix');
+    }
+    return args;
+}
+
 export type OptimizationLevel = '0' | '2';
 
 /** Build the argument list for `phel build`. */
