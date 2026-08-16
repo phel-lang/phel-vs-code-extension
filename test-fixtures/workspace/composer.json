@@ -1,0 +1,8 @@
+{
+    "name": "phel-lang/vs-code-extension-fixture",
+    "description": "Fixture project for the extension integration suite. Never installed.",
+    "type": "project",
+    "require": {
+        "phel-lang/phel": "^0.50"
+    }
+}

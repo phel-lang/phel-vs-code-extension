@@ -37,3 +37,34 @@ jobs:
       - run: npm run bundle:prod
       - name: vsce package (sanity)
         run: npx --yes @vscode/vsce package --out /tmp/phel-lang.vsix
+
+  integration:
+    name: integration (real VS Code host)
+    runs-on: ubuntu-latest
+    env:
+      # `stable` tracks whatever VS Code ships; the extension declares
+      # `engines.vscode ^1.88.0`, so the newest release is what users get.
+      VSCODE_TEST_VERSION: stable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # `@vscode/test-electron` v3 requires Node 22; the build matrix still
+          # covers Node 20 for the extension itself.
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # A ~300 MB VS Code download per run is the main source of flakiness here.
+      # The key is unique per run so the entry is refreshed as `stable` moves;
+      # the prefix restore-key picks up the most recent one.
+      - name: Cache the VS Code test build
+        uses: actions/cache@v4
+        with:
+          # Only the downloaded build; the sibling user-data dir the run creates
+          # must not survive into the next one.
+          path: .vscode-test/vscode-*
+          key: vscode-test-${{ runner.os }}-${{ env.VSCODE_TEST_VERSION }}-${{ github.run_id }}
+          restore-keys: |
+            vscode-test-${{ runner.os }}-${{ env.VSCODE_TEST_VERSION }}-
+      # Electron needs a display server even with --disable-gpu.
+      - run: xvfb-run -a npm run test:integration

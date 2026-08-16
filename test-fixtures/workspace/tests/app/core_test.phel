@@ -1,0 +1,13 @@
+(ns app.core-test
+  (:require phel.test :refer [deftest is])
+  (:require phel.bench :refer [defbench])
+  (:require app.core :refer [greet]))
+
+(deftest greets-a-name
+  (is (= "Hello, world!" (greet "world"))))
+
+(deftest greets-an-empty-name
+  (is (= "Hello, !" (greet ""))))
+
+(defbench greeting
+  (greet "world"))

@@ -1,5 +1,6 @@
 .vscode/**
 .vscode-test/**
+test-fixtures/**
 .idea/**
 .git/**
 .github/**

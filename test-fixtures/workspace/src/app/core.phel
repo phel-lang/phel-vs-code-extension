@@ -1,0 +1,13 @@
+(ns app.core)
+
+(defn greet
+  "Greets `name` by name."
+  [name]
+  (str "Hello, " name "!"))
+
+(defn old-greet
+  "Greets `name` the way 0.49 did."
+  {:deprecated "0.50"
+   :superseded-by "greet"}
+  [name]
+  (greet name))

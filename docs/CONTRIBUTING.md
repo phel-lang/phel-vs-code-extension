@@ -18,13 +18,65 @@ Useful scripts:
 | `npm run watch` | Incremental build during development |
 | `npm run lint` / `npm run lint:fix` | ESLint |
 | `npm run format` / `npm run format:check` | Prettier |
-| `npm test` | Mocha test suite |
+| `npm test` | Mocha unit suite |
+| `npm run test:integration` | Mocha suite inside a real VS Code (see below) |
 
 `npm run compile && npm run lint && npm test` is the gate every PR has to pass.
 
 ## Running the extension locally
 
 Open the repo in VS Code and press <kbd>F5</kbd>. That starts an Extension Development Host with this extension loaded and source-mapped - set breakpoints in `src/*.ts`, then exercise the extension by opening a `.phel` file in the Host window.
+
+## Integration tests
+
+The unit suite imports modules directly, so it can never show that the extension
+activates, that a provider is actually registered against the `phel` language,
+or that a command id in `package.json` matches the one the code registers. The
+integration suite does: it downloads a real VS Code, opens the fixture
+workspace, and drives the extension through the same `vscode.execute*` commands
+the editor uses.
+
+```bash
+npm run test:integration            # compile, bundle, download VS Code, run
+VSCODE_TEST_VERSION=1.88.0 npm run test:integration   # pin a version
+```
+
+The download lands in `.vscode-test/` (gitignored) and is reused. The run needs
+Node 22, which is what `@vscode/test-electron` requires.
+
+### Layout
+
+| Path | Purpose |
+|------|---------|
+| `src/test/integration/runTests.ts` | Launcher: downloads VS Code, opens the fixture workspace, points the host at `index.js` |
+| `src/test/integration/index.ts` | Runs inside the host; builds the Mocha run over every compiled `*.itest.js` |
+| `src/test/integration/helpers.ts` | `activateExtension`, `openFixture`, `positionOf`, `waitFor` |
+| `src/test/integration/*.itest.ts` | The suites |
+| `test-fixtures/workspace/` | A small Phel project: `phel-config.php`, `composer.json`, `src/app/*.phel`, `tests/app/core_test.phel` |
+| `test-fixtures/multi-root.code-workspace` | Two-folder workspace, for the multi-root cases |
+
+The `.itest.ts` suffix is what keeps the two suites apart. `npm test` globs
+`out/test/**/*.test.js`, which never matches `*.itest.js`, so the integration
+suites can live in the same `out/` tree without a second `tsconfig.json` and
+without either runner picking up the other's files. The fixtures sit at the repo
+root rather than under `src/`, because `tsc` only copies `.ts` output into
+`out/`. `main` points at `dist/extension.js`, so the suites always exercise the
+bundle a user would install - which is why `test:integration` bundles first.
+
+### Writing one
+
+- Call `activateExtension()` from `before`; it is idempotent.
+- Address fixture text with `positionOf(doc, '(push xs item)', 1)` instead of
+  hard-coded line/column, so editing a fixture cannot silently move an assertion
+  off its target.
+- Never sleep. Anything asynchronous - the workspace index scan, the 250 ms
+  diagnostic debounces - goes through `waitFor(what, probe)`, which polls
+  against a deadline and names what it was waiting for when it gives up.
+- The fixture deliberately has **no** `vendor/bin/phel`. Every CLI-backed
+  feature has to fail silently there, and that is itself an assertion: see
+  `diagnostics.itest.ts`.
+- If a test edits a buffer, revert it (`workbench.action.files.revert`) in
+  `afterEach`. The fixtures are checked in; a suite must leave them as found.
 
 ## Branches
 
