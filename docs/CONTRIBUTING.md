@@ -92,7 +92,7 @@ Node 22, which is what `@vscode/test-electron` requires.
 | `src/test/integration/index.ts` | Runs inside the host; builds the Mocha run over the compiled `*.itest.js` that belong to it |
 | `src/test/integration/helpers.ts` | `activateExtension`, `openFixture`, `positionOf`, `waitFor` |
 | `src/test/integration/*.itest.ts` | The suites |
-| `test-fixtures/workspace/` | A small Phel project: `phel-config.php`, `composer.json`, `src/app/*.phel`, `tests/app/core_test.phel` |
+| `test-fixtures/workspace/` | A small Phel project: `phel-config.php`, `composer.json`, `src/app/*.phel`, `tests/app/core_test.phel`, and a `.vscode/tasks.json` whose one `phel` task names a subcommand no default task uses, so `resolveTask` is what has to answer for it |
 | `test-fixtures/workspace2/` | A second project (`src/util/strings.phel`, with a `deftest` and a `defbench`) |
 | `test-fixtures/multi-root.code-workspace` | Two-folder workspace over both of the above, for the multi-root cases |
 

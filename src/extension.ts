@@ -32,6 +32,7 @@ import { registerReplCommands } from './phelReplProvider';
 import { registerNreplCommands } from './phelNreplProvider';
 import { registerDoctorCommands } from './phelDoctorProvider';
 import { registerCliCommands } from './phelCliCommandsProvider';
+import { registerTaskProvider } from './phelTaskProvider';
 import { runInTerminal } from './phelTerminal';
 import { registerSelectionCommands } from './phelSelectionProvider';
 import { PhelFormHighlight } from './phelFormHighlight';
@@ -258,6 +259,8 @@ export function activate(context: vscode.ExtensionContext) {
     registerDoctorCommands(context);
 
     registerCliCommands(context);
+
+    registerTaskProvider(context);
 
     void new PhelStatusBar().start(context);
 
