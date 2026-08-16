@@ -17,6 +17,7 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { resolvePhelExecutable } from './phelExecutable';
 import { runPhelCli } from './phelCli';
+import { coverageEnv } from './phelInvocation';
 import type { PhelProjectConfigProvider } from './phelProjectConfigProvider';
 import { findDeftests } from './phelTestScanner';
 import { PhelTestItemTree, groupQueue, nameForLeaf } from './phelTestItems';
@@ -86,7 +87,10 @@ async function runPhelTestFile(
     }
     args.push(relPath);
 
-    const result = await runPhelCli(cmd.command, args, cmd.cwd, { token });
+    const result = await runPhelCli(cmd.command, args, cmd.cwd, {
+        token,
+        env: coveragePath ? coverageEnv(process.env.XDEBUG_MODE) : undefined,
+    });
     const outcome = { code: result.code, output: result.stdout + result.stderr };
 
     let byName = new Map<string, AggregatedCase>();

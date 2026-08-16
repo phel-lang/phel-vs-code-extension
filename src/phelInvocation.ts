@@ -1,6 +1,7 @@
 // Turns a resolved Phel executable path into something the current platform
-// can actually start. Kept free of `vscode` imports so unit tests can drive
-// every Windows branch from any OS.
+// can actually start, and holds the one environment tweak a run may need.
+// Kept free of `vscode` imports so unit tests can drive every Windows branch
+// from any OS.
 //
 // Composer installs two proxies side by side: `vendor/bin/phel`, a PHP script,
 // and `vendor/bin/phel.bat`, whose entire body is `php "%~dp0/phel" %*`.
@@ -14,6 +15,23 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+
+/**
+ * The environment a `--coverage` run needs on top of the host's own, or
+ * `undefined` when it already has it.
+ *
+ * Xdebug only records executed lines when `coverage` is one of its *active*
+ * modes, and the mode a developer keeps in `php.ini` is `develop,debug`. On
+ * such a machine `phel test --coverage=clover` writes no report and says
+ * "--coverage requires the pcov or xdebug extension; xdebug is loaded but
+ * 'coverage' is not an active mode" — so a coverage run asks for the mode it
+ * needs. An `XDEBUG_MODE` that already lists `coverage` is left alone, since
+ * narrowing it would drop the other modes the user asked for.
+ */
+export function coverageEnv(current: string | undefined): Record<string, string> | undefined {
+    const modes = (current ?? '').split(',').map((mode) => mode.trim());
+    return modes.includes('coverage') ? undefined : { XDEBUG_MODE: 'coverage' };
+}
 
 export interface PhelInvocation {
     /** Executable to spawn. */

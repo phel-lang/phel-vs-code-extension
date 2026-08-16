@@ -21,7 +21,7 @@ export class PhelFormatProvider implements vscode.DocumentFormattingEditProvider
 
         const original = document.getText();
         try {
-            const formatted = await formatViaCli(command, original);
+            const formatted = await formatViaCli(command, original, folder?.uri.fsPath);
             if (token.isCancellationRequested) {
                 return [];
             }
@@ -51,13 +51,17 @@ function isEnabled(): boolean {
  * `phel format` only edits files in place, so we round-trip through a temp
  * file. The buffer is written, formatted, then read back. The temp file is
  * always cleaned up.
+ *
+ * `cwd` is the document's workspace folder. Phel resolves its project from the
+ * working directory, so without it the run inherits the extension host's — and
+ * writes a `.phel/` cache into whatever directory that happens to be.
  */
-async function formatViaCli(command: string, source: string): Promise<string> {
+async function formatViaCli(command: string, source: string, cwd?: string): Promise<string> {
     const tmp = path.join(os.tmpdir(), `phel-fmt-${process.pid}-${Date.now()}.phel`);
     await fs.writeFile(tmp, source, 'utf-8');
     try {
         const inv = toInvocation(command, ['format', tmp]);
-        const opts = { maxBuffer: 8 * 1024 * 1024, shell: inv.shell };
+        const opts = { maxBuffer: 8 * 1024 * 1024, cwd, shell: inv.shell };
         await new Promise<void>((resolve, reject) => {
             execFile(inv.file, inv.args, opts, (err) => {
                 if (err) {

@@ -10,28 +10,34 @@ import * as fs from 'fs';
 import * as path from 'path';
 import Mocha from 'mocha';
 
+/** Which host a suite belongs to; `runTests.js` sets `PHEL_ITEST_SUITES`. */
+type SuiteGroup = 'default' | 'multi-root' | 'real';
+
 /**
  * Suites that need the two-folder host (`test-fixtures/multi-root.code-workspace`)
- * rather than the single-folder fixture. `runTests.js` launches both and sets
- * `PHEL_ITEST_MULTI_ROOT` to say which window this is; each suite runs in
- * exactly one of them.
+ * rather than the single-folder fixture. `runTests.js` launches both and says
+ * which window this is; each suite runs in exactly one of them.
  */
 const MULTI_ROOT_SUITES = new Set(['multiRoot.itest.js']);
 
+/** The `real/` subdirectory holds the suites that need a workspace with a real Phel. */
+const REAL_CLI_DIR = 'real';
+
 export function run(): Promise<void> {
+    const group = (process.env.PHEL_ITEST_SUITES as SuiteGroup) || 'default';
     const mocha = new Mocha({
         ui: 'bdd',
         color: true,
         // Every assertion here drives a real editor: opening documents, waiting
         // for the workspace index to finish scanning, and for the 250 ms
         // diagnostic debounces to fire. A loaded CI runner is much slower than
-        // a laptop at all three.
-        timeout: 20_000,
+        // a laptop at all three. The real-CLI suites additionally wait on PHP:
+        // a boot is ~1 s, and the first project-wide index several times that.
+        timeout: group === 'real' ? 120_000 : 20_000,
     });
 
-    const multiRoot = process.env.PHEL_ITEST_MULTI_ROOT === '1';
     for (const file of suiteFiles(__dirname)) {
-        if (MULTI_ROOT_SUITES.has(path.basename(file)) === multiRoot) {
+        if (groupOf(file) === group) {
             mocha.addFile(file);
         }
     }
@@ -49,6 +55,14 @@ export function run(): Promise<void> {
             reject(err);
         }
     });
+}
+
+/** The host `file` belongs to: its directory first, then the multi-root list. */
+function groupOf(file: string): SuiteGroup {
+    if (path.basename(path.dirname(file)) === REAL_CLI_DIR) {
+        return 'real';
+    }
+    return MULTI_ROOT_SUITES.has(path.basename(file)) ? 'multi-root' : 'default';
 }
 
 /**

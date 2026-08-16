@@ -50,11 +50,21 @@ describe('PhelWorkspaceIndex', function () {
         );
     });
 
-    it('setFile with an empty array forgets the file', function () {
+    it('keeps a file that defines nothing, so a scan of the workspace still sees it', function () {
         const idx = new PhelWorkspaceIndex();
         idx.setFile('/repo/a.phel', [fakeDoc('a')]);
         idx.setFile('/repo/a.phel', []);
+
+        assert.strictEqual(idx.docCount(), 0);
+        assert.deepStrictEqual(idx.files(), ['/repo/a.phel']);
+    });
+
+    it('removeFile is what forgets a file entirely', function () {
+        const idx = new PhelWorkspaceIndex();
+        idx.setFile('/repo/a.phel', []);
+        idx.removeFile('/repo/a.phel');
         assert.strictEqual(idx.fileCount(), 0);
+        assert.deepStrictEqual(idx.files(), []);
     });
 
     it('removeFile drops only the targeted file', function () {
