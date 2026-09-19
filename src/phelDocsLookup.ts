@@ -156,9 +156,9 @@ export function renderSuperglobalMarkdown(name: string, description: string): st
 }
 
 /**
- * Render a hover for a form Phel removed as source. The compiler still emits it —
- * it is the target the Clojure-style shorthand expands to — so the note says what
- * to write instead rather than claiming the form no longer exists.
+ * Render a hover for a form Phel removed as source. The compiler still emits it,
+ * since it is the target the Clojure-style shorthand expands to, so the note says
+ * what to write instead rather than claiming the form no longer exists.
  */
 export function renderSupersededMarkdown(name: string, since: string, detail: string): string {
     return [

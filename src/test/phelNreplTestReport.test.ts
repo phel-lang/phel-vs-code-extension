@@ -268,8 +268,9 @@ describe('phelNreplTestReport.parseTestReport', () => {
         assert.equal(failures[0].actual, '"b"');
         assert.equal(failures[1].expected, '3');
         assert.equal(failures[1].actual, '4');
-        // Both report the `deftest`'s line: the assertion forms the macro
-        // rebuilt inherit its location.
+        // Both report the `deftest`'s line, which is what the 0.50 server this
+        // output was captured from did; since 0.52 each assertion reports its
+        // own. The parser passes the number through either way.
         assert.deepEqual(
             failures.map((f) => f.line),
             [25, 25]
