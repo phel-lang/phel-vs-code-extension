@@ -10,7 +10,7 @@
 [![Release](https://img.shields.io/github/v/release/phel-lang/phel-vs-code-extension?label=release)](https://github.com/phel-lang/phel-vs-code-extension/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-The complete editor for [Phel](https://phel-lang.org/), a functional Lisp that compiles to PHP: highlighting, completion, navigation, REPL, tests, debugger — all in one extension, tracking Phel **0.50**.
+The complete editor for [Phel](https://phel-lang.org/), a functional Lisp that compiles to PHP: highlighting, completion, navigation, REPL, tests, debugger — all in one extension, tracking Phel **0.52**.
 
 ## Quick start
 
@@ -22,7 +22,7 @@ The complete editor for [Phel](https://phel-lang.org/), a functional Lisp that c
    ```
 3. Open a `.phel` file. Everything below is on by default; run **Help: Get Started → Phel** for a guided tour, or **Phel: Doctor** to check the setup.
 
-Requires VS Code 1.88+ and the PHP your Phel needs (8.4+ for Phel 0.50) on `PATH`. Works on macOS, Linux and Windows.
+Requires VS Code 1.88+ and the PHP your Phel needs (8.4+ for Phel 0.52) on `PATH`. Works on macOS, Linux and Windows.
 
 ## What you get
 
@@ -30,7 +30,7 @@ Requires VS Code 1.88+ and the PHP your Phel needs (8.4+ for Phel 0.50) on `PATH
 - Syntax highlighting for every reader form, incl. the Clojure-style PHP interop (`(.method obj)`, `Class/CONST`, `(Class. args)`), plus semantic tokens
 - Completion for special forms, macros, core and workspace symbols with docs and call snippets — and in PHP-interop positions the compiler answers with the classes, methods and functions your project can load
 - Indentation as you type that matches `phel format`, structural editing (paredit: slurp, barf, raise, wrap, drag, splice, kill), 66 snippets
-- Format on save via `phel format`; unused locals, unused `:require`s and Phel 0.50 migration hints, each with a quick fix
+- Format on save via `phel format`; unused locals, unused `:require`s and Phel migration hints, each with a quick fix
 
 **Understanding code**
 - Go to definition, find references, rename, hover, signature help — all scope-aware (a local never rewrites a same-named global) and namespace-aware across files
@@ -59,7 +59,7 @@ Everything works with zero configuration when Phel lives at `vendor/bin/phel`. W
 |---|---|
 | [Installation](docs/installation.md) | Prerequisites, first project, doctor |
 | [Syntax](docs/syntax.md) | What is highlighted and why |
-| [Completion & snippets](docs/completion.md) | Symbol sources, PHP interop, inlay hints, migration to 0.50 |
+| [Completion & snippets](docs/completion.md) | Symbol sources, PHP interop, inlay hints, migration hints |
 | [Refactoring](docs/refactoring.md) | Navigation, rename, code actions, namespace hygiene |
 | [REPL & paredit](docs/repl-and-paredit.md) | REPL, nREPL, evaluation, structural editing, indentation |
 | [Debugging](docs/debugging.md) | Xdebug setup, breakpoints, debugging tests |

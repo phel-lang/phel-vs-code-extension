@@ -363,7 +363,7 @@ It runs each analyzer over every file, probes the offset-driven entry points acr
 To regenerate after bumping phel-lang:
 
 ```bash
-npm run regen-docs -- /path/to/phel-lang --phel-version v0.50.0
+npm run regen-docs -- /path/to/phel-lang --phel-version v0.52.0
 ```
 
 The script walks `src/phel/**/*.phel`, detects each file's namespace from its `(ns ...)` or `(in-ns ...)` form, runs the parser in `src/phelDocs.ts`, and writes the JSON corpus. `--phel-version` (default `main`) is the git ref used to build `View source` links.

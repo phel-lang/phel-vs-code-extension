@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Tracks **Phel 0.52**. `php/new`, `php/->`, `php/::` and `set-var` are no longer deprecated as source: writing one is a `PHEL012` error, and the migration hint says so. All four are still what the Clojure-style shorthands compile to, so a macro that expands to one keeps working and the forms stay in completion and hover, struck through with the spelling to write instead. With them gone, a workspace definition marked `:deprecated` and the `\` namespace separator are all that `warn-deprecations` still governs.
+
+- Refreshed the bundled symbol corpus against phel-lang v0.52.0: 1628 entries, 49 of them new (`phel.test`'s GitHub-Actions reporter and focus mode, `phel.ai/*sleep-fn*`, `phel.html`'s tag helpers), and every **View source** link now points at the v0.52.0 tree. `to-array` is offered in completion; `to-php-array` carries its `:deprecated "0.51.0"` note in hover and is struck through.
+
+### Fixed
+
+- The weekly **Regen core docs** workflow stopped opening pull requests when the corpus moved to `assets/phel-core-docs.json`: it still looked for changes in `src/phelCoreDocs.ts`, which the regeneration no longer writes, so every run decided nothing had changed. That is why the bundled corpus sat on v0.50.0.
+
 ### Docs
 
 - Rewrote the README around a three-step quick start and four "what you get" groups (writing, understanding, running & testing, REPL & debugging), replacing the sixteen paragraph-length bullets that had grown with every feature; the documentation index is a table with one line per page.

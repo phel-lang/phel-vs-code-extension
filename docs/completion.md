@@ -12,7 +12,7 @@ The extension ships a static `CompletionItemProvider` for the `phel` language. I
 
 Eleven long-deprecated `phel.core` aliases went away in Phel 0.50. Calls to them
 are flagged in the editor with the replacement to write — see
-[Migrating to Phel 0.50](#migrating-to-phel-050).
+[Migration hints](#migration-hints).
 
 `phel.core` bootstraps itself, and the macro, function and value counts have to
 account for that: `defn`, `defmacro`, `declare` and `meta` are macros installed as
@@ -88,7 +88,7 @@ Tagged literals (`#inst`, `#regex`) and PHP class names are not in completion - 
 The macro and function lists are projections of the symbol corpus in `assets/phel-core-docs.json`. Regenerate it from a phel-lang checkout:
 
 ```bash
-npm run regen-docs -- /path/to/phel-lang --phel-version v0.50.0
+npm run regen-docs -- /path/to/phel-lang --phel-version v0.52.0
 ```
 
 `MACROS`, `CORE_FNS` and `CORE_VALUES` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` and `CORE_DEF_FORMS` are hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source; the bootstrap `def`s are the ones described above) - add new entries there by hand. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full procedure.
@@ -147,7 +147,7 @@ obligation and a snapshot that rots. The link never goes stale, and the
 signature is the one part no bundled copy could get right.
 
 The interop special forms keep their own hovers: `php/new` is Phel syntax rather
-than a function (and carries its 0.50 migration note), and `php/$_SERVER` and
+than a function (and carries its 0.52 removal note), and `php/$_SERVER` and
 friends are superglobals.
 
 ## Parameter inlay hints
@@ -211,12 +211,14 @@ you can tell *which* arity a multi-arity call matched.
 
 Add or refine entries when a form is fiddly enough that scaffolding helps. Keep the `prefix` matching the form name so it composes with completion — `src/test/snippets.test.ts` fails the build when a prefix matches no form in the corpus, when two snippets share a prefix, or when a body's brackets do not balance.
 
-## Migrating to Phel 0.50
+## Migration hints
 
 Phel 0.50 removed eleven long-deprecated `phel.core` aliases and five pieces of
-reader syntax, and deprecated four forms as *source* plus the `\` namespace
-separator. The extension flags all of it as you type, so the change surfaces
-before a compile — and in one case where the compiler never would.
+reader syntax, deprecated four forms as *source*, and deprecated the `\`
+namespace separator. Phel 0.52 finished the job on those four forms: writing one
+is now a `PHEL012` error. The extension flags all of it as you type, so the
+change surfaces before a compile — and in one case where the compiler never
+would.
 
 **Removed** — these no longer resolve. The compiler reports an unresolvable
 symbol, which cannot tell you what the name used to mean; the editor can, and
@@ -237,11 +239,11 @@ offers the rename as a quick fix:
 | `str-contains?` | `phel.string/contains?` (needs a `:require`) |
 | `phel.test/print-summary` | react to the `:summary` event |
 
-**Deprecated as source** — still legal for every `1.x`, and still what the
-Clojure-style spelling compiles to, so these are hints by default. They appear
-struck through in completion and sort last:
+**Removed as source in 0.52** — writing one is a `PHEL012` error. The compiler
+still *emits* all four, so a macro that expands to one keeps working and they
+stay in completion, struck through and sorted last:
 
-| Deprecated | Write instead |
+| Removed in 0.52 | Write instead |
 |---|---|
 | `php/new` | `(new Foo arg)` or `(Foo. arg)` |
 | `php/->` | `(.method obj arg)`, `(.-field obj)` |
@@ -250,12 +252,12 @@ struck through in completion and sort last:
 
 Only the head of a list is considered, and a name the file defines itself or a
 local binding shadows is left alone — `(defn f [values] (values))` is silent.
-`php/new` and the eleven removals are plain head swaps, so they carry a quick
-fix; `php/->`, `php/::` and `set-var` rearrange the call or depend on intent, so
-they explain rather than rewrite.
+`php/new` and the eleven 0.50 removals are plain head swaps, so they carry a
+quick fix; `php/->`, `php/::` and `set-var` rearrange the call or depend on
+intent, so they explain rather than rewrite.
 
-**Removed reader syntax** — the grammar still highlights these so an old file
-stays readable, but on 0.50 they no longer lex, and one of them fails silently:
+**Removed reader syntax (0.50)** — the grammar still highlights these so an old
+file stays readable, but they no longer lex, and one of them fails silently:
 
 | Removed | Write instead | Quick fix |
 |---|---|---|
@@ -299,9 +301,11 @@ same arguments.
 **Severity follows your project.** A deprecation is a hint until the project
 turns `warn-deprecations` on in `phel-config.php`, at which point it becomes the
 warning `phel build` already prints; removals, and the `\` separator Phel
-announces without the flag, are warnings either way. The flag is read from the
+announces without the flag, are warnings either way. With the four interop forms
+now removed rather than deprecated, the `\` separator and your own
+`:deprecated` definitions are all the flag still governs. The flag is read from the
 Phel CLI, so a project without one keeps the hints. See
 [what the project config decides](settings.md#what-the-project-config-decides).
 
 Turn the whole check off with `phel.migration.enabled` when targeting a Phel
-older than 0.50.
+older than 0.52.
