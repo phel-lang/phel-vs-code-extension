@@ -677,7 +677,7 @@ function messagesFor(
                 : new vscode.TestMessage(text);
         if (failure.line !== undefined && failure.file === basename) {
             // The reporter's line is 1-based, and points at the failing
-            // assertion since Phel 0.52 (see phelNreplTestReport).
+            // assertion since Phel 0.51 (see phelNreplTestReport).
             message.location = new vscode.Location(
                 fileUri,
                 new vscode.Position(Math.max(0, failure.line - 1), 0)

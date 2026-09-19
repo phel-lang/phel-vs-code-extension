@@ -269,7 +269,7 @@ describe('phelNreplTestReport.parseTestReport', () => {
         assert.equal(failures[1].expected, '3');
         assert.equal(failures[1].actual, '4');
         // Both report the `deftest`'s line, which is what the 0.50 server this
-        // output was captured from did; since 0.52 each assertion reports its
+        // output was captured from did; since 0.51 each assertion reports its
         // own. The parser passes the number through either way.
         assert.deepEqual(
             failures.map((f) => f.line),

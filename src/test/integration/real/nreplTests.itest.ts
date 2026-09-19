@@ -105,8 +105,8 @@ describe('running tests over a live nREPL', function () {
         assert.equal(failures[0].expected, '"this will never match"');
         assert.equal(failures[0].actual, '"HI!"');
         assert.equal(failures[0].file, 'failing_test.phel');
-        // Since Phel 0.52 the reporter locates an assertion at the `(is …)`
-        // itself; up to 0.51 it reported the enclosing `(deftest …)`'s line,
+        // Since Phel 0.51 the reporter locates an assertion at the `(is …)`
+        // itself; up to 0.50 it reported the enclosing `(deftest …)`'s line,
         // because the forms the macro rebuilds inherited that location.
         assert.equal(failures[0].line, lineOf(testSource, '(is (= "this will never match"'));
     });

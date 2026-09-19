@@ -302,10 +302,12 @@ same arguments.
 turns `warn-deprecations` on in `phel-config.php`, at which point it becomes the
 warning `phel build` already prints; removals, and the `\` separator Phel
 announces without the flag, are warnings either way. With the four interop forms
-now removed rather than deprecated, the `\` separator and your own
-`:deprecated` definitions are all the flag still governs. The flag is read from the
+now removed rather than deprecated, your own `:deprecated` definitions, and the
+corpus's such as `to-php-array`, are all the flag still governs; the `\`
+separator is a warning either way. The flag is read from the
 Phel CLI, so a project without one keeps the hints. See
 [what the project config decides](settings.md#what-the-project-config-decides).
 
 Turn the whole check off with `phel.migration.enabled` when targeting a Phel
-older than 0.52.
+older than 0.50. On 0.50 and 0.51 the four interop forms still compile, so their
+hints read as deprecations rather than removals.
