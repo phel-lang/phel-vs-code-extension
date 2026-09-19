@@ -1,26 +1,31 @@
-// Flags what Phel 0.50 removed or deprecated, so the editor can say what to
-// write instead.
+// Flags what Phel removed or deprecated, so the editor can say what to write
+// instead. Two releases feed the table: 0.50 dropped the core aliases and the
+// old reader syntax, 0.52 dropped the four superseded forms.
 //
-// Four families, each earning its keep for a different reason:
+// Five families, each earning its keep for a different reason:
 //
-//   * The removed core aliases are a hard failure on 0.50, and the compiler
-//     reports them as an unresolvable symbol. It cannot know that `push` used
-//     to mean `conj`, so the useful half of the message only exists here.
+//   * The removed core aliases are a hard failure, and the compiler reports
+//     them as an unresolvable symbol. It cannot know that `push` used to mean
+//     `conj`, so the useful half of the message only exists here.
 //   * The removed reader syntax (`#| |#`, a bare `#` comment, `|()` short
 //     functions, `foo$` gensyms) stops lexing, which the compiler does report,
 //     but as a lexer error at the wrong spot. And `,` inside a syntax-quote is
 //     the dangerous one: it became whitespace, so `` `(f ,x) `` still parses and
 //     quietly quotes `x`. No error anywhere; only a wrong expansion.
-//   * The deprecated forms still compile, and the compiler only mentions them
-//     under `--warn-deprecations`. A `.phel` buffer would otherwise say nothing
-//     about a spelling the language has moved off.
+//   * `php/new`, `php/->`, `php/::` and `set-var` are a `PHEL012` error since
+//     0.52. The compiler names the code; it does not name the replacement,
+//     which is what this table adds. They remain the compiler's own emission
+//     target, so a macro that expands to one keeps working and the forms stay
+//     in completion and hover, marked.
+//   * The `\` namespace separator is still only deprecated, and is the one
+//     deprecation the compiler announces without `--warn-deprecations`.
 //   * A definition carrying `:deprecated` metadata warns at every call site
-//     under the same flag. The workspace index knows those definitions, so the
+//     under that flag. The workspace index knows those definitions, so the
 //     buffer can carry the same note.
 //
 // Sources: phel-lang `docs/migration/removed-deprecated-core-fns.md`,
-// `docs/migration/deprecated-surface.md`, `docs/migration/backslash-to-dot.md`
-// and the deprecated table in `docs/spec/language-surface.md`.
+// `docs/migration/deprecated-surface.md`, `docs/migration/backslash-to-dot.md`,
+// `docs/errors/analyzer.md` and the table in `docs/spec/language-surface.md`.
 //
 // Pure — no `vscode` import, so the detection is unit-testable and can be run
 // over a corpus by `scripts/sweep-analyzers.mjs`.
@@ -47,12 +52,18 @@ export interface MigrationEntry {
     replacement?: string;
     /** What to write instead, as a sentence fragment. */
     detail: string;
+    /**
+     * Set on a form the compiler still emits for itself after dropping it as
+     * source. Completion and hover keep answering for those names, marked,
+     * because a buffer that still holds one needs to be told what to write.
+     */
+    superseded?: true;
 }
 
 /**
- * The 0.50 migration table for names in call position. `removed` entries are
- * the long-deprecated `phel.core` aliases dropped in 0.50; `deprecated`
- * entries are the four forms the language-surface spec froze but superseded.
+ * The migration table for names in call position: the long-deprecated
+ * `phel.core` aliases 0.50 dropped, and the four superseded forms 0.52 turned
+ * into a `PHEL012` error.
  */
 export const MIGRATIONS: readonly MigrationEntry[] = [
     // Removed core aliases (#2784). Each was a thin alias, so the replacement
@@ -123,31 +134,36 @@ export const MIGRATIONS: readonly MigrationEntry[] = [
         detail: '`run-tests` already emits `:summary`; react to that event instead of triggering it',
     },
 
-    // Deprecated as source (ADR 0007). Still the compilation target, still
-    // legal for every 1.x, but no longer the spelling to write.
+    // Removed as source in 0.52 (ADR 0018), after being deprecated in 0.50.
+    // Writing one is a `PHEL012` error. All four are still what the compiler
+    // emits, so they are flagged rather than forgotten.
     {
         name: 'php/new',
-        status: 'deprecated',
-        since: '0.50',
+        status: 'removed',
+        since: '0.52',
+        superseded: true,
         replacement: 'new',
         detail: 'write `(new Foo arg)` or `(Foo. arg)`',
     },
     {
         name: 'php/->',
-        status: 'deprecated',
-        since: '0.50',
+        status: 'removed',
+        since: '0.52',
+        superseded: true,
         detail: 'write `(.method obj arg)` for a call and `(.-field obj)` for a value member',
     },
     {
         name: 'php/::',
-        status: 'deprecated',
-        since: '0.50',
+        status: 'removed',
+        since: '0.52',
+        superseded: true,
         detail: 'write `(Foo/method arg)` for a call and `Foo/CONST` for a constant',
     },
     {
         name: 'set-var',
-        status: 'deprecated',
-        since: '0.50',
+        status: 'removed',
+        since: '0.52',
+        superseded: true,
         detail: "write `(alter-var-root #'v f)` for the root, or `(set! v x)` for the current binding frame",
     },
 ];
@@ -156,6 +172,7 @@ export const MIGRATIONS: readonly MigrationEntry[] = [
  * The reader-level half of the 0.50 table (#2827), keyed by the spelling.
  * Everything here except the separator stopped lexing; the separator still
  * parses and is the one reader-level item whose removal is not yet scheduled.
+ * Unchanged by 0.52, which touched only the call-position table above.
  */
 export const SYNTAX_MIGRATIONS = {
     blockComment: {

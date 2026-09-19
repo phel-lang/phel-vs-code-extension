@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { CORE_FNS, CORE_VALUES, MACROS, PHP_SUPERGLOBALS, SPECIAL_FORMS } from './phelCoreSymbols';
-import { MIGRATIONS } from './phelMigration';
+import { MIGRATIONS, type MigrationEntry } from './phelMigration';
 import { buildCallSnippet, isCalleePosition } from './phelCallSnippet';
 import {
     lookupSymbol,
@@ -33,18 +33,17 @@ interface ItemSpec {
     workspace?: boolean;
     /** Markdown shown instead of a corpus lookup. Used where no doc record exists. */
     documentation?: string;
-    /** What to write instead, for a form deprecated as source. */
-    supersededBy?: string;
+    /** The table entry, for a form the language removed as source. */
+    superseded?: MigrationEntry;
 }
 
 /**
- * The forms Phel 0.50 deprecated as source, keyed by name. They still compile —
- * they are the target the shorthands expand to — so they stay in the candidate
- * list, but they are struck through and sorted last so new code reaches for the
- * Clojure-style spelling first.
+ * The forms Phel 0.52 removed as source, keyed by name. They are still what the
+ * shorthands expand to, so a buffer full of old code keeps its completions, but
+ * they are struck through and sorted last: writing one now is a `PHEL012` error.
  */
 const SUPERSEDED = new Map(
-    MIGRATIONS.filter((e) => e.status === 'deprecated').map((e) => [e.name, e.detail])
+    MIGRATIONS.filter((e) => e.superseded === true).map((e) => [e.name, e] as const)
 );
 
 function buildBaseSpecs(): ItemSpec[] {
@@ -54,8 +53,8 @@ function buildBaseSpecs(): ItemSpec[] {
         specs.push({
             label: name,
             kind: vscode.CompletionItemKind.Keyword,
-            detail: superseded ? 'Phel special form (deprecated)' : 'Phel special form',
-            ...(superseded === undefined ? {} : { supersededBy: superseded }),
+            detail: superseded ? 'Phel special form (removed as source)' : 'Phel special form',
+            ...(superseded === undefined ? {} : { superseded }),
         });
     }
     for (const [name, description] of PHP_SUPERGLOBALS) {
@@ -171,12 +170,14 @@ function buildItem(
             }
         }
     }
-    if (spec.supersededBy) {
+    if (spec.superseded) {
         item.tags = [vscode.CompletionItemTag.Deprecated];
         // Sorted after everything else, so the shorthand is what gets picked
         // when both spellings match what was typed.
         item.sortText = `z_${spec.label}`;
-        item.documentation = plainMarkdown(renderSupersededMarkdown(spec.label, spec.supersededBy));
+        item.documentation = plainMarkdown(
+            renderSupersededMarkdown(spec.label, spec.superseded.since, spec.superseded.detail)
+        );
     }
     if (range) {
         item.range = range;

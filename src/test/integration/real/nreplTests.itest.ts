@@ -105,16 +105,10 @@ describe('running tests over a live nREPL', function () {
         assert.equal(failures[0].expected, '"this will never match"');
         assert.equal(failures[0].actual, '"HI!"');
         assert.equal(failures[0].file, 'failing_test.phel');
-        // The reporter locates an assertion at the `(deftest …)` it is in, not
-        // at the `(is …)` itself: the forms the macro rebuilds inherit the
-        // enclosing form's location. The `(is …)` is the line after it.
-        const deftestLine = lineOf(testSource, '(deftest test-shout-fails');
-        assert.equal(failures[0].line, deftestLine);
-        assert.equal(
-            lineOf(testSource, '(is (= "this will never match"'),
-            deftestLine + 1,
-            'the fixture no longer has the assertion right below its deftest'
-        );
+        // Since Phel 0.51 the reporter locates an assertion at the `(is …)`
+        // itself; up to 0.50 it reported the enclosing `(deftest …)`'s line,
+        // because the forms the macro rebuilds inherited that location.
+        assert.equal(failures[0].line, lineOf(testSource, '(is (= "this will never match"'));
     });
 
     it('answers a passing test with a pass and nothing to report', async function () {

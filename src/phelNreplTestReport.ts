@@ -21,10 +21,11 @@
 //
 // Two things the reporter does that are worth knowing when reading a location:
 // the file is a basename (`php/basename`), so it only identifies a file
-// together with the namespace that was run; and the line is the enclosing
-// `(deftest …)` form's, not the failing `(is …)`'s — every assertion in a test
-// reports the same line, because the assertion forms inherit the location of
-// the form the `deftest` macro rebuilt them into.
+// together with the namespace that was run; and the line is the failing
+// `(is …)`'s own since Phel 0.51. Up to 0.51 every assertion in a test reported
+// the enclosing `(deftest …)`'s line instead, because the forms the macro
+// rebuilt inherited its location. Nothing here depends on which it is: the
+// line is passed through, and an older server simply anchors less precisely.
 //
 // No `vscode` import: this is a parser, and it is unit-tested against output
 // captured verbatim from a real server.
@@ -47,7 +48,7 @@ export interface PhelTestFailure {
     message?: string;
     /** Basename of the file the assertion is in; never a path. */
     file?: string;
-    /** 1-based, and the `deftest`'s line rather than the assertion's (see above). */
+    /** 1-based; the assertion's own line since Phel 0.51 (see above). */
     line?: number;
     /** The form whose value was asserted on. */
     form?: string;

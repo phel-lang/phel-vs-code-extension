@@ -156,15 +156,16 @@ export function renderSuperglobalMarkdown(name: string, description: string): st
 }
 
 /**
- * Render a hover for a form Phel 0.50 deprecated as source. It still compiles —
- * it is the target the Clojure-style shorthand expands to — so the note says
- * what to write instead rather than claiming the form is broken.
+ * Render a hover for a form Phel removed as source. The compiler still emits it,
+ * since it is the target the Clojure-style shorthand expands to, so the note says
+ * what to write instead rather than claiming the form no longer exists.
  */
-export function renderSupersededMarkdown(name: string, detail: string): string {
+export function renderSupersededMarkdown(name: string, since: string, detail: string): string {
     return [
-        `**\`${name}\`** _deprecated as source since Phel 0.50_`,
+        `**\`${name}\`** _removed as source in Phel ${since}_`,
         '',
-        `Still compiles — it is what the Clojure-style form expands to — but ${detail}.`,
+        `Writing one is a \`PHEL012\` error. It is still what the Clojure-style form expands ` +
+            `to, so a macro that emits it keeps working, but ${detail}.`,
     ].join('\n');
 }
 

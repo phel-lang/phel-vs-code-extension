@@ -1,5 +1,10 @@
 import * as assert from 'node:assert/strict';
-import { findMigrationIssues, MIGRATIONS, migrationMessage } from '../phelMigration';
+import {
+    findMigrationIssues,
+    MIGRATIONS,
+    migrationMessage,
+    SYNTAX_MIGRATIONS,
+} from '../phelMigration';
 
 /** The names reported for `src`, in source order. */
 function names(src: string): string[] {
@@ -22,7 +27,7 @@ describe('findMigrationIssues', () => {
         assert.equal(src.slice(issue.start, issue.end), 'values');
     });
 
-    it('flags the forms deprecated as source', () => {
+    it('flags the forms 0.52 removed as source', () => {
         assert.deepEqual(names('(php/new \\DateTime)'), ['php/new']);
         assert.deepEqual(names('(php/-> o (format "Y"))'), ['php/->']);
         assert.deepEqual(names('(php/:: C (m 1))'), ['php/::']);
@@ -87,12 +92,28 @@ describe('findMigrationIssues', () => {
         assert.equal(seen.size, MIGRATIONS.length);
     });
 
-    it('phrases removed and deprecated entries differently', () => {
-        const removed = MIGRATIONS.find((e) => e.name === 'push');
-        const deprecated = MIGRATIONS.find((e) => e.name === 'php/->');
-        assert.ok(removed && deprecated);
-        assert.match(migrationMessage(removed), /was removed in Phel 0\.50/);
-        assert.match(migrationMessage(deprecated), /deprecated as source since Phel 0\.50/);
+    it('names the release each entry was removed in', () => {
+        const alias = MIGRATIONS.find((e) => e.name === 'push');
+        const superseded = MIGRATIONS.find((e) => e.name === 'php/->');
+        assert.ok(alias && superseded);
+        assert.match(migrationMessage(alias), /was removed in Phel 0\.50/);
+        assert.match(migrationMessage(superseded), /was removed in Phel 0\.52/);
+    });
+
+    it('marks only the forms the compiler still emits as superseded', () => {
+        assert.deepEqual(
+            MIGRATIONS.filter((e) => e.superseded).map((e) => e.name),
+            ['php/new', 'php/->', 'php/::', 'set-var']
+        );
+        assert.ok(MIGRATIONS.every((e) => e.superseded === undefined || e.status === 'removed'));
+    });
+
+    it('phrases a deprecation differently from a removal', () => {
+        // The `\` separator is the one entry still only deprecated.
+        assert.match(
+            migrationMessage(SYNTAX_MIGRATIONS.separator),
+            /deprecated as source since Phel 0\.50/
+        );
     });
 
     it('carries the head swap as a fix too, so one code path applies every rewrite', () => {
@@ -240,9 +261,9 @@ describe('findMigrationIssues — backslash namespace separator', () => {
             issues.map((i) => i.announcedByDefault),
             [true, true]
         );
-        const [deprecatedCall] = findMigrationIssues('(php/new Foo)');
-        assert.equal(deprecatedCall.status, 'deprecated');
-        assert.equal(deprecatedCall.announcedByDefault, undefined);
+        const [supersededCall] = findMigrationIssues('(php/new Foo)');
+        assert.equal(supersededCall.status, 'removed');
+        assert.equal(supersededCall.announcedByDefault, undefined);
     });
 
     it('flags a fully-qualified call site, which the compiler does not detect', () => {

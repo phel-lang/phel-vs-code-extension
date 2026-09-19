@@ -120,6 +120,7 @@ const CORE_DEF_FORMS: ReadonlyMap<string, 'fn' | 'value'> = new Map([
     ['first', 'fn'],
     ['next', 'fn'],
     ['queue', 'fn'],
+    ['to-array', 'fn'],
     ['to-php-array', 'fn'],
     ['vary-meta', 'fn'],
     ['with-meta', 'fn'],
