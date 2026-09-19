@@ -1,6 +1,7 @@
-// The 0.50 migration hints, and the one thing about them that needs a CLI:
-// their severity follows the project's `warn-deprecations`, which only
-// `phel config` can answer.
+// The migration hints, and the one thing about them that needs a CLI: the
+// severity of a deprecation follows the project's `warn-deprecations`, which
+// only `phel config` can answer. Since 0.52 removed the four superseded forms,
+// a workspace `:deprecated` definition is the case that still flips.
 //
 // `PhelProjectConfigProvider` is instantiated directly for the parse assertion
 // — the extension's own instance is private to the bundle — but the severity
@@ -21,9 +22,9 @@ import {
 } from './support';
 
 const MIGRATION_CODE = 'phel-migration';
-/** `migrationMessage` for the `php/new` entry. */
-const PHP_NEW = '`php/new` is deprecated as source since Phel 0.50';
-/** `migrationMessage` for the `push` entry, which is removed and so always a warning. */
+/** `migrationMessage` for the `php/new` entry, removed as source in 0.52. */
+const PHP_NEW = '`php/new` was removed in Phel 0.52';
+/** `migrationMessage` for the `push` entry, removed in 0.50. */
 const PUSH = '`push` was removed in Phel 0.50';
 /** `deprecatedDefinitionMessage` for the workspace's own `:deprecated` defn. */
 const OLD_GREET = '`old-greet` is deprecated (since 0.49.0). Use `greet-v2` instead.';
@@ -66,28 +67,37 @@ describe('migration hints against the project’s own configuration', function (
         }
     });
 
-    it('flags a removed name as a warning and a silent deprecation as a hint', async function () {
-        const removed = await waitFor(
+    it('warns about both removals, whatever warn-deprecations says', async function () {
+        const alias = await waitFor(
             'the `push` migration warning',
             () => migrationDiagnostic(legacy.uri, PUSH),
             30_000
         );
-        assert.equal(removed.severity, vscode.DiagnosticSeverity.Warning);
+        assert.equal(alias.severity, vscode.DiagnosticSeverity.Warning);
 
-        const deprecated = await waitFor(
-            'the `php/new` migration hint',
+        // `php/new` stopped being a deprecation in 0.52: it is a `PHEL012`
+        // error now, so it is a warning here whether or not the flag is on.
+        const superseded = await waitFor(
+            'the `php/new` migration warning',
             () => migrationDiagnostic(legacy.uri, PHP_NEW),
             30_000
         );
+        assert.equal(superseded.severity, vscode.DiagnosticSeverity.Warning);
+        assert.equal(superseded.tags, undefined);
+    });
+
+    it('keeps a workspace deprecation a hint until the project turns warn-deprecations on', async function () {
+        const hint = await waitFor(
+            'the `old-greet` deprecation hint',
+            () => migrationDiagnostic(deprecatedApi.uri, OLD_GREET),
+            30_000
+        );
         assert.equal(
-            deprecated.severity,
+            hint.severity,
             vscode.DiagnosticSeverity.Hint,
             'warn-deprecations is off, so the compiler would say nothing about this'
         );
-        assert.deepEqual(deprecated.tags, [vscode.DiagnosticTag.Deprecated]);
-    });
 
-    it('promotes it to a warning once the project turns warn-deprecations on', async function () {
         await writeProjectFile(
             originalConfig.replace(
                 '->withOptimizationLevel(2)',
@@ -97,9 +107,9 @@ describe('migration hints against the project’s own configuration', function (
         );
 
         await waitFor(
-            'the `php/new` hint to become a warning',
+            'the `old-greet` hint to become a warning',
             () => {
-                const found = migrationDiagnostic(legacy.uri, PHP_NEW);
+                const found = migrationDiagnostic(deprecatedApi.uri, OLD_GREET);
                 return found?.severity === vscode.DiagnosticSeverity.Warning ? found : undefined;
             },
             90_000
@@ -107,9 +117,9 @@ describe('migration hints against the project’s own configuration', function (
 
         await writeProjectFile(originalConfig, 'phel-config.php');
         await waitFor(
-            'the `php/new` warning to go back to a hint',
+            'the `old-greet` warning to go back to a hint',
             () => {
-                const found = migrationDiagnostic(legacy.uri, PHP_NEW);
+                const found = migrationDiagnostic(deprecatedApi.uri, OLD_GREET);
                 return found?.severity === vscode.DiagnosticSeverity.Hint ? found : undefined;
             },
             90_000

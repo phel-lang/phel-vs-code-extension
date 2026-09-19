@@ -16,9 +16,9 @@ import { folderForDocument } from './phelWorkspace';
 import { PHEL_SYMBOL_RE } from './phelSymbolToken';
 import { mergedDocs, plainMarkdown } from './phelProviderSupport';
 
-/** The forms deprecated as source in 0.50, keyed by name. */
+/** The forms 0.52 removed as source but the compiler still emits, keyed by name. */
 const SUPERSEDED = new Map(
-    MIGRATIONS.filter((e) => e.status === 'deprecated').map((e) => [e.name, e.detail])
+    MIGRATIONS.filter((e) => e.superseded === true).map((e) => [e.name, e] as const)
 );
 
 /** How long a hover waits for the daemon to reflect a PHP signature. */
@@ -68,7 +68,9 @@ export class PhelHoverProvider implements vscode.HoverProvider {
         }
         const superseded = SUPERSEDED.get(word);
         if (superseded) {
-            const md = plainMarkdown(renderSupersededMarkdown(word, superseded));
+            const md = plainMarkdown(
+                renderSupersededMarkdown(word, superseded.since, superseded.detail)
+            );
             return new vscode.Hover(md, range);
         }
 

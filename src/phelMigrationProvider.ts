@@ -29,7 +29,7 @@ const DEBOUNCE_MS = 250;
 export const MIGRATION_SOURCE = 'phel';
 export const MIGRATION_CODE = 'phel-migration';
 
-/** True when the user has not turned the 0.50 migration hints off. */
+/** True when the user has not turned the migration hints off. */
 export function migrationEnabled(): boolean {
     return vscode.workspace.getConfiguration('phel').get<boolean>('migration.enabled', true);
 }

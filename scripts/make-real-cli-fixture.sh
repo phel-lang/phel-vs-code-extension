@@ -8,7 +8,7 @@
 # other half of that picture: a real `phel init` project, with a real Phel
 # pointed at it, holding one instance of every case the suites assert on -
 # a lint warning, a lint error, a file only the linter objects to, a failing and
-# a passing `deftest`, a `defbench`, a removed and a deprecated form, a
+# a passing `deftest`, a `defbench`, two removed forms, a
 # `:deprecated` definition with a caller, an unused `:require`, and a namespace
 # two others require, one with `:refer` and one with `:as`.
 #
@@ -161,8 +161,9 @@ cat >"$target/src/broken.phel" <<'EOF'
   (no-such-symbol 1 2))
 EOF
 
-# `push` was removed in 0.50, `php/new` deprecated: one migration warning and
-# one migration hint, plus the quick fix that rewrites `push` to `conj`.
+# `push` was removed in 0.50 and `php/new` in 0.52: two migration warnings, plus
+# the quick fix that rewrites `push` to `conj`. Nothing requires this namespace,
+# so the `PHEL012` its `php/new` now raises stays inside this one file.
 cat >"$target/src/legacy.phel" <<'EOF'
 (ns demo.legacy)
 
