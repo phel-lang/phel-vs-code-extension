@@ -51,7 +51,7 @@ if [ ! -f "$phel_repo/vendor/autoload.php" ]; then
     exit 1
 fi
 if ! command -v php >/dev/null 2>&1; then
-    echo "php is not on PATH (Phel needs 8.2+)" >&2
+    echo "php is not on PATH (Phel 0.53 needs 8.5+)" >&2
     exit 1
 fi
 phel_repo="$(cd "$phel_repo" && pwd)"

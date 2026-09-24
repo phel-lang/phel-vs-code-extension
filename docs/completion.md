@@ -88,7 +88,7 @@ Tagged literals (`#inst`, `#regex`) and PHP class names are not in completion - 
 The macro and function lists are projections of the symbol corpus in `assets/phel-core-docs.json`. Regenerate it from a phel-lang checkout:
 
 ```bash
-npm run regen-docs -- /path/to/phel-lang --phel-version v0.52.0
+npm run regen-docs -- /path/to/phel-lang --phel-version v0.53.0
 ```
 
 `MACROS`, `CORE_FNS` and `CORE_VALUES` in `src/phelCoreSymbols.ts` follow automatically. `SPECIAL_FORMS` and `CORE_DEF_FORMS` are hand-curated in the same file (the compiler-engine forms live in PHP, not in any `.phel` source; the bootstrap `def`s are the ones described above) - add new entries there by hand. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full procedure.

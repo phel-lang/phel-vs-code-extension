@@ -1,6 +1,6 @@
 # Syntax highlighting
 
-Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) **v0.52.0**: the full PHP interop surface — the Clojure-style shorthands, `php/callable`, `php/ref`, named args via `:&`, the `:php/*` metadata tags, `defenum`/`defstruct` `:php` blocks — plus the 0.48–0.50 additions (`break` stepping debugger, `while`, `with-open`, `dbg`, the `phel.trace` macros `deftrace`/`dotrace`, `set!`, and `defbench` from the new `phel.bench`). Legacy forms are still recognised so older codebases keep highlighting; the reader syntax 0.50 removed, and the four forms 0.52 removed, are flagged by the [migration diagnostics](completion.md#migration-hints) with a quick fix where the rewrite is mechanical.
+Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) **v0.53.0**: the full PHP interop surface (the Clojure-style shorthands, `php/callable`, `php/ref`, named args via `:&`, the `:php/*` metadata tags, `defenum`/`defstruct` `:php` blocks) plus the 0.48 to 0.50 additions (`break` stepping debugger, `while`, `with-open`, `dbg`, the `phel.trace` macros `deftrace`/`dotrace`, `set!`, and `defbench` from the new `phel.bench`). Legacy forms are still recognised so older codebases keep highlighting; the reader syntax 0.50 removed, and the four forms 0.52 removed, are flagged by the [migration diagnostics](completion.md#migration-hints) with a quick fix where the rewrite is mechanical.
 
 ## Special forms
 
