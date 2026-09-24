@@ -22,6 +22,9 @@
   [name & opts]
   (str "Hello, " name "! " opts))
 
+(defn tagged [^map m ^?vector v ^map|null o ^\DateTime d ^Foo.Bar b]
+  (:k m))
+
 (defn- private-helper [x]
   (when (pos? x) (* x x)))
 

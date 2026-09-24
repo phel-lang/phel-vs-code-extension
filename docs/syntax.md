@@ -107,6 +107,7 @@ The rest:
 `(1 ~x ~@xs)       ;; quasiquote, unquote, unquote-splicing
 ^:private          ;; metadata
 ^int  ^"?int"      ;; type tags
+^map  ^?map  ^map|null  ^\DateTime  ;; value-type, nullable, union and class tags
 ^:memoize ^:async  ;; metadata flags
 @my-atom           ;; deref
 {:a 1, :b 2}       ;; a comma is whitespace, never unquote
@@ -114,7 +115,7 @@ The rest:
 
 `,` and `,@` lost their unquote meaning before 1.0 and are not coming back. A comma now scopes as `punctuation.separator.comma.phel`, deliberately not as a reader macro: `` `(foo ,x) `` still parses and *quotes* `x` rather than unquoting it, so highlighting it like `~` would advertise a meaning it no longer has. Write `~` and `~@`.
 
-Type and metadata tags (`^int`, `^"?int"`, `^:memoize`, `^:async`, any `^:keyword` or `^Type`) highlight their tag as `storage.type.tagged.phel` and the `^` as `punctuation.definition.tag.phel`.
+Type and metadata tags (`^int`, `^"?int"`, `^:memoize`, `^:async`, any `^:keyword` or `^Type`) highlight their tag as `storage.type.tagged.phel` and the `^` as `punctuation.definition.tag.phel`. A type tag highlights as one token in every spelling Phel 0.53 accepts: the value-type tags (`^map`, `^vector`, `^set`, `^list`, `^keyword`, `^symbol`, `^atom`), a `?` prefix (`^?map`), `|` and `&` members (`^map|null`, `^Countable&Traversable`), and a dotted or rooted class (`^Doctrine.ORM.EntityManager`, `^\DateTime`).
 
 ## Tagged literals
 

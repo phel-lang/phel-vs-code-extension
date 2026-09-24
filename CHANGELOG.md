@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Type tags highlight as one token in every spelling Phel 0.53 accepts: the value-type tags (`^map`, `^vector`, `^set`, `^list`, `^keyword`, `^symbol`, `^atom`), a `?` prefix (`^?map`), `|` and `&` members (`^map|null`, `^Countable&Traversable`), and a dotted or rooted class (`^Doctrine.ORM.EntityManager`, `^\DateTime`). Before, only a bare name like `^map` did. The rest stopped at the first `?`, `|`, `&`, `.` or `\`.
+
 ### Changed
 
 - Refreshed the bundled symbol corpus against phel-lang v0.53.0. Still 1628 entries: 0.53 adds and removes no symbol. The `transient` docstring now says when a transient pays off, and every **View source** link points at the v0.53.0 tree.

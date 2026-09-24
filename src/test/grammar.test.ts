@@ -295,3 +295,28 @@ describe('phel.tmLanguage 0.50 forms', () => {
         );
     });
 });
+
+describe('phel.tmLanguage type tags', () => {
+    before(async () => {
+        grammar = await loadGrammar();
+    });
+
+    const cases: [string, string][] = [
+        ['(defn f [^map m] (:k m))', 'map'],
+        ['(defn f [^?map m] m)', '?map'],
+        ['(defn f [^map|null m] m)', 'map|null'],
+        ['(defn f [^Countable&Traversable xs] xs)', 'Countable&Traversable'],
+        ['(defn f [^\\DateTime d] d)', '\\DateTime'],
+        ['(defn f [^Doctrine.ORM.EntityManager em] em)', 'Doctrine.ORM.EntityManager'],
+        ['(defn f [^"?int" n] n)', '"?int"'],
+    ];
+    for (const [line, tag] of cases) {
+        it(`scopes ${tag} as one tag`, () => {
+            assertScoped(line, tag, 'storage.type.tagged.phel');
+        });
+    }
+
+    it('ends the tag at the symbol it annotates', () => {
+        assertScoped('(defn f [^?map m] m)', 'm', 'meta.symbol.phel');
+    });
+});
