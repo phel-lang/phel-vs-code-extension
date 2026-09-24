@@ -2,7 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- Type tags highlight as one token in every spelling Phel 0.53 accepts: the value-type tags (`^map`, `^vector`, `^set`, `^list`, `^keyword`, `^symbol`, `^atom`), a `?` prefix (`^?map`), `|` and `&` members (`^map|null`, `^Countable&Traversable`), and a dotted or rooted class (`^Doctrine.ORM.EntityManager`, `^\DateTime`). Before, only a bare name like `^map` did. The rest stopped at the first `?`, `|`, `&`, `.` or `\`.
+
 ### Changed
+
+- Tracks **Phel 0.53**, which needs PHP 8.5. The README and the real-CLI test notes say so.
+
+- Refreshed the bundled symbol corpus against phel-lang v0.53.0. Still 1628 entries: 0.53 adds and removes no symbol. The `transient` docstring now says when a transient pays off, and every **View source** link points at the v0.53.0 tree.
 
 - Tracks **Phel 0.52**. `php/new`, `php/->`, `php/::` and `set-var` are no longer deprecated as source: writing one is a `PHEL012` error, and the migration hint says so. All four are still what the Clojure-style shorthands compile to, so a macro that expands to one keeps working and the forms stay in completion and hover, struck through with the spelling to write instead. With them gone, a workspace definition marked `:deprecated` is all that `warn-deprecations` still governs; the `\` namespace separator announces without the flag.
 

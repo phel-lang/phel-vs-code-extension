@@ -1,6 +1,6 @@
 # Syntax highlighting
 
-Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) **v0.52.0**: the full PHP interop surface — the Clojure-style shorthands, `php/callable`, `php/ref`, named args via `:&`, the `:php/*` metadata tags, `defenum`/`defstruct` `:php` blocks — plus the 0.48–0.50 additions (`break` stepping debugger, `while`, `with-open`, `dbg`, the `phel.trace` macros `deftrace`/`dotrace`, `set!`, and `defbench` from the new `phel.bench`). Legacy forms are still recognised so older codebases keep highlighting; the reader syntax 0.50 removed, and the four forms 0.52 removed, are flagged by the [migration diagnostics](completion.md#migration-hints) with a quick fix where the rewrite is mechanical.
+Coverage tracks [phel-lang](https://github.com/phel-lang/phel-lang) **v0.53.0**: the full PHP interop surface (the Clojure-style shorthands, `php/callable`, `php/ref`, named args via `:&`, the `:php/*` metadata tags, `defenum`/`defstruct` `:php` blocks) plus the 0.48 to 0.50 additions (`break` stepping debugger, `while`, `with-open`, `dbg`, the `phel.trace` macros `deftrace`/`dotrace`, `set!`, and `defbench` from the new `phel.bench`). Legacy forms are still recognised so older codebases keep highlighting; the reader syntax 0.50 removed, and the four forms 0.52 removed, are flagged by the [migration diagnostics](completion.md#migration-hints) with a quick fix where the rewrite is mechanical.
 
 ## Special forms
 
@@ -107,6 +107,7 @@ The rest:
 `(1 ~x ~@xs)       ;; quasiquote, unquote, unquote-splicing
 ^:private          ;; metadata
 ^int  ^"?int"      ;; type tags
+^map  ^?map  ^map|null  ^\DateTime  ;; value-type, nullable, union and class tags
 ^:memoize ^:async  ;; metadata flags
 @my-atom           ;; deref
 {:a 1, :b 2}       ;; a comma is whitespace, never unquote
@@ -114,7 +115,7 @@ The rest:
 
 `,` and `,@` lost their unquote meaning before 1.0 and are not coming back. A comma now scopes as `punctuation.separator.comma.phel`, deliberately not as a reader macro: `` `(foo ,x) `` still parses and *quotes* `x` rather than unquoting it, so highlighting it like `~` would advertise a meaning it no longer has. Write `~` and `~@`.
 
-Type and metadata tags (`^int`, `^"?int"`, `^:memoize`, `^:async`, any `^:keyword` or `^Type`) highlight their tag as `storage.type.tagged.phel` and the `^` as `punctuation.definition.tag.phel`.
+Type and metadata tags (`^int`, `^"?int"`, `^:memoize`, `^:async`, any `^:keyword` or `^Type`) highlight their tag as `storage.type.tagged.phel` and the `^` as `punctuation.definition.tag.phel`. A type tag highlights as one token in every spelling Phel 0.53 accepts: the value-type tags (`^map`, `^vector`, `^set`, `^list`, `^keyword`, `^symbol`, `^atom`), a `?` prefix (`^?map`), `|` and `&` members (`^map|null`, `^Countable&Traversable`), and a dotted or rooted class (`^Doctrine.ORM.EntityManager`, `^\DateTime`).
 
 ## Tagged literals
 

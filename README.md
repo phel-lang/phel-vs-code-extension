@@ -10,7 +10,7 @@
 [![Release](https://img.shields.io/github/v/release/phel-lang/phel-vs-code-extension?label=release)](https://github.com/phel-lang/phel-vs-code-extension/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-The complete editor for [Phel](https://phel-lang.org/), a functional Lisp that compiles to PHP: highlighting, completion, navigation, REPL, tests, debugger — all in one extension, tracking Phel **0.52**.
+The complete editor for [Phel](https://phel-lang.org/), a functional Lisp that compiles to PHP: highlighting, completion, navigation, REPL, tests, debugger, all in one extension, tracking Phel **0.53**.
 
 ## Quick start
 
@@ -22,7 +22,7 @@ The complete editor for [Phel](https://phel-lang.org/), a functional Lisp that c
    ```
 3. Open a `.phel` file. Everything below is on by default; run **Help: Get Started → Phel** for a guided tour, or **Phel: Doctor** to check the setup.
 
-Requires VS Code 1.88+ and the PHP your Phel needs (8.4+ for Phel 0.52) on `PATH`. Works on macOS, Linux and Windows.
+Requires VS Code 1.88+ and the PHP your Phel needs (8.5+ for Phel 0.53) on `PATH`. Works on macOS, Linux and Windows.
 
 ## What you get
 

@@ -324,7 +324,7 @@
 			}
 		},
 		"metadata": {
-			"comment": "Type/metadata tags: ^int, ^\"?int\", ^:memoize, ^:async, ^:by-ref",
+			"comment": "Type/metadata tags: ^int, ^map, ^?map, ^map|null, ^Foo&Bar, ^\\DateTime, ^Foo.Bar, ^\"?int\", ^:memoize, ^:async, ^:by-ref",
 			"patterns": [
 				{
 					"match": "(\\^)(:[^\\s\\#\\(\\)\\{\\}\\[\\]\\'\\\"\\,\\`]+)",
@@ -338,7 +338,7 @@
 					}
 				},
 				{
-					"match": "(\\^)([a-zA-Z][\\w-]*|\"[^\"]*\")",
+					"match": "(\\^)(\\??\\\\?[a-zA-Z][\\w-]*(?:[.\\\\][a-zA-Z_][\\w-]*)*(?:[|&]\\??\\\\?[a-zA-Z][\\w-]*(?:[.\\\\][a-zA-Z_][\\w-]*)*)*|\"[^\"]*\")",
 					"captures": {
 						"1": {
 							"name": "punctuation.definition.tag.phel"
