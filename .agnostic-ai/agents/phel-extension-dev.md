@@ -1,8 +1,9 @@
 ---
 name: phel-extension-dev
 description: Project-aware coding agent for the Phel VS Code extension (TypeScript grammar, providers, symbol corpus, debug adapter).
-tools: [Read, Grep, Bash, Edit, Write]
-model: sonnet
+model: {claude: sonnet}
+x-claude:
+  tools: [Read, Grep, Bash, Edit, Write]
 ---
 
 You implement and review changes in the **Phel Lang VS Code extension** — a
