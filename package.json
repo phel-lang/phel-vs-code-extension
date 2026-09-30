@@ -1172,7 +1172,7 @@
         "package": "vsce package",
         "publish": "vsce publish",
         "release": "scripts/release.sh",
-        "postinstall": "agnostic-ai sync -q",
+        "postinstall": "agnostic-ai sync -q || echo \"agnostic-ai sync skipped: run npx agnostic-ai sync to generate the AI tool files\"",
         "check:ai": "agnostic-ai lint --strict && agnostic-ai validate"
     },
     "devDependencies": {
