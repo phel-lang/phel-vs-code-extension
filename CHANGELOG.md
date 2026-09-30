@@ -4,6 +4,12 @@
 
 ### Added
 
+- `new`, `catch` and `(:use …)` color their class names as PHP classes: `(new DateTime)`, `(catch Exception e)`, `(:use Random.Randomizer phpDocumentor.Reflection.DocBlock)`. A bare capitalised symbol elsewhere stays a plain symbol.
+
+- `atom`, `swap!`, `reset!`, `trampoline`, `ex-info`, `ex-data` and `satisfies?` highlight in the keyword color.
+
+- String escapes highlight whole and only when the reader accepts them: octal `\101`, `\e`, `\x41`, `\u00e9`, `\u{1F600}`. An unknown escape such as `\q` stays plain string text.
+
 - Type tags highlight as one token in every spelling Phel 0.53 accepts: the value-type tags (`^map`, `^vector`, `^set`, `^list`, `^keyword`, `^symbol`, `^atom`), a `?` prefix (`^?map`), `|` and `&` members (`^map|null`, `^Countable&Traversable`), and a dotted or rooted class (`^Doctrine.ORM.EntityManager`, `^\DateTime`). Before, only a bare name like `^map` did. The rest stopped at the first `?`, `|`, `&`, `.` or `\`.
 
 ### Changed
@@ -17,6 +23,10 @@
 - Refreshed the bundled symbol corpus against phel-lang v0.52.0: 1628 entries, up from 1582. Four of the additions are public and reach completion (`phel.test/skip!`, `phel.test/focused-run?`, `phel.test/*event-hook*`, `phel.ai/*sleep-fn*`); the other 45 are private helpers, and two private helpers are gone, and every **View source** link now points at the v0.52.0 tree. `to-array` is offered in completion; `to-php-array` carries its `:deprecated "0.51.0"` note in hover and is struck through.
 
 ### Fixed
+
+- A plain float with an `_` separator (`1_000.5`) no longer highlights as a number, since the reader reads it as a symbol. Integers, BigInt, BigDecimal and ratios keep their separators.
+
+- Removed syntax no longer highlights: `#| |#` block comments, a bare `#` comment, and `|( … $1 … )` short functions. The migration diagnostic still flags each one with a quick fix.
 
 - The weekly **Regen core docs** workflow stopped opening pull requests when the corpus moved to `assets/phel-core-docs.json`: it still looked for changes in `src/phelCoreDocs.ts`, which the regeneration no longer writes, so every run decided nothing had changed. That is why the bundled corpus sat on v0.50.0.
 

@@ -32,7 +32,7 @@ Symfony.Component.Console.Command.Command/SUCCESS   ;; dotted namespaced class
 | ALL-CAPS member (`C/CONST`) | `constant.other.class.phel` |
 | Leading `\` marker | `punctuation.definition.class.phel` |
 
-A constant and a static method share one spelling and are told apart by reflection at analysis time, which a grammar cannot do; the split above follows PHP's own casing convention. A **bare** capitalised symbol is deliberately left as a plain symbol — a `defstruct` or `definterface` name looks identical (`phel.router/Router`), so only member access or the explicit `\` marker is treated as interop. A lower-case-first qualified name stays a namespace alias: `str/join` and `phel.string/blank?` are not interop.
+A constant and a static method share one spelling and are told apart by reflection at analysis time, which a grammar cannot do; the split above follows PHP's own casing convention. A **bare** capitalised symbol is deliberately left as a plain symbol — a `defstruct` or `definterface` name looks identical (`phel.router/Router`), so only member access or the explicit `\` marker is treated as interop. Three positions fix a class regardless: the symbol after `new` (`(new DateTime)`), after `catch` (`(catch Exception e)`), and every symbol in a `(:use …)` clause, where a lower-case first segment (`phpDocumentor.Reflection.DocBlock`) is still a class. A lower-case-first qualified name stays a namespace alias: `str/join` and `phel.string/blank?` are not interop.
 
 ## Macros (~85)
 
@@ -46,6 +46,7 @@ Debug / trace: `dbg`, `deftrace`, `dotrace`.
 Benchmarks: `defbench` (`phel.bench`).
 Interop: `set!`.
 REPL helpers: `dir`, `doc`, `source`, `require`, `symbol-info`, `explain-sym`.
+References and errors: `atom`, `swap!`, `reset!`, `deref`, `trampoline`, `ex-info`, `ex-data`, `satisfies?`. These are core functions, colored as keywords because they shape control flow.
 Other: `comment`, `time`, `lazy-seq`, `lazy-cat`, `match`, `instance?`, `pop`, `reify`, `delay`, `future`, `future-fiber`, `extend-protocol`, `extend-type`, `html`, `with-config`, `async`.
 
 ## Literals
@@ -63,13 +64,13 @@ Every numeric form the reader accepts (see phel-lang's `AtomParser`) has its own
 | Ratio | `3/4`, `-1/2` | `constant.numeric.ratio.phel` |
 | Symbolic | `##Inf`, `##-Inf`, `##NaN` | `constant.language.symbolic-number.phel` |
 
-Octal is the leading-zero spelling `017`; `0o17` is not valid Phel.
+Octal is the leading-zero spelling `017`; `0o17` is not valid Phel. A plain float takes no `_` separator: `1_000.5` reads as a symbol and scopes as one, while `1_000.5M` is a BigDecimal.
 
 The rest:
 
 - Keywords: `:keyword`, `::auto-resolved`, `:my.ns/name`
 - Booleans / nil: `true`, `false`, `nil`
-- Strings: `"hello"` with `\\` escapes
+- Strings: `"hello"`. Escapes the reader accepts scope as `constant.character.escape.phel`: `\n \r \t \v \e \f \\ \" \$`, octal `\101`, hex `\x41` or `\X41`, and unicode `\u00e9` or `\u{1F600}`. Any other backslash is plain string text.
 - Characters: `\A`, `\1`, `\(`, `\space`, `\newline`, `\tab`, `\formfeed`, `\backspace`, `\return`, `\u00e9`, `\o101` → `constant.character.phel`. The lexer's lookahead keeps a PHP fully-qualified name (`\Throwable`, `\Foo\Bar`) out of that rule; it scopes as a class instead — see [PHP interop](#php-interop).
 - Regex literals: `#"^\d+$"` → `string.regexp.phel` (distinct from the `#regex "…"` tagged literal)
 - Collections: `[1 2]`, `{:a 1}`, `#{1 2}`, `'(a b)`, PHP arrays `@[1 2]` / `@{:a 1}`
@@ -82,8 +83,9 @@ The rest:
 #(+ %1 %2)        ;; preferred - Clojure-style
 #(* % %)          ;; % is shorthand for %1
 #(apply str %&)   ;; %& captures rest
+```
 
-|(+ $1 $2)        ;; removed in Phel 0.50 - still highlighted, flagged with a quick fix
+`|(+ $1 $2)` was removed before 1.0. It no longer highlights as a function; the migration diagnostic flags it with a quick fix.
 ```
 
 ## Comments
@@ -91,13 +93,11 @@ The rest:
 ```phel
 ;; preferred line comment
 ; also a line comment
-# legacy line comment - removed in Phel 0.50, still highlighted, flagged with a quick fix
-
-#| legacy block comment |#
-;; (removed in Phel 0.50, still highlighted, flagged with a quick fix)
 
 (println 1 #_ skipped 3)   ;; #_ comments out the next form
 ```
+
+A bare `#` comment and `#| |#` block comments were removed before 1.0. They no longer highlight as comments; the migration diagnostic flags them with a quick fix.
 
 ## Reader macros
 
