@@ -300,7 +300,17 @@ describe('phel.tmLanguage string escapes', () => {
         grammar = await loadGrammar();
     });
 
-    for (const esc of ['\\101', '\\e', '\\x41', '\\u{1F600}', '\\n', '\\$', '\\"']) {
+    for (const esc of [
+        '\\101',
+        '\\e',
+        '\\x41',
+        '\\X41',
+        '\\u00e9',
+        '\\u{1F600}',
+        '\\n',
+        '\\$',
+        '\\"',
+    ]) {
         it(`scopes ${esc} as one escape`, () => {
             assertScoped(`(def s "a${esc}b")`, esc, 'constant.character.escape.phel');
         });
@@ -337,6 +347,10 @@ describe('phel.tmLanguage class names in fixed positions', () => {
         assertScoped(line, ':as', 'variable.other.constant.phel');
         assertScoped(line, 'Doc', 'support.class.phel');
         assertScoped(line, ':use', 'variable.other.constant.phel');
+    });
+
+    it('leaves a lower-case keyword lookup on :use alone', () => {
+        assertScoped('(:use opts)', 'opts', 'meta.symbol.phel');
     });
 
     it('stops the :use clause at its closing paren', () => {

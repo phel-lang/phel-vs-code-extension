@@ -8,7 +8,7 @@
 
 - `atom`, `swap!`, `reset!`, `trampoline`, `ex-info`, `ex-data` and `satisfies?` highlight in the keyword color.
 
-- String escapes highlight whole and only when the reader accepts them: octal `\101`, `\e`, `\x41`, `\u{1F600}`. An unknown escape such as `\q` stays plain string text.
+- String escapes highlight whole and only when the reader accepts them: octal `\101`, `\e`, `\x41`, `\u00e9`, `\u{1F600}`. An unknown escape such as `\q` stays plain string text.
 
 - Type tags highlight as one token in every spelling Phel 0.53 accepts: the value-type tags (`^map`, `^vector`, `^set`, `^list`, `^keyword`, `^symbol`, `^atom`), a `?` prefix (`^?map`), `|` and `&` members (`^map|null`, `^Countable&Traversable`), and a dotted or rooted class (`^Doctrine.ORM.EntityManager`, `^\DateTime`). Before, only a bare name like `^map` did. The rest stopped at the first `?`, `|`, `&`, `.` or `\`.
 

@@ -387,7 +387,7 @@
 			"patterns": [
 				{
 					"name": "constant.character.escape.phel",
-					"match": "\\\\(?:x[0-9A-Fa-f]{1,2}|u\\{[0-9A-Fa-f]+\\}|[0-7]{1,3}|[nrtvef\\\\\"$])"
+					"match": "\\\\(?:[xX][0-9A-Fa-f]{1,2}|u\\{[0-9A-Fa-f]+\\}|u[0-9A-Fa-f]{4}|[0-7]{1,3}|[nrtvef\\\\\"$])"
 				}
 			]
 		},
@@ -587,7 +587,7 @@
 			]
 		},
 		"ns-use": {
-			"comment": "(:use A.B C :as D) - every symbol in the clause is a class. A first segment may be lower case (`phpDocumentor.Reflection.DocBlock`), so casing is not checked here.",
+			"comment": "(:use A.B C :as D) - every class in the clause. A dotted name may start lower case (`phpDocumentor.Reflection.DocBlock`); a bare lower-case name stays a symbol, so a keyword lookup such as `(:use opts)` is not coloured as a class.",
 			"begin": "(?<=\\()(:use)(?![^\\s\\#\\(\\)\\{\\}\\[\\]\\'\\\"\\,\\`])",
 			"beginCaptures": {
 				"1": {
@@ -603,7 +603,7 @@
 					"include": "#keysym"
 				},
 				{
-					"match": "(?<![\\w$.\\\\/-])(\\\\)?([A-Za-z_][A-Za-z0-9_]*(?:[.\\\\][A-Za-z0-9_]+)*)(?![A-Za-z0-9_\\-?!$%&*+./:<=>@^~\\\\])",
+					"match": "(?<![\\w$.\\\\/-])(\\\\)?((?:[A-Z][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*(?=[.\\\\][A-Za-z0-9_]))(?:[.\\\\][A-Za-z0-9_]+)*)(?![A-Za-z0-9_\\-?!$%&*+./:<=>@^~\\\\])",
 					"captures": {
 						"1": {
 							"name": "punctuation.definition.class.phel"

@@ -70,7 +70,7 @@ The rest:
 
 - Keywords: `:keyword`, `::auto-resolved`, `:my.ns/name`
 - Booleans / nil: `true`, `false`, `nil`
-- Strings: `"hello"`. Escapes the reader accepts scope as `constant.character.escape.phel`: `\n \r \t \v \e \f \\ \" \$`, octal `\101`, hex `\x41` and `\u{1F600}`. Any other backslash is plain string text.
+- Strings: `"hello"`. Escapes the reader accepts scope as `constant.character.escape.phel`: `\n \r \t \v \e \f \\ \" \$`, octal `\101`, hex `\x41` or `\X41`, and unicode `\u00e9` or `\u{1F600}`. Any other backslash is plain string text.
 - Characters: `\A`, `\1`, `\(`, `\space`, `\newline`, `\tab`, `\formfeed`, `\backspace`, `\return`, `\u00e9`, `\o101` → `constant.character.phel`. The lexer's lookahead keeps a PHP fully-qualified name (`\Throwable`, `\Foo\Bar`) out of that rule; it scopes as a class instead — see [PHP interop](#php-interop).
 - Regex literals: `#"^\d+$"` → `string.regexp.phel` (distinct from the `#regex "…"` tagged literal)
 - Collections: `[1 2]`, `{:a 1}`, `#{1 2}`, `'(a b)`, PHP arrays `@[1 2]` / `@{:a 1}`
