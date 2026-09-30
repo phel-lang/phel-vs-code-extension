@@ -862,7 +862,7 @@
                 "phel.lsp.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "markdownDescription": "Opt-in (default off): use the Phel language server (`phel lsp`) for completion, hover, signature help, go-to-definition, find references, rename, symbols, formatting, and diagnostics, backed by the Phel compiler with PHP-interop awareness (`php/->`, `php/::`, `php/new`). Best-effort today: some Phel releases ship a `phel lsp` that exits on idle, in which case the extension restarts it a few times and then falls back to its bundled providers. Enable once your Phel provides a stable server. Requires a reload to take effect."
+                    "markdownDescription": "Opt-in (default off): use the Phel language server (`phel lsp`) for completion, hover, signature help, go-to-definition, find references, rename, symbols, formatting, and diagnostics, backed by the Phel compiler with PHP-interop awareness. Best-effort today: some Phel releases ship a `phel lsp` that exits on idle, in which case the extension restarts it a few times and then falls back to its bundled providers. Enable once your Phel provides a stable server. Requires a reload to take effect."
                 },
                 "phel.lsp.command": {
                     "type": "string",
@@ -937,7 +937,7 @@
                     "type": "boolean",
                     "default": true,
                     "scope": "resource",
-                    "markdownDescription": "Complete PHP symbols in interop positions — the members of the class behind `(php/-> receiver …)` / `(php/:: Class …)` / `(.method x)`, the classes behind `\\Foo` and `(php/new \\Foo)`, PHP's global functions after `php/`, and the superglobals after `php/$` — through the same long-lived `phel api-daemon` live diagnostics use, which reflects over the classes your project can actually load. Needs `#phel.diagnostics.live#` on and a Phel that has the `api-daemon` command; the daemon gets 400 ms per keystroke, so a busy or still-booting one costs nothing but the suggestion."
+                    "markdownDescription": "Complete PHP symbols in interop positions — the members of the class behind `(.method x)` / `(.-field x)` / `\\Class/member`, the classes behind `\\Foo` and `(new \\Foo)`, PHP's global functions after `php/`, and the superglobals after `php/$` — through the same long-lived `phel api-daemon` live diagnostics use, which reflects over the classes your project can actually load. Needs `#phel.diagnostics.live#` on and a Phel that has the `api-daemon` command; the daemon gets 400 ms per keystroke, so a busy or still-booting one costs nothing but the suggestion."
                 },
                 "phel.format.enabled": {
                     "type": "boolean",
