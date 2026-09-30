@@ -81,6 +81,9 @@ describe('phel.tmLanguage numeric literals', () => {
         ['(def x 1.5M)', '1.5M', 'constant.numeric.bigdecimal.phel'],
         ['(def x 3/4)', '3/4', 'constant.numeric.ratio.phel'],
         ['(def x -3/4)', '-3/4', 'constant.numeric.ratio.phel'],
+        ['(def x 1_000N)', '1_000N', 'constant.numeric.bigint.phel'],
+        ['(def x 1_000.5M)', '1_000.5M', 'constant.numeric.bigdecimal.phel'],
+        ['(def x 0xFF_FF)', '0xFF_FF', 'constant.numeric.hex.phel'],
         ['(def x ##Inf)', '##Inf', 'constant.language.symbolic-number.phel'],
         ['(def x ##-Inf)', '##-Inf', 'constant.language.symbolic-number.phel'],
         ['(def x ##NaN)', '##NaN', 'constant.language.symbolic-number.phel'],
@@ -91,6 +94,30 @@ describe('phel.tmLanguage numeric literals', () => {
             assertScoped(line, text, scope);
         });
     }
+});
+
+describe('phel.tmLanguage float literals', () => {
+    before(async () => {
+        grammar = await loadGrammar();
+    });
+
+    it('does not read underscores in a plain float', () => {
+        // `1_000.5` is a symbol to the reader; only integer-like forms and
+        // BigDecimal take separators.
+        const tokens = tokenize('(def x 1_000.5)');
+        assert.ok(
+            !tokens.some(
+                (t) =>
+                    t.text.includes('_') && t.scopes.some((s) => s.startsWith('constant.numeric'))
+            ),
+            'an underscored float must not scope as a number'
+        );
+    });
+
+    it('still reads 3.14 as one float', () => {
+        assertScoped('(def x 3.14)', '3', 'constant.numeric.decimal.phel');
+        assertScoped('(def x 3.14)', '14', 'constant.numeric.decimal.phel');
+    });
 });
 
 describe('phel.tmLanguage character literals', () => {
@@ -139,8 +166,25 @@ describe('phel.tmLanguage reader syntax', () => {
         assertScoped('#my.app/Person {:a 1}', 'my.app/Person', 'storage.type.tagged.phel');
     });
 
-    it('still scopes a bare-# line comment', () => {
-        assertScoped('# legacy comment', '# legacy comment'.slice(1), 'comment.line.phel');
+    it('no longer reads a bare # or #| |# as a comment', () => {
+        // Both were removed before 1.0; phelMigration flags them instead.
+        for (const line of ['# legacy comment', '#| legacy block |#']) {
+            assert.ok(
+                !tokenize(line).some((t) => t.scopes.some((s) => s.startsWith('comment'))),
+                `${JSON.stringify(line)} must not scope as a comment`
+            );
+        }
+    });
+
+    it('no longer reads |( as a short function', () => {
+        const tokens = tokenize('(reduce |(+ $1 $2) 0 xs)');
+        assert.ok(!tokens.some((t) => t.scopes.includes('meta.short-fn.phel')));
+        assert.ok(!tokens.some((t) => t.scopes.includes('variable.parameter.positional.phel')));
+    });
+
+    it('scopes a #( short function and its % arguments', () => {
+        assertScoped('#(+ %1 %&)', '%1', 'variable.parameter.positional.phel');
+        assertScoped('#(+ %1 %&)', '%&', 'variable.parameter.positional.phel');
     });
 
     it('keeps a mid or trailing apostrophe inside the symbol', () => {
@@ -251,6 +295,55 @@ describe('phel.tmLanguage Clojure-style interop', () => {
     });
 });
 
+describe('phel.tmLanguage string escapes', () => {
+    before(async () => {
+        grammar = await loadGrammar();
+    });
+
+    for (const esc of ['\\101', '\\e', '\\x41', '\\u{1F600}', '\\n', '\\$', '\\"']) {
+        it(`scopes ${esc} as one escape`, () => {
+            assertScoped(`(def s "a${esc}b")`, esc, 'constant.character.escape.phel');
+        });
+    }
+
+    it('leaves an unknown escape as plain string text', () => {
+        const tokens = tokenize('(def s "a\\qb")');
+        assert.ok(!tokens.some((t) => t.scopes.includes('constant.character.escape.phel')));
+    });
+});
+
+describe('phel.tmLanguage class names in fixed positions', () => {
+    before(async () => {
+        grammar = await loadGrammar();
+    });
+
+    it('scopes the class after new', () => {
+        assertScoped('(new DateTimeImmutable "2026")', 'new', 'keyword.control.phel');
+        assertScoped('(new DateTimeImmutable "2026")', 'DateTimeImmutable', 'support.class.phel');
+        assertScoped('(new Random.Randomizer)', 'Random.Randomizer', 'support.class.phel');
+    });
+
+    it('scopes the class after catch, with or without the marker', () => {
+        assertScoped('(catch Exception e (throw e))', 'catch', 'keyword.control.phel');
+        assertScoped('(catch Exception e (throw e))', 'Exception', 'support.class.phel');
+        assertScoped('(catch \\Throwable e nil)', '\\', 'punctuation.definition.class.phel');
+        assertScoped('(catch Exception e (throw e))', 'e', 'meta.symbol.phel');
+    });
+
+    it('scopes every class in a :use clause', () => {
+        const line = '(ns app (:use Random.Randomizer phpDocumentor.Reflection.DocBlock :as Doc))';
+        assertScoped(line, 'Random.Randomizer', 'support.class.phel');
+        assertScoped(line, 'phpDocumentor.Reflection.DocBlock', 'support.class.phel');
+        assertScoped(line, ':as', 'variable.other.constant.phel');
+        assertScoped(line, 'Doc', 'support.class.phel');
+        assertScoped(line, ':use', 'variable.other.constant.phel');
+    });
+
+    it('stops the :use clause at its closing paren', () => {
+        assertScoped('(ns app (:use Foo)) (def x y)', 'y', 'meta.symbol.phel');
+    });
+});
+
 describe('phel.tmLanguage comma handling', () => {
     before(async () => {
         grammar = await loadGrammar();
@@ -276,6 +369,20 @@ describe('phel.tmLanguage comma handling', () => {
 describe('phel.tmLanguage 0.50 forms', () => {
     before(async () => {
         grammar = await loadGrammar();
+    });
+
+    it('scopes the reference and exception helpers as keywords', () => {
+        for (const kw of [
+            'atom',
+            'swap!',
+            'reset!',
+            'trampoline',
+            'ex-info',
+            'ex-data',
+            'satisfies?',
+        ]) {
+            assertScoped(`(${kw} x)`, kw, 'keyword.control.phel');
+        }
     });
 
     it('scopes defbench as a keyword', () => {

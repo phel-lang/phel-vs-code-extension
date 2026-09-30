@@ -4,10 +4,6 @@
   (:require phel.core :refer [filter map reduce])
   (:require phel.test :refer [deftest is testing]))
 
-#| legacy block comment - deprecated upstream but still valid |#
-
-# legacy line comment - deprecated, should still highlight
-
 (def ^:private answer 42)
 (def numbers [1 2 3 4 5 0xff 0b1010 017 1_000 3.14 2e-3 +7 -3.5])
 (def ratios #{1/2 -3/4})
@@ -44,8 +40,6 @@
        (filter #(> % 1))
        (map #(* %1 %1))
        (reduce + 0)))
-
-(reduce |(+ $1 $2) 0 [1 2 3])
 
 (let [m {:a 1 :b 2}
       a (atom 0)]
@@ -107,6 +101,11 @@
 (php-invoke target "format" "Y")
 (php/$_SERVER "REQUEST_URI")
 (:use \DateTimeImmutable)
+(ns app.core (:require phel.string :as s) (:use Random.Randomizer phpDocumentor.Reflection.DocBlock :as Doc))
+(try (new Random.Randomizer) (catch Exception e (throw (ex-info "x" (ex-data e)))))
+(def escapes "\101\e[0m\x41\u{1F600}")
+(def floats [1.5M 1_000.5M 12N 1_000.5])   ;; the last one reads as a symbol
+(swap! cache assoc ::key #'inc)
 
 ;; A comma is whitespace, never unquote.
 (def pairs {:a 1, :b 2})
