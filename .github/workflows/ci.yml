@@ -49,6 +49,7 @@ jobs:
       - run: npm run check:changelog
         if: github.event_name == 'pull_request'
       - run: npm run tokenize
+      - run: npm run check:ai
       # Builds for production and then asserts the activation bundle's budget:
       # under 200 000 bytes, with neither deferred sibling's dependencies in it.
       - run: npm run bundle:check
