@@ -46,7 +46,7 @@
   (swap! a inc)
   (println @a)
   (try
-    (php/->> m "missing")
+    (php/strlen "missing")
     (catch \Throwable e
       (println (ex-message e)))))
 

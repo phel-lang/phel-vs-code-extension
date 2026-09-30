@@ -32,6 +32,8 @@
 
 ### Docs
 
+- The PHP-interop completion docs describe the spellings Phel compiles today (`(.method obj)`, `\Class/member`, `(new \Foo …)`) instead of the removed `php/->`, `php/::` and `php/new`. They also list what gets no PHP members yet, such as a local bound with `(new Foo)`, and how to annotate around it.
+
 - Rewrote the README around a three-step quick start and four "what you get" groups (writing, understanding, running & testing, REPL & debugging), replacing the sixteen paragraph-length bullets that had grown with every feature; the documentation index is a table with one line per page.
 
 ## [0.14.0] - 2026-08-16
