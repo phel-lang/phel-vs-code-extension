@@ -23,8 +23,11 @@ node_modules/**
 docs/**
 scripts/**
 .agnostic-ai/**
+.agents/**
 .claude/**
 .codex/**
+.worktreeinclude
+agnostic-ai.local.yaml
 CLAUDE.md
 AGENTS.md
 agnostic-ai.yaml

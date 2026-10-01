@@ -1171,7 +1171,9 @@
         "regen-docs": "npm run compile && node scripts/regen-core-docs.cjs",
         "package": "vsce package",
         "publish": "vsce publish",
-        "release": "scripts/release.sh"
+        "release": "scripts/release.sh",
+        "postinstall": "agnostic-ai sync -q || echo \"agnostic-ai sync skipped: run npx agnostic-ai sync to generate the AI tool files\"",
+        "check:ai": "agnostic-ai lint --strict && agnostic-ai validate"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.6",
@@ -1181,6 +1183,7 @@
         "@typescript-eslint/parser": "^7.0.0",
         "@vscode/test-electron": "^3.1.0",
         "@vscode/vsce": "^3.0.0",
+        "agnostic-ai": "0.75.0",
         "esbuild": "^0.28.0",
         "eslint": "^8.57.0",
         "mocha": "^11.7.5",

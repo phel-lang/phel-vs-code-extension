@@ -22,15 +22,26 @@ yarn-error.log
 
 # Editor directories
 .idea/
-agnostic-ai.local.yaml
-.agnostic-ai/.sync-state
-.agnostic-ai/packs/
+
+# AI tool files agnostic-ai writes or the tools create at runtime; specs live in .agnostic-ai/
+/.worktreeinclude
+/.claude/worktrees/
+/.claude/scheduled_tasks.lock
 
 # >>> agnostic-ai (managed) >>>
 # Generated paths. Edit specs, not this block. Run `agnostic-ai sync` to refresh.
+# Not committed: a fresh clone or `git worktree` lacks these until `agnostic-ai sync` runs (e.g. a post-checkout hook).
+/.agents/skills/
 /.agnostic-ai/.sync-state
-/.claude/
-/.codex/
+/.agnostic-ai/local/
+/.agnostic-ai/packs/
+/.claude/agent-memory-local/
+/.claude/agents/
+/.claude/rules/
+/.claude/settings.local.json
+/.claude/skills/
+/.codex/agents/
 /AGENTS.md
 /CLAUDE.md
+/agnostic-ai.local.yaml
 # <<< agnostic-ai (managed) <<<
