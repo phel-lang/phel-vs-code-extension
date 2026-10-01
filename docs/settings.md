@@ -211,6 +211,6 @@ Both settings are independent switches — `phel.diagnostics.live: false` leaves
 
 **Staleness.** The daemon evaluates a file's dependencies once per process, so an edit you save in *another* file is not picked up by a process that already loaded the old version. The extension restarts the daemon the first time you ask about a different file after a save, which covers the usual edit-save-switch loop. If diagnostics still look stale, **Phel: Restart Analysis Daemon** (`phel.diagnostics.restartDaemon`) drops the process; see [troubleshooting](troubleshooting.md#diagnostics).
 
-**The same process also powers navigation and PHP-interop completion.** Two seconds after each save it re-indexes the project, and go-to-definition and find-references read that index; see [what the analysis daemon adds](refactoring.md#what-the-analysis-daemon-adds). It also answers what to complete after `php/->`, `\Foo` or `php/`, within a 400 ms budget per keystroke; see [PHP interop](completion.md#php-interop).
+**The same process also powers navigation and PHP-interop completion.** Two seconds after each save it re-indexes the project, and go-to-definition and find-references read that index; see [what the analysis daemon adds](refactoring.md#what-the-analysis-daemon-adds). It also answers what to complete after `(.`, `\Foo/`, `\Foo` or `php/`, within a 400 ms budget per keystroke; see [PHP interop](completion.md#php-interop).
 
 Every other command the extension contributes is listed in the [commands reference](commands.md).

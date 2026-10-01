@@ -73,8 +73,8 @@ Project: `test-fixtures/workspace/`.
 
 Alternative, for the interop story (needs the real-CLI project and a warm
 daemon — open a file and wait for the first diagnostics to land first): type
-`(php/-> (php/new \DateTimeImmutable) ` and let the daemon answer with the
-class's methods.
+`(\DateTimeImmutable/` and let the daemon answer with the class's static
+methods and constants.
 
 ### `tests.png` — Test Explorer and the CodeLenses
 

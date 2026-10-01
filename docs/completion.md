@@ -54,18 +54,24 @@ Two positions get their own, much smaller list instead of the flat core one:
 
 The corpus above stops where PHP begins: no `.phel` file declares `strtoupper`, `DateTimeImmutable` or `format`. Those come from the compiler instead — the same long-lived `phel api-daemon` behind [live diagnostics](settings.md#live-diagnostics), which reflects over the classes your project can actually load and answers a second completion provider registered next to the bundled one. VS Code merges the two lists, so nothing that worked before goes away.
 
-Seven positions are recognised, and they are the ones Phel's own `PhpInteropContextResolver` recognises:
+The positions are the ones Phel's own `PhpInteropContextResolver` recognises, in the spelling Phel compiles today:
 
 | Typing | What you get |
 |---|---|
-| `(php/-> receiver metho…` | Public instance methods and properties of the receiver's class |
-| `(php/:: Class metho…` and `\Class/metho…` | Public static methods, constants and `$`-prefixed static properties |
-| `(.metho…` / `(.-fiel…`, receiver after the cursor | The same instance members, for the dot shorthands |
-| `(php/new \Fo…` and a bare `\Fo…` | Class, interface, enum and trait names |
+| `(.metho…` / `(.-fiel…`, receiver after the cursor | Public instance methods and properties of the receiver's class |
+| `\Class/metho…`, or `Class/metho…` for a `:use`d class | Public static methods, constants and `$`-prefixed static properties |
+| `\Fo…`, as in `(new \Fo…` | Class, interface, enum and trait names |
 | `php/strto…` | PHP's global functions, with their signatures |
 | `php/$_SE…` | The superglobals |
 
-The receiver's class is resolved lexically: a `(php/new \Foo …)` binding, a `^{:tag \Foo}` or `^\Foo` annotation, a `(:use Foo\Bar)` import, or the return type of the method a `(php/-> x (get-thing) (…` chain hops through.
+The receiver's class is resolved lexically, from a `^Foo`, `^\Foo` or `^{:tag Foo}` annotation on the local, or from a `(:use Foo.Bar)` import. For example, `(defn f [^DateTimeImmutable d] (.for d))` offers `format`.
+
+Some spellings get no PHP members yet, because the daemon does not type them ([phel-lang#3398](https://github.com/phel-lang/phel-lang/issues/3398)):
+
+- a local bound with `(new Foo …)` or `(Foo. …)`: annotate it, as in `[^Foo x (new Foo)]`,
+- an inline receiver, as in `(.format (new Foo))`,
+- a bare class with no `:use` and no leading `\`, as in `DateTimeImmutable/cre…`, and a dotted one, as in `Symfony.Component.Console.Command.Command/SU…`,
+- a class name after `(new Fo…` without the leading `\`.
 
 Two things follow from where this runs. It needs `phel.diagnostics.live` on and a Phel with the `api-daemon` command; without either, completion is exactly what it was. And it runs on the keystroke path, so the daemon gets **400 ms** — a busy or still-booting one costs the suggestion for that keystroke and nothing else, and the next keystroke asks again. Turn it off per folder with `phel.completion.phpInterop`.
 
@@ -75,7 +81,7 @@ The daemon has no signature-help method today, so a method's rendered signature 
 
 These bundled providers are the zero-config default: they work offline, with no extra process or warmup, and cover ~80% of the daily friction.
 
-For deeper, compiler-backed intelligence (namespace-aware completion, PHP-interop hover/signature help for `php/->` / `php/::` / `php/new`, and scoped rename/references) the extension can delegate to Phel's own language server, `phel lsp`. It is **opt-in** via `phel.lsp.enabled` (off by default): when enabled and the server is healthy the LSP serves these features; otherwise the bundled providers above are used. See the language-server bullet in the README.
+For deeper, compiler-backed intelligence (namespace-aware completion, PHP-interop hover and signature help, and scoped rename/references) the extension can delegate to Phel's own language server, `phel lsp`. It is **opt-in** via `phel.lsp.enabled` (off by default): when enabled and the server is healthy the LSP serves these features; otherwise the bundled providers above are used. See the language-server bullet in the README.
 
 ### Why isn't symbol X suggested?
 
