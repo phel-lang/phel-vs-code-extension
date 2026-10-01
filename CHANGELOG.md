@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-01
+
 ### Added
 
 - `new`, `catch` and `(:use …)` color their class names as PHP classes: `(new DateTime)`, `(catch Exception e)`, `(:use Random.Randomizer phpDocumentor.Reflection.DocBlock)`. A bare capitalised symbol elsewhere stays a plain symbol.
