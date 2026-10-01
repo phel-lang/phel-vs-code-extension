@@ -14,3 +14,4 @@ on-unsupported: warn
 
 gitignore:
   enabled: true
+  ignore-worktree-include: true
