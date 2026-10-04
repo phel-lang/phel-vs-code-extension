@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Tracks **Phel 0.54**. The README, the docs and the real-CLI test notes say so; it still needs PHP 8.5.
+
+- Refreshed the bundled symbol corpus against phel-lang v0.54.0: 1671 entries, up from 1628. Twenty of the additions are public and reach completion, among them `phel.core/with-out-str`, `subs`, `list*`, `partitionv`, `replace`, `halt-when` and `phel.test/thrown?`; the other 26 are private helpers. Three private `phel.test` diff helpers are gone, and every **View source** link now points at the v0.54.0 tree.
+
 ## [0.15.0] - 2026-10-01
 
 ### Added
