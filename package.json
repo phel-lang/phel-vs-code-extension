@@ -1070,7 +1070,7 @@
                     {
                         "id": "phel.gettingStarted.install",
                         "title": "Install Phel",
-                        "description": "Everything past highlighting shells out to the Phel CLI. In an existing project run `composer require phel-lang/phel`; Composer puts the binary at `vendor/bin/phel`.\n[Read the getting started guide](https://phel-lang.org/documentation/getting-started/)",
+                        "description": "Everything past highlighting shells out to the Phel CLI. In an existing project run `composer require phel-lang/phel-lang`; Composer puts the binary at `vendor/bin/phel`.\n[Read the getting started guide](https://phel-lang.org/documentation/getting-started/)",
                         "media": {
                             "markdown": "media/walkthrough/install.md"
                         },

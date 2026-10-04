@@ -15,7 +15,7 @@ The complete editor for [Phel](https://phel-lang.org/), a functional Lisp that c
 ## Quick start
 
 1. Install from the Marketplace (<kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> → **Phel Lang**), or `code --install-extension Phel-Lang.phel-lang`.
-2. Open a project that has Phel installed (`composer require phel-lang/phel`). The CLI is expected at `vendor/bin/phel`; for another layout set one setting:
+2. Open a project that has Phel installed (`composer require phel-lang/phel-lang`). The CLI is expected at `vendor/bin/phel`; for another layout set one setting:
    ```jsonc
    // .vscode/settings.json
    { "phel.executablePath": "bin/phel" }

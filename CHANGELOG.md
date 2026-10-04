@@ -8,6 +8,10 @@
 
 - Refreshed the bundled symbol corpus against phel-lang v0.54.0: 1671 entries, up from 1628. Twenty of the additions are public and reach completion, among them `phel.core/with-out-str`, `subs`, `list*`, `partitionv`, `replace`, `halt-when` and `phel.test/thrown?`; the other 26 are private helpers. Three private `phel.test` diff helpers are gone, and every **View source** link now points at the v0.54.0 tree.
 
+### Fixed
+
+- The README, the Get started walkthrough, the troubleshooting page and project detection named the package `phel-lang/phel`, which does not exist on Packagist. It is `phel-lang/phel-lang`, so `composer require phel-lang/phel-lang` is the command, and a `composer.json` that requires it is what marks a workspace as a Phel project.
+
 ## [0.15.0] - 2026-10-01
 
 ### Added
