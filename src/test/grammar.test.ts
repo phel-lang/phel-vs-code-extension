@@ -441,3 +441,28 @@ describe('phel.tmLanguage type tags', () => {
         assertScoped('(defn f [^?map m] m)', 'm', 'meta.symbol.phel');
     });
 });
+
+describe('phel.tmLanguage Phel 0.54 macros', () => {
+    before(async () => {
+        grammar = await loadGrammar();
+    });
+
+    it('colors the new phel.core macros as keywords', () => {
+        assertScoped('(with-out-str (println 1))', 'with-out-str', 'keyword.control.phel');
+        assertScoped('(pvalues (inc 1) (inc 2))', 'pvalues', 'keyword.control.phel');
+    });
+
+    it('colors the phel.test assertion macros as keywords', () => {
+        assertScoped('(is (thrown? Exception (f)))', 'thrown?', 'keyword.control.phel');
+        assertScoped(
+            '(is (thrown-with-msg? Exception "x" (f)))',
+            'thrown-with-msg?',
+            'keyword.control.phel'
+        );
+        assertScoped('(is (output? "x" (f)))', 'output?', 'keyword.control.phel');
+    });
+
+    it('leaves a function that merely starts with a macro name alone', () => {
+        assertScoped('(thrown-count x)', 'thrown-count', 'meta.symbol.phel');
+    });
+});

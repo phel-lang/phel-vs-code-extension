@@ -202,7 +202,7 @@ you can tell *which* arity a multi-arity call matched.
 | `if-let`, `when-let`, `if-some`, `when-some`, `when-first` | Bind-and-branch forms, with the binding vector already in place |
 | `binding`, `letfn` | Dynamic rebinding, mutually recursive local fns |
 | `doseq`, `for`, `foreach`, `dotimes`, `loop` | Iteration (`loop` with a `recur` skeleton) |
-| `try` | `try` + `catch \Throwable e` |
+| `try` | `try` + `catch Throwable e` |
 | `defmacro`, `defstruct`, `defenum`, `definterface`, `defprotocol`, `defexception` | Definitions |
 | `defrecord`, `deftype`, `reify`, `extend-type`, `extend-protocol` | Records / types / protocol implementations, with a method skeleton |
 | `defmulti`, `defmethod` | Multimethod and one dispatch implementation |

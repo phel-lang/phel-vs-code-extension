@@ -41,15 +41,15 @@ A constant and a static method share one spelling and are told apart by reflecti
 Threading: `->`, `->>`, `some->`, `some->>`, `as->`, `cond->`, `cond->>`.
 Conditionals: `if-let`, `if-not`, `if-some`, `when`, `when-let`, `when-not`, `when-some`, `when-first`, `while`, `cond`, `condp`, `case`.
 Iteration: `for`, `doseq`, `dofor`, `dotimes`, `doto`.
-Bindings: `binding`, `letfn`, `with-bindings`, `with-redefs`, `with-output-buffer`, `with-open`.
+Bindings: `binding`, `letfn`, `with-bindings`, `with-redefs`, `with-output-buffer`, `with-out-str`, `with-open`.
 Definitions: `defprotocol`, `defrecord`, `defmethod`, `defmulti`, `prefer-method`, `prefers`, `defspec`, `defstruct`, `defenum`, `definterface`, `defexception`, `deftype`, `declare`.
-Testing: `deftest`, `is`, `are`, `testing`, `assert`, `with-mocks`, `with-mock-wrapper`, `with-isolated-stats`, `with-isolated-reporters`.
+Testing: `deftest`, `is`, `are`, `testing`, `assert`, `thrown?`, `thrown-with-msg?`, `output?`, `with-mocks`, `with-mock-wrapper`, `with-isolated-stats`, `with-isolated-reporters`.
 Debug / trace: `dbg`, `deftrace`, `dotrace`.
 Benchmarks: `defbench` (`phel.bench`).
 Interop: `set!`.
 REPL helpers: `dir`, `doc`, `source`, `require`, `symbol-info`, `explain-sym`.
 References and errors: `atom`, `swap!`, `reset!`, `deref`, `trampoline`, `ex-info`, `ex-data`, `satisfies?`. These are core functions, colored as keywords because they shape control flow.
-Other: `comment`, `time`, `lazy-seq`, `lazy-cat`, `match`, `instance?`, `pop`, `reify`, `delay`, `future`, `future-fiber`, `extend-protocol`, `extend-type`, `html`, `with-config`, `async`.
+Other: `comment`, `time`, `lazy-seq`, `lazy-cat`, `match`, `instance?`, `pop`, `reify`, `delay`, `future`, `future-fiber`, `pvalues`, `extend-protocol`, `extend-type`, `html`, `with-config`, `async`.
 
 ## Literals
 

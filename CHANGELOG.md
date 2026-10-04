@@ -2,7 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+
+- `with-out-str` and `pvalues` (new in `phel.core`) and the `phel.test` assertion macros `thrown?`, `thrown-with-msg?` and `output?` highlight in the keyword color.
+
 ### Changed
+
+- The `try` snippet writes `(catch Throwable e ...)` without the leading `\`, the spelling Phel 0.54 recommends for a PHP class.
 
 - Tracks **Phel 0.54**. The README, the docs and the real-CLI test notes say so; it still needs PHP 8.5.
 
