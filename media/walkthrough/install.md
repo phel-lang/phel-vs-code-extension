@@ -6,7 +6,7 @@ tests, the REPL — shells out to the Phel CLI. So a project needs Phel itself.
 **Adding Phel to an existing project:**
 
 ```bash
-composer require phel-lang/phel
+composer require phel-lang/phel-lang
 ```
 
 Composer installs the binary at `vendor/bin/phel`, which is exactly where the

@@ -150,7 +150,7 @@ assertion observes what the CLI actually did. They are opt-in — CI has no PHP
 project to point at — and worth running before a release.
 
 ```bash
-# Needs the PHP that Phel requires (8.5+ for 0.53) and a phel-lang checkout with `composer install` done.
+# Needs the PHP that Phel requires (8.5+ for 0.54) and a phel-lang checkout with `composer install` done.
 FIXTURE=$(scripts/make-real-cli-fixture.sh)          # defaults to ../phel-lang
 FIXTURE=$(scripts/make-real-cli-fixture.sh --phel /path/to/phel-lang)
 
@@ -363,7 +363,7 @@ It runs each analyzer over every file, probes the offset-driven entry points acr
 To regenerate after bumping phel-lang:
 
 ```bash
-npm run regen-docs -- /path/to/phel-lang --phel-version v0.53.0
+npm run regen-docs -- /path/to/phel-lang --phel-version v0.54.0
 ```
 
 The script walks `src/phel/**/*.phel`, detects each file's namespace from its `(ns ...)` or `(in-ns ...)` form, runs the parser in `src/phelDocs.ts`, and writes the JSON corpus. `--phel-version` (default `main`) is the git ref used to build `View source` links.

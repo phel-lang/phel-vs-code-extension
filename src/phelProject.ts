@@ -1,6 +1,6 @@
 // Pure project-detection helpers. Given the contents of a `composer.json`,
 // determine whether the workspace folder is a Phel project (i.e. the
-// `phel-lang/phel` package appears in `require` or `require-dev`).
+// `phel-lang/phel-lang` package appears in `require` or `require-dev`).
 
 export interface PhelProjectInfo {
     isPhelProject: boolean;
@@ -15,7 +15,7 @@ interface ComposerJson {
     'require-dev'?: Record<string, string>;
 }
 
-const PACKAGE_NAME = 'phel-lang/phel';
+const PACKAGE_NAME = 'phel-lang/phel-lang';
 
 export function analyzeComposerJson(text: string): PhelProjectInfo {
     let data: ComposerJson;

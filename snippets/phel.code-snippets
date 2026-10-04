@@ -216,7 +216,7 @@
         "body": [
             "(try",
             "  ${1:body}",
-            "  (catch \\\\Throwable ${2:e}",
+            "  (catch Throwable ${2:e}",
             "    ${0}))"
         ],
         "description": "Try / catch"

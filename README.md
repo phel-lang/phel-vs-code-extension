@@ -10,19 +10,19 @@
 [![Release](https://img.shields.io/github/v/release/phel-lang/phel-vs-code-extension?label=release)](https://github.com/phel-lang/phel-vs-code-extension/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-The complete editor for [Phel](https://phel-lang.org/), a functional Lisp that compiles to PHP: highlighting, completion, navigation, REPL, tests, debugger, all in one extension, tracking Phel **0.53**.
+The complete editor for [Phel](https://phel-lang.org/), a functional Lisp that compiles to PHP: highlighting, completion, navigation, REPL, tests, debugger, all in one extension, tracking Phel **0.54**.
 
 ## Quick start
 
 1. Install from the Marketplace (<kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> → **Phel Lang**), or `code --install-extension Phel-Lang.phel-lang`.
-2. Open a project that has Phel installed (`composer require phel-lang/phel`). The CLI is expected at `vendor/bin/phel`; for another layout set one setting:
+2. Open a project that has Phel installed (`composer require phel-lang/phel-lang`). The CLI is expected at `vendor/bin/phel`; for another layout set one setting:
    ```jsonc
    // .vscode/settings.json
    { "phel.executablePath": "bin/phel" }
    ```
 3. Open a `.phel` file. Everything below is on by default; run **Help: Get Started → Phel** for a guided tour, or **Phel: Doctor** to check the setup.
 
-Requires VS Code 1.88+ and the PHP your Phel needs (8.5+ for Phel 0.53) on `PATH`. Works on macOS, Linux and Windows.
+Requires VS Code 1.88+ and the PHP your Phel needs (8.5+ for Phel 0.54) on `PATH`. Works on macOS, Linux and Windows.
 
 ## What you get
 
