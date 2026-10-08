@@ -212,24 +212,27 @@ describe('the phel lint task', function () {
             await runTaskAndWaitForMarkers(lint, sentinel);
         });
 
-        assert.equal(ours().length, 1, 'the extension lost its own diagnostic over the runs');
-        // The task lints the whole project, so it reported on this file too —
-        // under the path the CLI printed, which on a project reached through a
-        // symlink (`mktemp -d` on macOS) is a second uri for the same file. Only
-        // there are the two halves distinguishable, and there a matcher owning
-        // its own markers has no reason to touch the editor's spelling at all.
+        // The task lints the whole project, so it reported on this file too.
         await waitFor(
             'the task to report the same finding on lint_only.phel',
             () => (diagnosticsOnFile(uri).length === 2 ? true : undefined),
             30_000
         );
+        // Under the path the CLI printed, which on a project reached through a
+        // symlink (`mktemp -d` on macOS) is a second uri for the same file.
+        // Only there are the two halves distinguishable, and there a matcher
+        // owning its own markers has no reason to touch the editor's spelling
+        // at all. Under one spelling both land on the same uri.
         const spellings = diagnosticUris(uri);
         if (spellings.length > 1) {
+            assert.equal(ours().length, 1, 'the extension lost its own diagnostic over the runs');
             assert.equal(
                 touched.has(uri.toString()),
                 false,
                 'the task run changed the markers on the file the lint pass had reported on'
             );
+        } else {
+            assert.equal(ours().length, 2, 'the extension lost its own diagnostic over the runs');
         }
     });
 });
