@@ -16,6 +16,8 @@
 
 ### Fixed
 
+- Diagnostics from `phel lint`, `phel analyze` and the analysis daemon land on the reported text with the Phel release after 0.54.0, which counts columns from 1. The extension asks each Phel binary and daemon for its version once and keeps reading 0.54.0 and older from 0, so `(def m {:a 1 :a 2})` highlights the second `:a` exactly on both. A version it cannot read counts as the newer behaviour, with a line in the **Phel Analysis** output.
+
 - The README, the Get started walkthrough, the troubleshooting page and project detection named the package `phel-lang/phel`, which does not exist on Packagist. It is `phel-lang/phel-lang`, so `composer require phel-lang/phel-lang` is the command, and a `composer.json` that requires it is what marks a workspace as a Phel project.
 
 ## [0.15.0] - 2026-10-01

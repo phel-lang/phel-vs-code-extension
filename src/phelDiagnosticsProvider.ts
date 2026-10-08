@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import * as vscode from 'vscode';
-import type { PhelDaemonDiagnostics } from './phelDaemonDiagnosticsProvider';
+import { runPhelCli } from './phelCli';
+import { phelAnalysisOutput, type PhelDaemonDiagnostics } from './phelDaemonDiagnosticsProvider';
 import {
     groupDiagnosticsByUri,
     isUnknownCommandError,
@@ -10,6 +11,7 @@ import {
 } from './phelDiagnostics';
 import { affectsPhelExecutable, resolvePhelExecutable } from './phelExecutable';
 import { toInvocation } from './phelInvocation';
+import { PhelColumnBaseCache } from './phelVersion';
 import { pathFromCli, pickWorkspaceFolder, uriFromCli } from './phelWorkspace';
 
 const COLLECTION_NAME = 'phel';
@@ -23,6 +25,12 @@ type Engine = 'auto' | 'lint' | 'analyze';
  * the first time a CLI rejects the subcommand and remembers that per session.
  */
 let lintUnavailable = false;
+
+/** The column base of each Phel binary, from one `phel --version` per binary. */
+const columnBases = new PhelColumnBaseCache(
+    async (command, cwd) => (await runPhelCli(command, ['--version'], cwd ?? process.cwd())).stdout,
+    (message) => phelAnalysisOutput().appendLine(message)
+);
 
 /**
  * What the last run reported per document, keyed by uri. The live (on-type)
@@ -183,8 +191,10 @@ export function registerDiagnostics(
                 e.affectsConfiguration('phel.diagnostics.engine') ||
                 affectsPhelExecutable(e)
             ) {
-                // A different executable may well have `lint`.
+                // A different executable may well have `lint`, and the same
+                // path may now hold another Phel.
                 lintUnavailable = false;
+                columnBases.clear();
                 clearAllDiagnostics(collection, live);
                 vscode.workspace.textDocuments.forEach(runForDocument);
             }
@@ -252,11 +262,23 @@ async function checkFile(
 /** Thrown when the CLI does not know the subcommand, so a fallback can retry. */
 class UnknownCommandError extends Error {}
 
-function runPhel(
+async function runPhel(
     command: string,
     args: string[],
     cwd: string | undefined
 ): Promise<PhelDiagnostic[]> {
+    const [stdout, columnBase] = await Promise.all([
+        runDiagnosticsCommand(command, args, cwd),
+        columnBases.get(command, cwd),
+    ]);
+    return parsePhelAnalyzeOutput(stdout, columnBase);
+}
+
+function runDiagnosticsCommand(
+    command: string,
+    args: string[],
+    cwd: string | undefined
+): Promise<string> {
     return new Promise((resolve, reject) => {
         const inv = toInvocation(command, args);
         const opts = { maxBuffer: 8 * 1024 * 1024, cwd, shell: inv.shell };
@@ -271,7 +293,7 @@ function runPhel(
                 reject(new Error(stderr || err.message));
                 return;
             }
-            resolve(parsePhelAnalyzeOutput(stdout));
+            resolve(stdout);
         });
     });
 }

@@ -17,6 +17,7 @@ const FAKE_DAEMON = join(__dirname, 'fakeApiDaemon.js');
 interface Stats {
     analyzed: number;
     indexed: number;
+    versioned: number;
     /** The params of the last request that was not a `__stats` one. */
     lastParams: Record<string, unknown>;
     pid: number;
@@ -33,11 +34,20 @@ interface FakeDiagnostic {
  * started again".
  */
 function createClient(
-    options: { spawnLog?: string; budget?: LspRestartBudget; states?: DaemonState[] } = {}
+    options: {
+        spawnLog?: string;
+        budget?: LspRestartBudget;
+        states?: DaemonState[];
+        phelVersion?: string;
+        log?: (message: string) => void;
+    } = {}
 ) {
     const args = ['api-daemon'];
     if (options.spawnLog) {
         args.push('--spawn-log', options.spawnLog);
+    }
+    if (options.phelVersion !== undefined) {
+        args.push('--phel-version', options.phelVersion);
     }
     return new PhelApiDaemonClient({
         command: process.execPath,
@@ -47,6 +57,7 @@ function createClient(
         // survive a PHP boot, which node does not need.
         timeouts: { first: 1500, next: 1500 },
         onStateChange: (state) => options.states?.push(state),
+        log: options.log,
     });
 }
 
@@ -109,6 +120,46 @@ describe('PhelApiDaemonClient', function () {
         client = createClient();
 
         await assert.rejects(client.request('nope'), /Unknown method: nope/);
+    });
+
+    describe('columnBase', () => {
+        it('reads a daemon without a `version` method as 0-based', async () => {
+            client = createClient();
+
+            assert.equal(await client.columnBase(), 0);
+        });
+
+        it('reads the version a newer daemon reports', async () => {
+            client = createClient({ phelVersion: 'v1.0.0-rc3' });
+
+            assert.equal(await client.columnBase(), 1);
+        });
+
+        it('reads 0.54.0 as 0-based', async () => {
+            client = createClient({ phelVersion: 'v0.54.0' });
+
+            assert.equal(await client.columnBase(), 0);
+        });
+
+        it('asks once per daemon', async () => {
+            client = createClient({ phelVersion: 'v0.55.0' });
+
+            await client.columnBase();
+            await analyze(client, '(ns a)', '/a.phel');
+            await client.columnBase();
+            assert.equal((await client.request<Stats>('__stats')).versioned, 1);
+        });
+
+        it('takes an unreadable version as 1-based and logs it', async () => {
+            const logged: string[] = [];
+            client = createClient({
+                phelVersion: 'dev-main',
+                log: (message) => logged.push(message),
+            });
+
+            assert.equal(await client.columnBase(), 1);
+            assert.ok(logged.some((line) => line.includes('dev-main')));
+        });
     });
 
     it('replaces a queued request with the newer one under the same key', async () => {

@@ -220,6 +220,7 @@ export class PhelDaemonDiagnostics implements vscode.Disposable {
         client: PhelApiDaemonClient,
         document: vscode.TextDocument
     ): Promise<PhelDiagnostic[]> {
+        const columnBase = await client.columnBase();
         const result = await client.request<unknown>(
             'analyzeSource',
             { source: document.getText(), uri: document.uri.fsPath },
@@ -227,7 +228,7 @@ export class PhelDaemonDiagnostics implements vscode.Disposable {
             // replaces it rather than piling a second analysis behind it.
             { key: document.uri.toString() }
         );
-        const diagnostics = Array.isArray(result) ? normaliseDiagnostics(result) : [];
+        const diagnostics = Array.isArray(result) ? normaliseDiagnostics(result, columnBase) : [];
         return (
             groupDiagnosticsByUri(diagnostics, document.uri.fsPath).get(document.uri.fsPath) ?? []
         );

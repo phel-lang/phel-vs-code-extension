@@ -12,6 +12,8 @@
 //
 // Kept free of `vscode` imports to make unit testing straightforward.
 
+import type { ColumnBase } from './phelVersion';
+
 export type PhelSeverity = 'error' | 'warning' | 'info' | 'hint';
 
 export interface PhelDiagnostic {
@@ -25,11 +27,11 @@ export interface PhelDiagnostic {
     uri?: string;
     /** 1-based line number where the diagnostic starts. */
     startLine: number;
-    /** 1-based column number where the diagnostic starts. */
+    /** 0-based column where the diagnostic starts, whatever base phel printed. */
     startCol: number;
     /** 1-based line number where the diagnostic ends. */
     endLine: number;
-    /** 1-based column number where the diagnostic ends. */
+    /** 0-based column one past the last character. */
     endCol: number;
 }
 
@@ -40,7 +42,10 @@ export interface PhelDiagnostic {
  * usually wants to drop the diagnostics silently and try again on the next
  * save.
  */
-export function parsePhelAnalyzeOutput(stdout: string): PhelDiagnostic[] {
+export function parsePhelAnalyzeOutput(
+    stdout: string,
+    columnBase: ColumnBase = 0
+): PhelDiagnostic[] {
     const trimmed = stdout.trim();
     if (!trimmed) {
         return [];
@@ -62,18 +67,24 @@ export function parsePhelAnalyzeOutput(stdout: string): PhelDiagnostic[] {
         return [];
     }
 
-    return normaliseDiagnostics(parsed);
+    return normaliseDiagnostics(parsed, columnBase);
 }
 
 /**
  * Normalise already-decoded diagnostic objects (a `phel analyze` payload, or
  * the `result` of an `analyzeSource` daemon call). Entries without a message
  * or a numeric start position are dropped rather than guessed at.
+ *
+ * `columnBase` is the base the producing Phel printed columns in; the result
+ * is always 0-based, so findings from two Phel versions compare equal.
  */
-export function normaliseDiagnostics(raw: readonly unknown[]): PhelDiagnostic[] {
+export function normaliseDiagnostics(
+    raw: readonly unknown[],
+    columnBase: ColumnBase = 0
+): PhelDiagnostic[] {
     const out: PhelDiagnostic[] = [];
     for (const entry of raw) {
-        const diag = normaliseEntry(entry);
+        const diag = normaliseEntry(entry, columnBase);
         if (diag) {
             out.push(diag);
         }
@@ -143,7 +154,7 @@ export function isUnknownCommandError(stderr: string): boolean {
     return /Command ".*" is not defined/i.test(stderr);
 }
 
-function normaliseEntry(raw: unknown): PhelDiagnostic | null {
+function normaliseEntry(raw: unknown, columnBase: ColumnBase): PhelDiagnostic | null {
     if (!raw || typeof raw !== 'object') {
         return null;
     }
@@ -167,9 +178,9 @@ function normaliseEntry(raw: unknown): PhelDiagnostic | null {
         message,
         severity: toSeverity(r.severity),
         startLine,
-        startCol,
+        startCol: Math.max(0, startCol - columnBase),
         endLine,
-        endCol,
+        endCol: Math.max(0, endCol - columnBase),
     };
     if (typeof r.code === 'string' && r.code) {
         diag.code = r.code;
@@ -211,10 +222,10 @@ function toSeverity(value: unknown): PhelSeverity {
 }
 
 /**
- * Convert a phel diagnostic position to the VS Code range. Phel emits
- * 1-based lines and 0-based columns, with `endCol` exclusive (one past
- * the last char). VS Code wants 0-based lines and 0-based exclusive
- * columns, so only lines need shifting.
+ * Convert a normalised diagnostic position to the VS Code range. Lines are
+ * 1-based and columns already 0-based, with `endCol` exclusive (one past the
+ * last char). VS Code wants 0-based lines and 0-based exclusive columns, so
+ * only lines need shifting.
  */
 export function toZeroBasedRange(diag: PhelDiagnostic): {
     startLine: number;
