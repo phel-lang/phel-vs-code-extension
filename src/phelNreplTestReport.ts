@@ -14,7 +14,12 @@
 //   ERROR <test-name> ['<message>'] (<basename>:<line>)
 //
 // followed by right-aligned `label: value` lines whose padding varies with the
-// failure type, and optionally a `Diff:` / `String diff (…)` block. Only the
+// failure type, and optionally a `Diff:` / `String diff (…)` block.
+//
+// Since Phel 0.54 an `=` failure reads `Form:`, `expected:`, `actual:`. Up to
+// 0.53 it read `Form:`, `evaluated to:`, `but is not: = to <expected>`. A
+// `thrown?` failure still opens with `expected: <form>`, so `expected:` is the
+// expected value only after a `Form:` line. Only the
 // headline is anchored on; everything after it is read as labelled lines until
 // the next separator or the blank line before the counts, which is what keeps a
 // verbose run (or a test that prints) from being mistaken for a report.
@@ -177,8 +182,18 @@ function applyLabel(failure: PhelTestFailure, line: string): void {
     const value = match[2].trim();
     switch (match[1].trim()) {
         case 'Form':
-        case 'expected':
             failure.form ??= value;
+            break;
+        case 'expected':
+            if (failure.form === undefined) {
+                failure.form = value;
+            } else {
+                failure.expected = value;
+            }
+            break;
+        case 'actual':
+            failure.pred ??= '=';
+            failure.actual = value;
             break;
         case 'evaluated to':
             failure.actual = strip(value, '(which is not truthy)');

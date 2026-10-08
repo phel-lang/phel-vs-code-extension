@@ -106,6 +106,100 @@ Error: 1
 Total: 9
 `;
 
+// Captured the same way from Phel 0.54.0, whose `=` failures print `expected:`
+// and `actual:` rows. `PROBE_054` is `run-tests 'demo.probe-test` over a file
+// with the same kinds as `EVERY_KIND`, plus a `not=` and a `<` failure.
+
+/** `run-test 'demo.failing-test/test-shout-fails` on Phel 0.54.0. */
+const SHOUT_FAILS_054 = `
+
+~~~~~~~~~~
+FAIL test-shout-fails (failing_test.phel:9)
+      Form: (= "this will never match" (shout "hi"))
+  expected: "this will never match"
+    actual: "HI!"
+  String diff (first mismatch at index 0):
+    expected: "this will never match"
+    actual:   "HI!"
+               ^
+
+
+Passed: 0
+Failed: 1
+Error: 0
+Total: 1
+`;
+
+const PROBE_054 = `
+
+~~~~~~~~~~
+FAIL t-message 'one is not two' (probe_test.phel:5)
+      Form: (= 1 2)
+  expected: 1
+    actual: 2
+~~~~~~~~~~
+FAIL t-falsey
+          Form: false
+  evaluated to: false (which is not truthy)
+~~~~~~~~~~
+FAIL t-predicate (probe_test.phel:11)
+                 Form: (pos? -1)
+         evaluated to: -1
+  but doesn't satisfy: pos?
+~~~~~~~~~~
+FAIL t-collection (probe_test.phel:14)
+      Form: (= [1 2 3] [1 9 3])
+  expected: [1 2 3]
+    actual: [1 9 3]
+  Diff:
+    ~ [1] 2 -> 9
+~~~~~~~~~~
+FAIL t-thrown (probe_test.phel:17)
+    expected: (thrown? InvalidArgumentException (+ 1 1))
+  to throw a: InvalidArgumentException (it didn't)
+~~~~~~~~~~
+FAIL t-thrown-with-msg (probe_test.phel:20)
+      expected: (thrown-with-msg? Exception "boom" (throw (new Exception "bang")))
+    to throw a: Exception
+  with message: boom
+       but got: bang
+~~~~~~~~~~
+ERROR t-error (probe_test.phel:23)
+              Form: (= 1 (php/intdiv 1 0))
+             threw: DivisionByZeroError
+      with message: Division by zero
+~~~~~~~~~~
+FAIL t-two-failures (probe_test.phel:26)
+      Form: (= "a" "b")
+  expected: "a"
+    actual: "b"
+  String diff (first mismatch at index 0):
+    expected: "a"
+    actual:   "b"
+               ^
+~~~~~~~~~~
+FAIL t-two-failures (probe_test.phel:27)
+      Form: (= 3 4)
+  expected: 3
+    actual: 4
+~~~~~~~~~~
+FAIL t-not-equal (probe_test.phel:30)
+          Form: (not= 1 1)
+  evaluated to: 1
+    but is not: not= to 1
+~~~~~~~~~~
+FAIL t-less (probe_test.phel:33)
+          Form: (< 3 1)
+  evaluated to: 1
+    but is not: < to 3
+
+
+Passed: 0
+Failed: 10
+Error: 1
+Total: 11
+`;
+
 describe('phelNreplTestReport.parseRunTestsSummary', () => {
     it('reads the map a run-tests op returns', () => {
         assert.deepEqual(parseRunTestsSummary('{:pass 1, :fail 1, :error 0}'), {
@@ -286,5 +380,51 @@ describe('phelNreplTestReport.parseTestReport', () => {
         ].join('\n');
 
         assert.equal(parseTestReport(noisy).length, 1);
+    });
+
+    describe('the Phel 0.54 layout', () => {
+        it('reads expected and actual off an `=` failure', () => {
+            const [failure] = parseTestReport(SHOUT_FAILS_054);
+
+            assert.equal(failure.testName, 'test-shout-fails');
+            assert.equal(failure.line, 9);
+            assert.equal(failure.form, '(= "this will never match" (shout "hi"))');
+            assert.equal(failure.pred, '=');
+            assert.equal(failure.expected, '"this will never match"');
+            assert.equal(failure.actual, '"HI!"');
+        });
+
+        it('reads every kind of failure', () => {
+            const failures = parseTestReport(PROBE_054);
+
+            assert.equal(failures.length, 11);
+            const fields = failures.map((f) => [f.testName, f.form, f.pred, f.expected, f.actual]);
+            assert.deepEqual(fields, [
+                ['t-message', '(= 1 2)', '=', '1', '2'],
+                ['t-falsey', 'false', undefined, undefined, 'false'],
+                ['t-predicate', '(pos? -1)', 'pos?', undefined, '-1'],
+                ['t-collection', '(= [1 2 3] [1 9 3])', '=', '[1 2 3]', '[1 9 3]'],
+                [
+                    't-thrown',
+                    '(thrown? InvalidArgumentException (+ 1 1))',
+                    undefined,
+                    'InvalidArgumentException',
+                    undefined,
+                ],
+                [
+                    't-thrown-with-msg',
+                    '(thrown-with-msg? Exception "boom" (throw (new Exception "bang")))',
+                    undefined,
+                    'boom',
+                    'bang',
+                ],
+                ['t-error', '(= 1 (php/intdiv 1 0))', undefined, undefined, 'DivisionByZeroError'],
+                ['t-two-failures', '(= "a" "b")', '=', '"a"', '"b"'],
+                ['t-two-failures', '(= 3 4)', '=', '3', '4'],
+                ['t-not-equal', '(not= 1 1)', 'not=', '1', '1'],
+                ['t-less', '(< 3 1)', '<', '3', '1'],
+            ]);
+            assert.equal(failures[0].message, 'one is not two');
+        });
     });
 });
