@@ -39,6 +39,7 @@ import {
     toProjectIndex,
 } from './phelProjectIndex';
 import type { DaemonState } from './phelRuntimeState';
+import { type ColumnBase, columnBaseOrNewest } from './phelVersion';
 
 /** The daemon takes no arguments of its own. */
 const DEFAULT_ARGS = ['api-daemon'];
@@ -48,6 +49,9 @@ const DEFAULT_ARGS = ['api-daemon'];
  * the project, not two - and the second one is the answer both callers want.
  */
 const INDEX_KEY = 'indexProject';
+
+/** JSON-RPC "method not found", what a daemon answers for a method it lacks. */
+const METHOD_NOT_FOUND = -32601;
 
 // Same shape as the language client's budget: a daemon that dies immediately
 // and repeatedly must not respawn in a tight loop.
@@ -98,6 +102,16 @@ export interface PhelApiDaemonRequestOptions {
 
 /** The installed Phel has no `api-daemon` command; nothing will change that. */
 export class PhelApiDaemonUnavailableError extends Error {}
+
+/** An `error` answer from the daemon, with its JSON-RPC code when it sent one. */
+export class PhelApiDaemonResponseError extends Error {
+    constructor(
+        message: string,
+        readonly code: number | undefined
+    ) {
+        super(message);
+    }
+}
 
 interface Waiter {
     resolve: (value: unknown) => void;
@@ -154,6 +168,7 @@ export class PhelApiDaemonClient {
     private disposed = false;
     /** Last state reported to `onStateChange`. */
     private state: DaemonState = 'off';
+    private columnBaseAnswer?: Promise<ColumnBase>;
 
     constructor(options: PhelApiDaemonOptions) {
         this.command = options.command;
@@ -288,6 +303,31 @@ export class PhelApiDaemonClient {
                 { key }
             )
         );
+    }
+
+    /**
+     * The base `analyzeSource` reports columns in, asked of the daemon once.
+     * The `version` method arrived after 0.54.0, the last release with 0-based
+     * columns, so a daemon that does not know it is 0-based. Any other failure
+     * is not remembered, so the next call asks again.
+     */
+    columnBase(): Promise<ColumnBase> {
+        this.columnBaseAnswer ??= this.request<unknown>('version', {}, { key: 'version' }).then(
+            (version) =>
+                columnBaseOrNewest(
+                    typeof version === 'string' ? version : '',
+                    'the analysis daemon',
+                    this.log
+                ),
+            (err: unknown) => {
+                if (err instanceof PhelApiDaemonResponseError && err.code === METHOD_NOT_FOUND) {
+                    return 0;
+                }
+                this.columnBaseAnswer = undefined;
+                throw err;
+            }
+        );
+        return this.columnBaseAnswer;
     }
 
     /** Every reference site the cached index holds for `namespace/symbol`. */
@@ -429,7 +469,7 @@ export class PhelApiDaemonClient {
         const response = decoded as {
             id?: unknown;
             result?: unknown;
-            error?: { message?: unknown };
+            error?: { code?: unknown; message?: unknown };
         };
         const flight = this.inFlight;
         if (!flight || response.id !== flight.id) {
@@ -444,7 +484,8 @@ export class PhelApiDaemonClient {
                 typeof response.error.message === 'string'
                     ? response.error.message
                     : 'unknown daemon error';
-            rejectAll(flight.waiters, new Error(detail));
+            const code = typeof response.error.code === 'number' ? response.error.code : undefined;
+            rejectAll(flight.waiters, new PhelApiDaemonResponseError(detail, code));
         } else {
             for (const waiter of flight.waiters) {
                 waiter.resolve(response.result);

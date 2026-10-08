@@ -132,6 +132,30 @@ describe('toZeroBasedRange', function () {
         assert.deepStrictEqual(r, { startLine: 4, startCol: 7, endLine: 4, endCol: 8 });
     });
 
+    // `(def m {:a 1 :a 2})` on line 2: the repeated `:a` is characters 13-14.
+    const duplicateKey = (startCol: number, endCol: number) =>
+        `[{"severity":"error","message":"Duplicate key: :a","startLine":2,"startCol":${startCol},"endLine":2,"endCol":${endCol}}]`;
+
+    it('places the columns of a 0-based Phel on the reported text', function () {
+        const [d] = parsePhelAnalyzeOutput(duplicateKey(13, 15), 0);
+        assert.deepStrictEqual(toZeroBasedRange(d), {
+            startLine: 1,
+            startCol: 13,
+            endLine: 1,
+            endCol: 15,
+        });
+    });
+
+    it('places the columns of a 1-based Phel on the same text', function () {
+        const [d] = parsePhelAnalyzeOutput(duplicateKey(14, 16), 1);
+        assert.deepStrictEqual(toZeroBasedRange(d), {
+            startLine: 1,
+            startCol: 13,
+            endLine: 1,
+            endCol: 15,
+        });
+    });
+
     it('clamps negative phel positions to zero', function () {
         const r = toZeroBasedRange(diag({ startLine: 0, startCol: 0, endLine: 0, endCol: 0 }));
         assert.deepStrictEqual(r, { startLine: 0, startCol: 0, endLine: 0, endCol: 1 });

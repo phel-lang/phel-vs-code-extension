@@ -23,6 +23,10 @@
 // to nothing, so the same run also exercises the fallback to the TypeScript
 // index.
 //
+// `--version` prints what Phel 0.54.0 prints, the last release whose columns
+// are 0-based like the ones below, and the daemon has no `version` method, as
+// 0.54.0's did not. `--phel-version <v>` adds the method, answering `v`.
+//
 // `completeAtPoint` answers with two PHP global functions and one Phel core
 // symbol, whatever the cursor is on: the extension's own gate decides *whether*
 // to ask, and the Phel item is there because the real daemon adds one whenever
@@ -136,7 +140,11 @@ function shortName(symbol: string): string {
 /** The subcommand, i.e. the first argument that is not a flag or its value. */
 const subcommand = argv.find((arg) => !arg.startsWith('-')) ?? 'api-daemon';
 
-if (subcommand !== 'api-daemon') {
+const phelVersion = flagValue('--phel-version');
+
+if (argv.includes('--version')) {
+    process.stdout.write('Phel v0.54.0\n');
+} else if (subcommand !== 'api-daemon') {
     // One-shot mode. Nothing keeps the loop alive, so the process ends once
     // stdout has drained - `process.exit` here could truncate the pipe.
     process.stdout.write('[]\n');
@@ -152,6 +160,8 @@ if (subcommand !== 'api-daemon') {
     let analyzed = 0;
     /** How many `indexProject` calls it has answered. */
     let indexed = 0;
+    /** How many `version` calls it has received. */
+    let versioned = 0;
     /** The params of the last real request, so a test can see what was sent. */
     let lastParams: Record<string, unknown> = {};
 
@@ -235,21 +245,27 @@ if (subcommand !== 'api-daemon') {
                         shortName(String(params.symbol ?? '')) === 'greet' ? greetReferences() : [],
                 });
                 return;
+            case 'version':
+                versioned++;
+                if (phelVersion === undefined) {
+                    break;
+                }
+                respond({ id: request.id, result: phelVersion });
+                return;
             case 'completeAtPoint':
                 respond({ id: request.id, result: completions() });
                 return;
             case '__stats':
                 respond({
                     id: request.id,
-                    result: { analyzed, indexed, lastParams, pid: process.pid },
+                    result: { analyzed, indexed, versioned, lastParams, pid: process.pid },
                 });
                 return;
-            default:
-                respond({
-                    id: request.id,
-                    error: { code: -32601, message: `Unknown method: ${String(request.method)}` },
-                });
         }
+        respond({
+            id: request.id,
+            error: { code: -32601, message: `Unknown method: ${String(request.method)}` },
+        });
     });
 
     // Losing stdin means the editor is gone; do not linger as an orphan.
