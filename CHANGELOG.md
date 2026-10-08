@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-08
+
 ### Added
 
 - `with-out-str` and `pvalues` (new in `phel.core`) and the `phel.test` assertion macros `thrown?`, `thrown-with-msg?` and `output?` highlight in the keyword color.
