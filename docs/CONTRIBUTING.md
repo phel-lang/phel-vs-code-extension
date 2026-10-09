@@ -245,13 +245,17 @@ Two things the workflow cannot check for you:
 - **Screenshots**: if the release changed how a feature looks, re-take the shot it appears in, following [`docs/media/README.md`](media/README.md), and push it in the same batch. The Marketplace serves README images off the default branch, so a stale one keeps showing until the file changes - the listing does not wait for a release.
 - **The real-CLI integration run** is green (see [above](#against-a-real-phel-cli)). CI has no PHP project to point at, so this is the only pass over the CLI-backed half.
 
+### Versioning
+
+The extension version follows Phel, which leads. `MAJOR.MINOR` is the Phel release the extension tracks; `PATCH` counts extension releases against it. Version 0.54.0 tracks Phel 0.54, and an extension-only fix on top of it ships as 0.54.1. When the corpus moves to a new Phel release, cut that release's version explicitly (e.g. `0.55.0`).
+
 ### One-click release (recommended)
 
 1. Make sure CHANGELOG `## [Unreleased]` is up to date on `main`.
 2. Open <https://github.com/phel-lang/phel-vs-code-extension/actions/workflows/release.yml> and click **Run workflow**.
 3. Fill in:
-   - `version`: leave empty to auto-bump from the current `package.json`, or pin an explicit semver like `0.6.0`.
-   - `bump`: when `version` is empty, picks the auto-bump level (`patch` / `minor` / `major`). Default `minor`.
+   - `version`: leave empty to auto-bump from the current `package.json`, or pin an explicit semver like `0.55.0` when tracking a new Phel release.
+   - `bump`: when `version` is empty, picks the auto-bump level (`patch` / `minor` / `major`). Default `patch`.
    - `publish_marketplace`: check to publish via `vsce publish` (requires `VSCE_PAT` secret). Uncheck to skip the Marketplace step and upload the vsix yourself via the [publisher web UI](https://marketplace.visualstudio.com/manage/publishers/Phel-Lang). The vsix is attached to the GitHub Release and uploaded as a workflow artifact either way.
    - `dry_run`: check to bump + package only, with no git push, GH release, or Marketplace publish. Use it once before a real cut to confirm the pipeline.
 4. The workflow:
@@ -268,18 +272,16 @@ Two things the workflow cannot check for you:
 Same flow, run from a clean `main` checkout:
 
 ```bash
-npm run release            # auto-bump minor, build vsix, push tag, create GH Release
-npm run release -- 0.6.0   # explicit version
-npm run release -- --bump patch
-npm run release -- --bump major
+npm run release             # auto-bump patch, build vsix, push tag, create GH Release
+npm run release -- 0.55.0   # explicit version, for a new Phel release
 ```
 
-Default behaviour: bump the minor version of the current `package.json`, build the vsix, push the tag, create the GitHub Release with the vsix attached. Marketplace publish is **off** by default - download the vsix from the GH Release and drop it into <https://marketplace.visualstudio.com/manage/publishers/Phel-Lang>.
+Default behaviour: bump the patch version of the current `package.json`, build the vsix, push the tag, create the GitHub Release with the vsix attached. Marketplace publish is **off** by default - download the vsix from the GH Release and drop it into <https://marketplace.visualstudio.com/manage/publishers/Phel-Lang>.
 
 Flags:
 
 - `--publish` - also run `vsce publish` (requires `vsce login Phel-Lang` cached or `VSCE_PAT` env var set).
-- `--bump <patch|minor|major>` - choose the auto-bump level (default `minor`).
+- `--bump <patch|minor|major>` - choose the auto-bump level (default `patch`).
 - `--no-push` - dry run: bumps versions and builds the `.vsix` locally, no push / tag / GH release.
 
 If the script fails partway through, fix the cause and re-run; each step checks for existing artefacts.

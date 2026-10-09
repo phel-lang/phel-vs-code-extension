@@ -23,7 +23,7 @@ on:
         description: 'Auto-bump level when `version` is empty'
         required: false
         type: choice
-        default: 'minor'
+        default: 'patch'
         options:
           - patch
           - minor
