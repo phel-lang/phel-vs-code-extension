@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- The version now follows Phel, which leads: `MAJOR.MINOR` names the Phel release the extension tracks, and `PATCH` counts extension releases against it. 0.54.0 tracks Phel 0.54 and ships the same features as 0.16.0, which never reached the Marketplace. The release script and workflow now bump the patch version by default.
+
 ## [0.16.0] - 2026-10-08
 
 ### Added

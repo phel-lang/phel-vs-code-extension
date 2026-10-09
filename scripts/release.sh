@@ -3,7 +3,7 @@
 #
 #   scripts/release.sh [<version>] [--bump <major|minor|patch>] [--publish] [--no-push]
 #
-# Default flow (no args): bump the minor version of the current package.json,
+# Default flow (no args): bump the patch version of the current package.json,
 # package the vsix, push the tag, create the GitHub Release with the vsix
 # attached. Marketplace publish is OFF by default - drop the vsix into the
 # Marketplace web UI yourself, or pass `--publish` for full automation.
@@ -11,7 +11,11 @@
 # Version selection precedence:
 #   1. Explicit `<version>` arg if given.
 #   2. `--bump major|minor|patch` of the current `package.json` version.
-#   3. Default: `--bump minor`.
+#   3. Default: `--bump patch`.
+#
+# The version follows Phel: MAJOR.MINOR is the Phel release the extension
+# tracks, PATCH counts extension releases against it. Pass the version
+# explicitly (e.g. 0.55.0) when moving to a new Phel release.
 #
 # What it does, in order:
 #   1. Sanity checks: on main, working tree clean, version not already tagged.
@@ -38,7 +42,7 @@ set -euo pipefail
 PUBLISH=0
 PUSH=1
 VERSION=""
-BUMP="minor"
+BUMP="patch"
 
 usage() {
     sed -n '2,38p' "$0" >&2
