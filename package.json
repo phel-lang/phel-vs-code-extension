@@ -2,7 +2,7 @@
     "name": "phel-lang",
     "displayName": "Phel Lang",
     "description": "Phel language support for VS Code: syntax highlighting, completion, lint and format on save, REPL and nREPL, Test Explorer, paredit, and an Xdebug debugger for .phel files.",
-    "version": "0.16.0",
+    "version": "0.54.0",
     "publisher": "Phel-Lang",
     "license": "MIT",
     "engines": {
