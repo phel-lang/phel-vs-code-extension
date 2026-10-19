@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- The weekly core-docs refresh commits only `assets/phel-core-docs.json`. It used to commit its phel-lang checkout as a broken submodule too.
+
 ## [0.54.0] - 2026-10-09
 
 ### Changed

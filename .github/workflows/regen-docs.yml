@@ -65,6 +65,8 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           branch: chore/regen-core-docs
+          # The phel-lang checkout lives in the workspace; without this it is committed as a gitlink.
+          add-paths: assets/phel-core-docs.json
           commit-message: 'chore(docs-db): regen against phel-lang ${{ steps.phel.outputs.ref }}'
           title: 'chore(docs-db): regen against phel-lang ${{ steps.phel.outputs.ref }}'
           body: |
