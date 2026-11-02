@@ -1,33 +1,16 @@
 ---
 name: phel-extension-dev
-description: Project-aware coding agent for the Phel VS Code extension (TypeScript grammar, providers, symbol corpus, debug adapter).
+description: Use to implement or review changes in the Phel VS Code extension (grammar, providers, symbol corpus, debug adapter).
 model: {claude: sonnet}
 x-claude:
   tools: [Read, Grep, Bash, Edit, Write]
 ---
 
-You implement and review changes in the **Phel Lang VS Code extension** — a
-TypeScript extension giving `.phel` files syntax highlighting, completion, hover,
-signature help, diagnostics, an Xdebug debug adapter, and REPL/paredit helpers.
+Implement and review changes in this extension. Rules, commands and layout are in `project-conventions`.
 
-## Mental model
-
-- **Providers** live in `src/*.ts` (completion, hover, diagnostics, signature help, definition, references, rename, format) with tests in `src/test/`.
-- **Language surface** = three sources:
-  - `assets/phel-core-docs.json` — generated symbol corpus (completion/hover/signature). Never hand-edit; regenerate via the `regen-phel-corpus` skill.
-  - `src/phelCoreSymbols.ts` — `MACROS`/`CORE_FNS`/`CORE_VALUES` derive from the corpus; `SPECIAL_FORMS` is hand-curated for engine forms that live in phel-lang PHP, not `.phel`, and `CORE_DEF_FORMS` for the bootstrap `(def …)` forms that hold a function rather than a constant.
-  - `syntaxes/phel.tmLanguage.json` + `snippets/phel.code-snippets` — highlighting and snippets.
-- `out/` and `dist/` are generated (tsc, esbuild). Never edit them.
-
-## Workflow
-
-1. Build/test: `npm run compile`, `npm run lint`, `npm test` (mocha on `out/test/**`). `npm run pretest` = compile + lint. Keep all green.
-2. Grammar edits → validate JSON, then `npm run tokenize` (see the `verify-grammar` skill). No test pins tokenization.
-3. Corpus/version bumps → use the `regen-phel-corpus` skill; one signed commit per phel version.
-4. Every change → a bullet under `## [Unreleased]` in `CHANGELOG.md`; `npm run check:changelog` is a CI gate. Keep `docs/syntax.md` and `docs/completion.md` accurate.
-
-## Commits
-
-Conventional Commits, `ref:` instead of `refactor:`. Never reference Claude/Anthropic; no `Co-Authored-By`. Sign with git identity `chemaclass@outlook.es` and GPG key `E51B5BF45F85D160`.
-
-Prefer reusing existing providers and helpers over new abstractions. Match the surrounding code's style and comment density.
+- Language surface has three sources: `assets/phel-core-docs.json` (generated; regenerate with the `regen-phel-corpus` skill), `src/phelCoreSymbols.ts` (`SPECIAL_FORMS` and `CORE_DEF_FORMS` are hand-curated), and `syntaxes/phel.tmLanguage.json` plus `snippets/phel.code-snippets`.
+- Grammar edits: validate the JSON, then `npm run tokenize` (`verify-grammar` skill). No test pins tokenization.
+- Corpus or version bumps: `regen-phel-corpus` skill, one signed commit per Phel version.
+- Run `npm run pretest` and `npm test`; keep them green.
+- Add a `## [Unreleased]` bullet in `CHANGELOG.md` and keep `docs/syntax.md` and `docs/completion.md` accurate.
+- Reuse existing providers and helpers over new abstractions. Match the surrounding style and comment density.
